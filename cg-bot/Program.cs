@@ -1,41 +1,44 @@
 using System;
-using System.Reflection;
+using System.Configuration;
 using System.Threading.Tasks;
-
 using Microsoft.Extensions.DependencyInjection;
-
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using cg_bot.Services;
 
 namespace cg_bot
 {
     public class Program
     { 
         private DiscordSocketClient _client;
-        private CommandService _commands;
+        private CommandService _commandService;
+        private CommandHandler _commandHandler;
+        private SoundpadService _soundpadService;
         private IServiceProvider _services;
+
+        public static string DiscordToken;
+        public static ulong SoundboardNotificationChannelID;
 
         public static void Main(string[] args)
             => new Program().MainAsync().GetAwaiter().GetResult();
 
         public async Task MainAsync()
         {
-            _client = new DiscordSocketClient();
-            _commands = new CommandService();
-            _services = new ServiceCollection()
-                .AddSingleton(_client)
-                .AddSingleton(_commands)
-                .BuildServiceProvider();
+            ConfigureVariables();
+            ConfigureServices();
 
             _client.Log += Log;
+            _commandService.Log += Log;
 
-            await RegisterCommandsAsync();
-            await _client.LoginAsync(TokenType.Bot,
-                Environment.GetEnvironmentVariable("DiscordToken"));
+            _client.Ready += _soundpadService.StartService;
+
+            await _client.LoginAsync(TokenType.Bot, DiscordToken);
             await _client.StartAsync();
+            
+            await _commandHandler.InitializeAsync();
 
-            // Block this task until the program is closed.
+            // block this task until the program is closed.
             await Task.Delay(-1);
         }
 
@@ -45,26 +48,47 @@ namespace cg_bot
             return Task.CompletedTask;
         }
 
-        public async Task RegisterCommandsAsync()
+        private void ConfigureVariables()
         {
-            _client.MessageReceived += HandleCommandAsync;
-            await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), _services);
+            try
+            {
+                if (ConfigurationManager.AppSettings["DiscordToken"] == "" && ConfigurationManager.AppSettings["SoundboardNotificationChannelID"] == "")
+                {
+                    throw new Exception("App.config variables need to be configured: DiscordToken, SoundboardNotificationChannelID");
+                }
+                if (ConfigurationManager.AppSettings["DiscordToken"] == "")
+                {
+                    throw new Exception("App.config variable needs to be configured: DiscordToken");
+                }
+                if (ConfigurationManager.AppSettings["SoundboardNotificationChannelID"] == "")
+                {
+                    throw new Exception("App.config variable needs to be configured: SoundboardNotificationChannelID");
+                }
+            }
+            catch(Exception error)
+            {
+                Console.WriteLine(error);
+                System.Threading.Thread.Sleep(5000);
+                Environment.Exit(1);
+            }
+
+            DiscordToken = ConfigurationManager.AppSettings["DiscordToken"];
+            SoundboardNotificationChannelID = ulong.Parse(ConfigurationManager.AppSettings["SoundboardNotificationChannelID"]);
         }
 
-        private async Task HandleCommandAsync(SocketMessage arg)
+        private void ConfigureServices()
         {
-            var message = arg as SocketUserMessage;
-            var context = new SocketCommandContext(_client, message);
+            _services = new ServiceCollection()
+               .AddSingleton<DiscordSocketClient>()
+               .AddSingleton<CommandService>()
+               .AddSingleton<CommandHandler>()
+               .AddSingleton<SoundpadService>()
+               .BuildServiceProvider();
 
-            // If another bot sent the message, then return
-            if (message.Author.IsBot) return;
-
-            int argPos = 0;
-            if (message.HasStringPrefix("~", ref argPos))
-            {
-                var result = await _commands.ExecuteAsync(context, argPos, _services);
-                if (!result.IsSuccess) Console.WriteLine(result.ErrorReason);
-            }
+            _client = _services.GetRequiredService<DiscordSocketClient>();
+            _commandService = _services.GetRequiredService<CommandService>();
+            _commandHandler = _services.GetRequiredService<CommandHandler>();
+            _soundpadService = _services.GetRequiredService<SoundpadService>();
         }
     }
 }
