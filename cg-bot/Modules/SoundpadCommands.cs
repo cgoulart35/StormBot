@@ -46,13 +46,10 @@ The bot will then ask you to play a sound by entering the corresponding number."
         {
             if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
             {
-                string categoryName = null;
+                string categoryName = GetCategoryArg(args);
 
-                if (args.Length != 0)
-                    categoryName = string.Join(" ", args);
-
-                List<int> soundIndexes;
-                soundIndexes = await LoadSounds(categoryName);
+                List<Category> sounds = await LoadSounds();
+                List<int> soundIndexes = await DisplaySounds(sounds, categoryName);
 
                 if (soundIndexes.Count == 0 && categoryName != null)
                     await ReplyAsync("The category name '" + categoryName + "' does not exist.");
@@ -63,12 +60,15 @@ The bot will then ask you to play a sound by entering the corresponding number."
                 await ReplyAsync("The soundboard is not currently connected.");
         }
 
-        private async Task<List<int>> LoadSounds(string categoryName = null)
+        private string GetCategoryArg(string[] args)
+        {
+            return args.Length != 0 ? string.Join(" ", args) : null;
+        }
+
+        private async Task<List<Category>> LoadSounds()
         {
             CategoryListResponse categoryListResponse = await _soundpad.GetCategories(true);
-            List<Category> categoryList = categoryListResponse.Value.Categories;
-
-            return await DisplaySounds(categoryList, categoryName);
+            return categoryListResponse.Value.Categories;
         }
 
         private async Task<List<int>> DisplaySounds(List<Category> categoryList, string categoryName)
@@ -106,17 +106,45 @@ The bot will then ask you to play a sound by entering the corresponding number."
 
         private async Task PlayUserSelectedSound(List<int> soundIndexes)
         {
-            await ReplyAsync("What sound would you like to play? Please answer with a number.");
-            var userSelectResponse = await NextMessageAsync();//( new TimeSpan(0, 0, 10));
+            await ReplyAsync("What sound would you like to play? Please answer with a number or 'cancel'.");
+            var userSelectResponse = await NextMessageAsync(true, true, new TimeSpan(0, 0, 20));
 
+            // if user responds in time
             if (userSelectResponse != null)
             {
-                await ReplyAsync($"You entered: {userSelectResponse.Content}");
-
-                int userSelectNumber = int.Parse(userSelectResponse.Content);
-
-                await _soundpad.PlaySound(soundIndexes[userSelectNumber - 1]);
+                // if response is not a number
+                if (!(int.TryParse(userSelectResponse.Content, out int userSelectNumber)))
+                {
+                    // if cancel then don't play sound
+                    if (userSelectResponse.Content == "cancel" || userSelectResponse.Content == "CANCEL" || userSelectResponse.Content == "Cancel")
+                    {
+                        await ReplyAsync("Request cancelled.");
+                    }
+                    // if not cancel, request another response
+                    else
+                    {
+                        await ReplyAsync("Your response was invalid. Please answer with a number.");
+                        await PlayUserSelectedSound(soundIndexes);
+                    }
+                }
+                // if response is a number
+                else
+                {
+                    // if number is valid option on list of sounds
+                    if (userSelectNumber >= 1 && userSelectNumber <= soundIndexes.Count)
+                    {
+                        await ReplyAsync($"You entered: {userSelectNumber}");
+                        await _soundpad.PlaySound(soundIndexes[userSelectNumber - 1]);
+                    }
+                    // if not valid number, request another response
+                    else
+                    {
+                        await ReplyAsync("Your response was invalid. Please answer a number shown on the list.");
+                        await PlayUserSelectedSound(soundIndexes);
+                    }
+                }
             }
+            // if user doesn't respond in time
             else
             {
                 await ReplyAsync("You did not reply before the timeout.");
