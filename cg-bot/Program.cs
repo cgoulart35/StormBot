@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using Discord.Addons.Interactive;
 using cg_bot.Services;
 
 namespace cg_bot
@@ -13,6 +14,7 @@ namespace cg_bot
     { 
         private DiscordSocketClient _client;
         private CommandService _commandService;
+        private InteractiveService _interactiveService;
         private CommandHandler _commandHandler;
         private SoundpadService _soundpadService;
         private IServiceProvider _services;
@@ -81,12 +83,14 @@ namespace cg_bot
             _services = new ServiceCollection()
                .AddSingleton<DiscordSocketClient>()
                .AddSingleton<CommandService>()
+               .AddSingleton<InteractiveService>()
                .AddSingleton<CommandHandler>()
                .AddSingleton<SoundpadService>()
                .BuildServiceProvider();
 
             _client = _services.GetRequiredService<DiscordSocketClient>();
             _commandService = _services.GetRequiredService<CommandService>();
+            _interactiveService = _services.GetRequiredService<InteractiveService>();
             _commandHandler = _services.GetRequiredService<CommandHandler>();
             _soundpadService = _services.GetRequiredService<SoundpadService>();
         }

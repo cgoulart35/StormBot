@@ -50,7 +50,7 @@ namespace cg_bot.Services
             }
         }
 
-        private void SoundpadOnStatusChangedAsync(object sender, EventArgs e)
+        private async void SoundpadOnStatusChangedAsync(object sender, EventArgs e)
         {
             if (_soundpad == null)
             {
@@ -60,14 +60,14 @@ namespace cg_bot.Services
             {
                 string message = "SOUNDBOARD CONNECTED.";
                 Console.WriteLine(message);
-                _soundboardNotificationChannel.SendMessageAsync("_**[    " + message + "    ]**_");
+                await _soundboardNotificationChannel.SendMessageAsync("_**[    " + message + "    ]**_");
                 displayedConnectingMessage = false;
             }
             else if (_soundpad.ConnectionStatus == ConnectionStatus.Disconnected && isRunning)
             {
                 string message = "SOUNDBOARD DISCONNECTED.";
                 Console.WriteLine(message);
-                _soundboardNotificationChannel.SendMessageAsync("_**[    " + message + "    ]**_");
+                await _soundboardNotificationChannel.SendMessageAsync("_**[    " + message + "    ]**_");
                 displayedConnectingMessage = false;
             }
             else if (_soundpad.ConnectionStatus == ConnectionStatus.Connecting && isRunning)
