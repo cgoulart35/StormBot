@@ -27,7 +27,10 @@ namespace cg_bot
 
         public async Task MainAsync()
         {
+            // get the discord bot token and soundboard notification channel ID from app.config
             ConfigureVariables();
+
+            // add singleton services
             ConfigureServices();
 
             _client.Log += Log;
@@ -67,10 +70,12 @@ namespace cg_bot
                     throw new Exception("App.config variable needs to be configured: SoundboardNotificationChannelID");
                 }
             }
-            catch(Exception error)
+
+            // if the user has not configured the discord bot token and soundboard notification channel ID from app.config, show error for 10 seconds
+            catch (Exception error)
             {
                 Console.WriteLine(error);
-                System.Threading.Thread.Sleep(5000);
+                System.Threading.Thread.Sleep(10000);
                 Environment.Exit(1);
             }
 
