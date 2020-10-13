@@ -19,8 +19,10 @@ namespace cg_bot
         private SoundpadService _soundpadService;
         private IServiceProvider _services;
 
-        public static string DiscordToken;
+        private static string DiscordToken;
         public static ulong SoundboardNotificationChannelID;
+
+        private static bool isReady = false;
 
         public static void Main(string[] args)
             => new Program().MainAsync().GetAwaiter().GetResult();
@@ -36,12 +38,17 @@ namespace cg_bot
             _client.Log += Log;
             _commandService.Log += Log;
 
-            _client.Ready += _soundpadService.StartService;
+            // change boolean when ready
+            _client.Ready += SetAsReady;
 
             await _client.LoginAsync(TokenType.Bot, DiscordToken);
             await _client.StartAsync();
             
             await _commandHandler.InitializeAsync();
+
+            // when ready, start the soundpad service
+            while (!isReady) { }
+            await _soundpadService.StartService();
 
             // block this task until the program is closed.
             await Task.Delay(-1);
@@ -53,7 +60,12 @@ namespace cg_bot
             return Task.CompletedTask;
         }
 
-        private void ConfigureVariables()
+		private async Task SetAsReady()
+		{
+			isReady = true;
+		}
+
+		private void ConfigureVariables()
         {
             try
             {

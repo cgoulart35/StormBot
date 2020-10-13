@@ -58,25 +58,27 @@ namespace cg_bot.Services
             }
             else if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
             {
+                displayedConnectingMessage = false;
+                isRunning = true;
                 string message = "SOUNDBOARD CONNECTED.";
                 Console.WriteLine(message);
                 await _soundboardNotificationChannel.SendMessageAsync("_**[    " + message + "    ]**_");
-                displayedConnectingMessage = false;
             }
             else if (_soundpad.ConnectionStatus == ConnectionStatus.Disconnected && isRunning)
             {
+                displayedConnectingMessage = false;
                 string message = "SOUNDBOARD DISCONNECTED.";
                 Console.WriteLine(message);
                 await _soundboardNotificationChannel.SendMessageAsync("_**[    " + message + "    ]**_");
-                displayedConnectingMessage = false;
             }
             else if (_soundpad.ConnectionStatus == ConnectionStatus.Connecting && isRunning)
             {
                 if (!displayedConnectingMessage)
                 {
+                    displayedConnectingMessage = true;
+                    isRunning = false;
                     string message = "Trying to connect to in-game soundboard...";
                     Console.WriteLine(message);
-                    displayedConnectingMessage = true;
                 }
             }
         }

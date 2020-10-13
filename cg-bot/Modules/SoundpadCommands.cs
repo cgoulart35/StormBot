@@ -11,7 +11,7 @@ using SoundpadConnector.XML;
 
 namespace cg_bot.Modules
 {
-	public class SoundpadCommands : InteractiveBase<SocketCommandContext>
+    public class SoundpadCommands : InteractiveBase<SocketCommandContext>
     {
         private readonly SoundpadService _soundpadService;
 
@@ -25,7 +25,7 @@ namespace cg_bot.Modules
         }
 
         [Command("help")]
-        public async Task TestCommand()
+        public async Task HelpCommand()
         {
             string output =
 @"Type '~help' to display information on all commands.
