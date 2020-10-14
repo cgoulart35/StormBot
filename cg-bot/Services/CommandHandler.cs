@@ -41,7 +41,7 @@ namespace cg_bot.Services
             if (message.Author.IsBot) return;
 
             int argPos = 0;
-            if (message.HasStringPrefix("~", ref argPos))
+            if (message.HasStringPrefix(Program.Prefix, ref argPos))
             {
                 // execute command if one is found that matches
                 await _commandService.ExecuteAsync(context, argPos, _services);

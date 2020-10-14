@@ -10,11 +10,10 @@ namespace cg_bot.Services
     class SoundpadService
     {
         private readonly DiscordSocketClient _client;
-        private readonly IServiceProvider _services;
-
-        IMessageChannel _soundboardNotificationChannel;
 
         public Soundpad _soundpad;
+
+        public IMessageChannel _soundboardNotificationChannel;
 
         private bool isRunning;
         private bool displayedConnectingMessage;
@@ -22,7 +21,6 @@ namespace cg_bot.Services
         public SoundpadService(IServiceProvider services)
         {
             _client = services.GetRequiredService<DiscordSocketClient>();
-            _services = services;
         }
 
         public async Task StartService()

@@ -7,6 +7,7 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Discord.Addons.Interactive;
 using cg_bot.Services;
+using System.Net.NetworkInformation;
 
 namespace cg_bot
 {
@@ -21,6 +22,9 @@ namespace cg_bot
 
         private static string DiscordToken;
         public static ulong SoundboardNotificationChannelID;
+        public static string CategoryFoldersLocation;
+
+        public static string Prefix = ".";
 
         private static bool isReady = false;
 
@@ -69,17 +73,22 @@ namespace cg_bot
         {
             try
             {
-                if (ConfigurationManager.AppSettings["DiscordToken"] == "" && ConfigurationManager.AppSettings["SoundboardNotificationChannelID"] == "")
-                {
-                    throw new Exception("App.config variables need to be configured: DiscordToken, SoundboardNotificationChannelID");
-                }
+                string variables = "";
                 if (ConfigurationManager.AppSettings["DiscordToken"] == "")
                 {
-                    throw new Exception("App.config variable needs to be configured: DiscordToken");
+                    variables += "DiscordToken ";
                 }
                 if (ConfigurationManager.AppSettings["SoundboardNotificationChannelID"] == "")
                 {
-                    throw new Exception("App.config variable needs to be configured: SoundboardNotificationChannelID");
+                    variables += "SoundboardNotificationChannelID ";
+                }
+                if (ConfigurationManager.AppSettings["CategoryFoldersLocation"] == "")
+                {
+                    variables += "CategoryFoldersLocation ";
+                }
+                if (variables != "")
+                {
+                    throw new Exception("The following App.config variable(s) need to be configured: " + variables);
                 }
             }
 
@@ -93,6 +102,7 @@ namespace cg_bot
 
             DiscordToken = ConfigurationManager.AppSettings["DiscordToken"];
             SoundboardNotificationChannelID = ulong.Parse(ConfigurationManager.AppSettings["SoundboardNotificationChannelID"]);
+            CategoryFoldersLocation = ConfigurationManager.AppSettings["CategoryFoldersLocation"];
         }
 
         private void ConfigureServices()
