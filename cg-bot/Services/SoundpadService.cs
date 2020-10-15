@@ -34,13 +34,15 @@ namespace cg_bot.Services
             _soundpad.AutoReconnect = true;
             _soundpad.StatusChanged += SoundpadOnStatusChangedAsync;
 
+            string logStamp = GetLogStamp();
+
             if (isRunning)
             {
-                Console.WriteLine("Soundpad service already running.");
+                Console.WriteLine(logStamp + "Service already running.");
             }
             else
             {
-                Console.WriteLine("Starting Soundpad service.");
+                Console.WriteLine(logStamp + "Starting service.");
 
                 isRunning = true;
 
@@ -50,6 +52,8 @@ namespace cg_bot.Services
 
         private async void SoundpadOnStatusChangedAsync(object sender, EventArgs e)
         {
+            string logStamp = GetLogStamp();
+
             if (_soundpad == null)
             {
                 return;
@@ -59,14 +63,14 @@ namespace cg_bot.Services
                 displayedConnectingMessage = false;
                 isRunning = true;
                 string message = "SOUNDBOARD CONNECTED.";
-                Console.WriteLine(message);
+                Console.WriteLine(logStamp + message);
                 await _soundboardNotificationChannel.SendMessageAsync("_**[    " + message + "    ]**_");
             }
             else if (_soundpad.ConnectionStatus == ConnectionStatus.Disconnected && isRunning)
             {
                 displayedConnectingMessage = false;
                 string message = "SOUNDBOARD DISCONNECTED.";
-                Console.WriteLine(message);
+                Console.WriteLine(logStamp + message);
                 await _soundboardNotificationChannel.SendMessageAsync("_**[    " + message + "    ]**_");
             }
             else if (_soundpad.ConnectionStatus == ConnectionStatus.Connecting && isRunning)
@@ -76,9 +80,14 @@ namespace cg_bot.Services
                     displayedConnectingMessage = true;
                     isRunning = false;
                     string message = "Listening for the soundboard application...";
-                    Console.WriteLine(message);
+                    Console.WriteLine(logStamp + message);
                 }
             }
+        }
+
+        private string GetLogStamp()
+        {
+            return DateTime.Now.ToString("HH:mm:ss ") + "Soundpad Service     ";
         }
     }
 }

@@ -33,8 +33,6 @@ namespace cg_bot.Modules
             _categoryFoldersLocation = Program.CategoryFoldersLocation;
         }
 
-
-
 	    #region COMMAND FUNCTIONS
         [Command("add", RunMode = RunMode.Async)]
         public async Task AddCommand(params string[] args)
@@ -99,34 +97,6 @@ namespace cg_bot.Modules
                 await ReplyAsync("The soundboard is not currently connected.");
         }
 
-        [Command("help")]
-        public async Task HelpCommand()
-        {
-            string output = string.Format(
-@"Type '{0}add [YouTube video URL] [sound name]' to add a YouTube to MP3 sound to the soundboard in the specified category.
-The bot will then ask you to select a category to add the sound to.
-
-Type '{0}categories' to display all categories.
-
-Type '{0}delete [sound number]' to delete the sound with the corresponding number from the soundboard.
-
-Type '{0}help' to display information on all commands.
-
-Type '{0}pause' to pause/resume the sound currently playing.
-
-Type '{0}play [sound number]' to play the sound with the corresponding number.
-
-Type '{0}sounds' to display all categories and their playable sounds.
-The bot will then ask you to play a sound by entering the corresponding number.
-                
-Type '{0}sounds [category name]' to display all playable sounds in the specified category.
-The bot will then ask you to play a sound by entering the corresponding number.
-
-Type '{0}stop' to stop the sound currently playing.", Program.Prefix);
-
-            await ReplyAsync(output);
-        }
-
         [Command("pause")]
         public async Task PauseCommand()
         {
@@ -185,8 +155,6 @@ Type '{0}stop' to stop the sound currently playing.", Program.Prefix);
                 await ReplyAsync("The soundboard is not currently connected.");
         }
         #endregion
-
-
 
         #region COMMAND HELPER FUNCTIONS
 	    private void SaveMP3(string source, string videoURL, string soundName)
@@ -313,7 +281,7 @@ Type '{0}stop' to stop the sound currently playing.", Program.Prefix);
             if (!(int.TryParse(requestedNumber, out int validatedNumber)))
             {
                 // if cancel then don't play sound
-                if (requestedNumber == "cancel" || requestedNumber == "CANCEL" || requestedNumber == "Cancel")
+                if (requestedNumber.ToLower() == "cancel")
                 {
                     await ReplyAsync("Request cancelled.");
                 }
@@ -395,7 +363,7 @@ Type '{0}stop' to stop the sound currently playing.", Program.Prefix);
                 if (!(int.TryParse(requestedNumber, out int validatedNumber)))
                 {
                     // if cancel then don't return category index
-                    if (requestedNumber == "cancel" || requestedNumber == "CANCEL" || requestedNumber == "Cancel")
+                    if (requestedNumber.ToLower() == "cancel")
                     {
                         await ReplyAsync("Request cancelled.");
                         return -1;
