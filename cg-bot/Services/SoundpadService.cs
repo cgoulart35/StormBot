@@ -75,7 +75,7 @@ namespace cg_bot.Services
                 {
                     displayedConnectingMessage = true;
                     isRunning = false;
-                    string message = "Trying to connect to in-game soundboard...";
+                    string message = "Listening for the soundboard application...";
                     Console.WriteLine(message);
                 }
             }

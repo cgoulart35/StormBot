@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using cg_bot.Services;
+using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using MediaToolkit.Model;
@@ -34,8 +35,8 @@ namespace cg_bot.Modules
 
 
 
-		#region COMMAND FUNCTIONS
-		[Command("add", RunMode = RunMode.Async)]
+	    #region COMMAND FUNCTIONS
+        [Command("add", RunMode = RunMode.Async)]
         public async Task AddCommand(params string[] args)
         {
             if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
@@ -50,37 +51,15 @@ namespace cg_bot.Modules
                     string soundName = GetSingleArg(soundNameArgs);
 
                     // display all category options to user
-                    List<int> categoryIndexes = await LoadSounds(true, null, true);
+                    Tuple<List<int>, bool> loadedSounds = await LoadSounds(true, null, true);
+                    List<int> categoryIndexes = loadedSounds.Item1;
 
                     // ask user what category to add to
                     int categoryIndex = await AskUserForCategory(categoryIndexes);
 
                     if (categoryIndex != -1)
                     {
-                        CategoryResponse categoryResponse = await _soundpad.GetCategory(categoryIndex + 1);
-                        string categoryName = categoryResponse.Value.Name;
-
-                        string source = _categoryFoldersLocation + categoryName + @"\";
-
-                        // try create an MP3 file of the YouTube video with the specified name and location
-                        try
-                        {
-                            SaveMP3(source, videoURL, soundName);
-
-                            // add downloaded sound to soundpad
-                            List<int> soundIndexes = await LoadSounds(false, null, false);
-                            int newSoundIndex = soundIndexes[soundIndexes.Count - 1] + 1;
-                            await _soundpad.AddSound(source + $"{soundName}.mp3", newSoundIndex, categoryIndex + 1);
-
-                            // print out category that the sound was added to
-                            await ReplyAsync("Sound added: " + soundName);
-                            await LoadSounds(true, categoryName, false);
-                        }
-                        // video does not exist
-                        catch (ArgumentException)
-                        {
-                            await ReplyAsync("Invalid YouTube video URL.");
-                        }
+                        await AddNewSound(categoryIndex, videoURL, soundName);
                     }
                 }
                 else
@@ -103,6 +82,23 @@ namespace cg_bot.Modules
                 await ReplyAsync("The soundboard is not currently connected.");
         }
 
+        [RequireUserPermission(GuildPermission.Administrator)]
+        [Command("delete", RunMode = RunMode.Async)]
+        public async Task DeleteCommand(params string[] args) 
+        {
+            if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
+            {
+                string soundNumber = GetSingleArg(args);
+
+                Tuple<List<int>, bool> loadedSounds = await LoadSounds(false);
+                List<int> soundIndexes = loadedSounds.Item1;
+
+                await PlayOrDeleteSoundNumber(soundIndexes, soundNumber, false, true);
+            }
+            else
+                await ReplyAsync("The soundboard is not currently connected.");
+        }
+
         [Command("help")]
         public async Task HelpCommand()
         {
@@ -110,21 +106,23 @@ namespace cg_bot.Modules
 @"Type '{0}add [YouTube video URL] [sound name]' to add a YouTube to MP3 sound to the soundboard in the specified category.
 The bot will then ask you to select a category to add the sound to.
 
-Type '{1}categories' to display all categories.
+Type '{0}categories' to display all categories.
 
-Type '{2}help' to display information on all commands.
+Type '{0}delete [sound number]' to delete the sound with the corresponding number from the soundboard.
 
-Type '{3}pause' to pause/resume the sound currently playing.
+Type '{0}help' to display information on all commands.
 
-Type '{4}play [sound number]' to play the sound with the corresponding number.
+Type '{0}pause' to pause/resume the sound currently playing.
 
-Type '{5}sounds' to display all categories and their playable sounds.
+Type '{0}play [sound number]' to play the sound with the corresponding number.
+
+Type '{0}sounds' to display all categories and their playable sounds.
 The bot will then ask you to play a sound by entering the corresponding number.
                 
-Type '{6}sounds [category name]' to display all playable sounds in the specified category.
+Type '{0}sounds [category name]' to display all playable sounds in the specified category.
 The bot will then ask you to play a sound by entering the corresponding number.
 
-Type '{7}stop' to stop the sound currently playing.", Program.Prefix, Program.Prefix, Program.Prefix, Program.Prefix, Program.Prefix, Program.Prefix, Program.Prefix, Program.Prefix);
+Type '{0}stop' to stop the sound currently playing.", Program.Prefix);
 
             await ReplyAsync(output);
         }
@@ -147,9 +145,10 @@ Type '{7}stop' to stop the sound currently playing.", Program.Prefix, Program.Pr
             {
                 string soundNumber = GetSingleArg(args);
 
-                List<int> soundIndexes = await LoadSounds(false);
+                Tuple<List<int>, bool> loadedSounds = await LoadSounds(false);
+                List<int> soundIndexes = loadedSounds.Item1;
 
-                await PlaySoundNumber(soundIndexes, soundNumber);
+                await PlayOrDeleteSoundNumber(soundIndexes, soundNumber);
             }
             else
                 await ReplyAsync("The soundboard is not currently connected.");
@@ -162,12 +161,14 @@ Type '{7}stop' to stop the sound currently playing.", Program.Prefix, Program.Pr
             {
                 string categoryName = GetSingleArg(args);
 
-                List<int> soundIndexes = await LoadSounds(true, categoryName);
+                Tuple<List<int>, bool> loadedSounds = await LoadSounds(true, categoryName);
+                List<int> soundIndexes = loadedSounds.Item1;
+                bool categoryExists = loadedSounds.Item2;
 
-                if (soundIndexes.Count == 0 && categoryName != null)
+                if (categoryName != null && !categoryExists)
                     await ReplyAsync("The category name '" + categoryName + "' does not exist.");
                 else
-                    await PlayUserSelectedSound(soundIndexes);
+                    await PlayOrDeleteUserSelectedSound(soundIndexes);
             }
             else
                 await ReplyAsync("The soundboard is not currently connected.");
@@ -183,39 +184,42 @@ Type '{7}stop' to stop the sound currently playing.", Program.Prefix, Program.Pr
             else
                 await ReplyAsync("The soundboard is not currently connected.");
         }
-		#endregion
+        #endregion
 
 
 
-		#region COMMAND HELPER FUNCTIONS
-		private void SaveMP3(string source, string videoURL, string soundName)
-		{
-			var youtube = YouTube.Default;
-			var video = youtube.GetVideo(videoURL);
-			File.WriteAllBytes(source + video.FullName, video.GetBytes());
+        #region COMMAND HELPER FUNCTIONS
+	    private void SaveMP3(string source, string videoURL, string soundName)
+	    {
+		    var youtube = YouTube.Default;
+		    var video = youtube.GetVideo(videoURL);
+		    File.WriteAllBytes(source + video.FullName, video.GetBytes());
 
-			var inputFile = new MediaFile { Filename = source + video.FullName };
-			var outputFile = new MediaFile { Filename = source + $"{soundName}.mp3" };
+		    var inputFile = new MediaFile { Filename = source + video.FullName };
+		    var outputFile = new MediaFile { Filename = source + $"{soundName}.mp3" };
 
-			using (var engine = new Engine())
-			{
-				engine.GetMetadata(inputFile);
-				engine.Convert(inputFile, outputFile);
-			}
+		    using (var engine = new Engine())
+		    {
+			    engine.GetMetadata(inputFile);
+			    engine.Convert(inputFile, outputFile);
+		    }
 
-			// after creating the MP3, delete the created MP4 video
-			File.Delete(Path.Combine(source, video.FullName));
-		}
+		    // after creating the MP3, delete the created MP4 video
+		    File.Delete(Path.Combine(source, video.FullName));
+	    }
 
-		private string GetSingleArg(string[] args)
+        private string GetSingleArg(string[] args)
         {
             return args.Length != 0 ? string.Join(" ", args) : null;
         }
 
-        private async Task<List<int>> LoadSounds(bool displayOutput, string categoryName = null, bool categoriesMode = false)
+        private async Task<Tuple<List<int>, bool>> LoadSounds(bool displayOutput, string categoryName = null, bool categoriesMode = false)
         {
             CategoryListResponse categoryListResponse = await _soundpad.GetCategories(true);
             List<Category> categoryList = categoryListResponse.Value.Categories;
+
+            // keep track of whether of not it is a valid name; only important when category name provided
+            bool categoryExists = false;
 
             List<string> output = new List<string>();
             output.Add("");
@@ -228,6 +232,9 @@ Type '{7}stop' to stop the sound currently playing.", Program.Prefix, Program.Pr
             {
                 if (category.Name != "All sounds")
                 {
+                    if (category.Name == categoryName)
+                        categoryExists = true;
+
                     if (categoryName == null || category.Name == categoryName)
                         output = ValidateOutputLimit(output, "\n**" + displayedCategoryNumber + ".) " + category.Name + "**");
 
@@ -239,6 +246,7 @@ Type '{7}stop' to stop the sound currently playing.", Program.Prefix, Program.Pr
                         {
                             if (categoryName == null || category.Name == categoryName)
                                 output = ValidateOutputLimit(output, "\n" + "     " + displayedSoundNumber + ".) " + sound.Title);
+
                             displayedSoundNumber++;
                             indexes.Add(sound.Index);
                         }
@@ -260,7 +268,7 @@ Type '{7}stop' to stop the sound currently playing.", Program.Prefix, Program.Pr
                 }
             }
 
-            return indexes;
+            return Tuple.Create(indexes, categoryExists);
         }
 
         private List<string> ValidateOutputLimit(List<string> output, string messageToAdd)
@@ -278,15 +286,19 @@ Type '{7}stop' to stop the sound currently playing.", Program.Prefix, Program.Pr
             }
         }
 
-        private async Task PlayUserSelectedSound(List<int> soundIndexes)
+        private async Task PlayOrDeleteUserSelectedSound(List<int> soundIndexes, bool deleteMode = false)
         {
-            await ReplyAsync("What sound would you like to play? Please answer with a number or 'cancel'.");
+            string verb = "play";
+            if (deleteMode)
+                verb = "delete";
+
+            await ReplyAsync($"What sound would you like to {verb}? Please answer with a number or 'cancel'.");
             var userSelectResponse = await NextMessageAsync(true, true, new TimeSpan(0, 1, 0));
 
             // if user responds in time
             if (userSelectResponse != null)
             {
-                await PlaySoundNumber(soundIndexes, userSelectResponse.Content, true);
+                await PlayOrDeleteSoundNumber(soundIndexes, userSelectResponse.Content, true, deleteMode);
             }
             // if user doesn't respond in time
             else
@@ -295,7 +307,7 @@ Type '{7}stop' to stop the sound currently playing.", Program.Prefix, Program.Pr
             }
         }
 
-        private async Task PlaySoundNumber(List<int> soundIndexes, string requestedNumber, bool waitingForAnswer = false)
+        private async Task PlayOrDeleteSoundNumber(List<int> soundIndexes, string requestedNumber, bool waitingForAnswer = false, bool deleteMode = false)
         {
             // if response is not a number
             if (!(int.TryParse(requestedNumber, out int validatedNumber)))
@@ -313,7 +325,7 @@ Type '{7}stop' to stop the sound currently playing.", Program.Prefix, Program.Pr
                 else
                 {
                     await ReplyAsync("Your response was invalid. Please answer with a number.");
-                    await PlayUserSelectedSound(soundIndexes);
+                    await PlayOrDeleteUserSelectedSound(soundIndexes, deleteMode);
                 }
             }
             // if response is a number
@@ -323,13 +335,48 @@ Type '{7}stop' to stop the sound currently playing.", Program.Prefix, Program.Pr
                 if (validatedNumber >= 1 && validatedNumber <= soundIndexes.Count)
                 {
                     await ReplyAsync($"You entered: {validatedNumber}");
-                    await _soundpad.PlaySound(soundIndexes[validatedNumber - 1]);
+
+                    int soundIndex = soundIndexes[validatedNumber - 1];
+
+                    if (deleteMode)
+                    {
+                        string soundName = "";
+
+                        // get the sound's name to delete
+                        CategoryListResponse categoryListResponse = await _soundpad.GetCategories(true);
+                        List<Category> categoryList = categoryListResponse.Value.Categories;
+                        foreach (Category category in categoryList)
+                        {
+                            List<Sound> soundList = category.Sounds;
+                            foreach (Sound sound in soundList)
+                            {
+                                if (sound.Index == soundIndex)
+                                {
+                                    soundName = sound.Title;
+                                    break;
+                                }
+                            }
+                        }
+
+                        // select desired sound
+                        await _soundpad.SelectIndex(soundIndex);
+
+                        // wait for sound to be selected before removing selected sound
+                        await Task.Delay(2000);
+
+                        // delete selected sound 
+                        await _soundpad.RemoveSelectedEntries(true);
+
+                        await ReplyAsync("Sound deleted: " + soundName);
+                    }
+                    else
+                        await _soundpad.PlaySound(soundIndex);
                 }
                 // if not valid number, request another response
                 else
                 {
                     await ReplyAsync("Your response was invalid. Please answer a number shown on the list.");
-                    await PlayUserSelectedSound(soundIndexes);
+                    await PlayOrDeleteUserSelectedSound(soundIndexes, deleteMode);
                 }
             }
         }
@@ -387,6 +434,38 @@ Type '{7}stop' to stop the sound currently playing.", Program.Prefix, Program.Pr
             {
                 await ReplyAsync("You did not reply before the timeout.");
                 return -1;
+            }
+        }
+
+        private async Task AddNewSound(int categoryIndex, string videoURL, string soundName)
+        {
+            CategoryResponse categoryResponse = await _soundpad.GetCategory(categoryIndex + 1);
+            string categoryName = categoryResponse.Value.Name;
+
+            string source = _categoryFoldersLocation + categoryName + @"\";
+
+            // try create an MP3 file of the YouTube video with the specified name and location
+            try
+            {
+                SaveMP3(source, videoURL, soundName);
+
+                // add downloaded sound to soundpad
+                Tuple<List<int>, bool> loadedSounds = await LoadSounds(false, null, false);
+                List<int> soundIndexes = loadedSounds.Item1;
+                int newSoundIndex = soundIndexes[soundIndexes.Count - 1] + 1;
+                await _soundpad.AddSound(source + $"{soundName}.mp3", newSoundIndex, categoryIndex + 1);
+
+                // wait for sound to be added before printing category
+                await Task.Delay(2000);
+
+                // print out category that the sound was added to
+                await LoadSounds(true, categoryName, false);
+                await ReplyAsync("Sound added: " + soundName);
+            }
+            // video does not exist
+            catch (ArgumentException)
+            {
+                await ReplyAsync("Invalid YouTube video URL.");
             }
         }
         #endregion

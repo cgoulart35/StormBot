@@ -7,11 +7,10 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Discord.Addons.Interactive;
 using cg_bot.Services;
-using System.Net.NetworkInformation;
 
 namespace cg_bot
 {
-    public class Program
+	public class Program
     { 
         private DiscordSocketClient _client;
         private CommandService _commandService;
