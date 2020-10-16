@@ -12,6 +12,8 @@ using SoundpadConnector;
 using SoundpadConnector.Response;
 using SoundpadConnector.XML;
 using MediaToolkit;
+using Discord.WebSocket;
+using System.Diagnostics;
 
 namespace cg_bot.Modules
 {
@@ -21,15 +23,14 @@ namespace cg_bot.Modules
 
         public Soundpad _soundpad;
 
-        private string _categoryFoldersLocation;
+        private string _categoryFoldersLocation = Program.CategoryFoldersLocation;
+
+        private static Dictionary<string, int> _adminApprovalRequests = new Dictionary<string, int>();
 
         public SoundpadCommands(IServiceProvider services)
         {
             _soundpadService = services.GetRequiredService<SoundpadService>();
-
             _soundpad = _soundpadService._soundpad;
-
-            _categoryFoldersLocation = Program.CategoryFoldersLocation;
         }
 
         #region COMMAND FUNCTIONS
@@ -51,17 +52,53 @@ namespace cg_bot.Modules
                     Tuple<List<int>, bool> loadedSounds = await LoadSounds(true, null, true);
                     List<int> categoryIndexes = loadedSounds.Item1;
 
-                    // ask user what category to add to
-                    int categoryIndex = await AskUserForCategory(categoryIndexes);
+                    var user = Context.User as SocketGuildUser;
 
+                    // ask user what category to add to
+                    int categoryIndex = await AskUserForCategory(categoryIndexes, user.Username);
+
+                    // get instance of the YouTube video
+                    YouTubeVideo video = await GetYouTubeVideo(videoURL);
+
+                    // unless cancelled, continue adding the sound
                     if (categoryIndex != -1)
                     {
-                        await AddNewSound(categoryIndex, videoURL, soundName);
+                        // unless video doesn't exist, get admin approval 
+                        if (video != null)
+                        {
+                            // add sound if admin or if an admin approves
+                            if (user.GuildPermissions.Administrator || await AskAdministratorForApproval(user.Username))
+                            {
+                                await AddNewSound(categoryIndex, video, soundName);
+                            }
+                        }
                     }
                 }
                 else
                 {
                     await ReplyAsync("Please enter all required arguments: [YouTube video URL] [sound name]");
+                }
+            }
+            else
+                await ReplyAsync("The soundboard is not currently connected.");
+        }
+
+        // TODO: how handled if executed by a non-administrator?
+        [RequireUserPermission(GuildPermission.Administrator)]
+        [Command("approve", RunMode = RunMode.Async)]
+        public async Task ApproveCommand(SocketGuildUser user)
+        {
+            if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
+            {
+                string username = user.Username;
+                if (_adminApprovalRequests.ContainsKey(username))
+                {
+                    await ReplyAsync($"{username}'s request has been approved.");
+                    _adminApprovalRequests[username] = 1;
+                }
+                else
+                {
+                    await ReplyAsync($"{username} is not awaiting an approval.");
                 }
             }
             else
@@ -79,6 +116,7 @@ namespace cg_bot.Modules
                 await ReplyAsync("The soundboard is not currently connected.");
         }
 
+        // TODO: how handled if executed by a non-administrator?
         [RequireUserPermission(GuildPermission.Administrator)]
         [Command("delete", RunMode = RunMode.Async)]
         public async Task DeleteCommand(params string[] args) 
@@ -91,6 +129,28 @@ namespace cg_bot.Modules
                 List<int> soundIndexes = loadedSounds.Item1;
 
                 await PlayOrDeleteSoundNumber(soundIndexes, soundNumber, false, true);
+            }
+            else
+                await ReplyAsync("The soundboard is not currently connected.");
+        }
+
+        // TODO: how handled if executed by a non-administrator?
+        [RequireUserPermission(GuildPermission.Administrator)]
+        [Command("deny", RunMode = RunMode.Async)]
+        public async Task DenyCommand(SocketGuildUser user)
+        {
+            if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
+            {
+                string username = user.Username;
+                if (_adminApprovalRequests.ContainsKey(username))
+                {
+                    await ReplyAsync($"{username}'s request has been denied.");
+                    _adminApprovalRequests[username] = 0;
+                }
+                else
+                {
+                    await ReplyAsync($"{username} is not awaiting an approval.");
+                }
             }
             else
                 await ReplyAsync("The soundboard is not currently connected.");
@@ -156,25 +216,6 @@ namespace cg_bot.Modules
         #endregion
 
         #region COMMAND HELPER FUNCTIONS
-        private void SaveMP3(string source, string videoURL, string soundName)
-	    {
-		    var youtube = YouTube.Default;
-		    var video = youtube.GetVideo(videoURL);
-		    File.WriteAllBytes(source + video.FullName, video.GetBytes());
-
-		    var inputFile = new MediaFile { Filename = source + video.FullName };
-		    var outputFile = new MediaFile { Filename = source + $"{soundName}.mp3" };
-
-		    using (var engine = new Engine())
-		    {
-			    engine.GetMetadata(inputFile);
-			    engine.Convert(inputFile, outputFile);
-		    }
-
-		    // after creating the MP3, delete the created MP4 video
-		    File.Delete(Path.Combine(source, video.FullName));
-	    }
-
         private async Task<Tuple<List<int>, bool>> LoadSounds(bool displayOutput, string categoryName = null, bool categoriesMode = false)
         {
             CategoryListResponse categoryListResponse = await _soundpad.GetCategories(true);
@@ -271,6 +312,8 @@ namespace cg_bot.Modules
 
         private async Task PlayOrDeleteSoundNumber(List<int> soundIndexes, string requestedNumber, bool waitingForAnswer = false, bool deleteMode = false)
         {
+            string username = Context.User.Username;
+
             // if response is not a number
             if (!(int.TryParse(requestedNumber, out int validatedNumber)))
             {
@@ -291,7 +334,7 @@ namespace cg_bot.Modules
                 // if not cancel, request another response
                 else
                 {
-                    await ReplyAsync("Your response was invalid. Please answer with a number.");
+                    await ReplyAsync($"{username}, your response was invalid. Please answer with a number.");
                     await PlayOrDeleteUserSelectedSound(soundIndexes, deleteMode);
                 }
             }
@@ -301,7 +344,7 @@ namespace cg_bot.Modules
                 // if number is valid option on list of sounds
                 if (validatedNumber >= 1 && validatedNumber <= soundIndexes.Count)
                 {
-                    await ReplyAsync($"You entered: {validatedNumber}");
+                    await ReplyAsync($"{username} entered: {validatedNumber}");
 
                     int soundIndex = soundIndexes[validatedNumber - 1];
 
@@ -342,13 +385,13 @@ namespace cg_bot.Modules
                 // if not valid number, request another response
                 else
                 {
-                    await ReplyAsync("Your response was invalid. Please answer a number shown on the list.");
+                    await ReplyAsync($"{username}, your response was invalid. Please answer a number shown on the list.");
                     await PlayOrDeleteUserSelectedSound(soundIndexes, deleteMode);
                 }
             }
         }
-        
-        private async Task<int> AskUserForCategory(List<int> categoryIndexes)
+
+        private async Task<int> AskUserForCategory(List<int> categoryIndexes, string username)
         {
             await ReplyAsync("What category would you like to add the sound to? Please answer with a number or 'cancel'.");
             var userSelectResponse = await NextMessageAsync(true, true, new TimeSpan(0, 0, 20));
@@ -375,8 +418,8 @@ namespace cg_bot.Modules
                     // if not cancel, request another response
                     else
                     {
-                        await ReplyAsync("Your response was invalid. Please answer with a number.");
-                        return await AskUserForCategory(categoryIndexes);
+                        await ReplyAsync($"{username}, your response was invalid. Please answer with a number.");
+                        return await AskUserForCategory(categoryIndexes, username);
                     }
                 }
                 // if response is a number
@@ -391,8 +434,8 @@ namespace cg_bot.Modules
                     // if not valid number, request another response
                     else
                     {
-                        await ReplyAsync("Your response was invalid. Please answer a number shown on the list.");
-                        return await AskUserForCategory(categoryIndexes);
+                        await ReplyAsync($"{username}, your response was invalid. Please answer a number shown on the list.");
+                        return await AskUserForCategory(categoryIndexes, username);
                     }
                 }
             }
@@ -404,36 +447,106 @@ namespace cg_bot.Modules
             }
         }
 
-        private async Task AddNewSound(int categoryIndex, string videoURL, string soundName)
+        private async Task<YouTubeVideo> GetYouTubeVideo(string videoURL)
+        {
+            // try create an instance of the YouTube video with the specified url
+            try
+            {
+                YouTube youtube = YouTube.Default;
+                YouTubeVideo video = youtube.GetVideo(videoURL);
+                return video;
+            }
+            // video does not exist
+            catch (ArgumentException)
+            {
+                await ReplyAsync("Invalid YouTube video URL.");
+                return null;
+            }
+        }
+
+        private async Task<bool> AskAdministratorForApproval(string username)
+        {
+            // if user is already awaiting an approval on a request, block an additional request
+            if (_adminApprovalRequests.ContainsKey(username))
+            {
+                await ReplyAsync($"{username}, you are already waiting on a request to be approved.");
+                return false;
+            }
+
+            // add request with requesting user's name and initial approval value of 0
+            _adminApprovalRequests.Add(username, -1);
+
+            await ReplyAsync($"{username}, your request to add to the soundboard is awaiting approval.");
+
+            // create timer to keep track of elapsed time
+            Stopwatch timer = new Stopwatch();
+            timer.Start();
+
+            // wait for an approval value from an admin or timeout
+            while (_adminApprovalRequests[username] == -1 && timer.Elapsed.TotalMinutes < 5) { }
+
+            timer.Stop();
+
+            // request denied
+            if (_adminApprovalRequests[username] == 0)
+            {
+                _adminApprovalRequests.Remove(username);
+                return false;
+            }
+            // request approved
+            else if (_adminApprovalRequests[username] == 1)
+            {
+                _adminApprovalRequests.Remove(username);
+                return true;
+            }
+            // request timed out
+            else
+            {
+                await ReplyAsync($"{username}, your request was not approved before the timeout.");
+                _adminApprovalRequests.Remove(username);
+                return false;
+            }
+        }
+
+        private async Task AddNewSound(int categoryIndex, YouTubeVideo video, string soundName)
         {
             CategoryResponse categoryResponse = await _soundpad.GetCategory(categoryIndex + 1);
             string categoryName = categoryResponse.Value.Name;
 
             string source = _categoryFoldersLocation + categoryName + @"\";
 
-            // try create an MP3 file of the YouTube video with the specified name and location
-            try
+            // downlaod video and convert to MP3
+            SaveMP3(source, video, soundName);
+
+            // add downloaded sound to soundpad
+            Tuple<List<int>, bool> loadedSounds = await LoadSounds(false, null, false);
+            List<int> soundIndexes = loadedSounds.Item1;
+            int newSoundIndex = soundIndexes[soundIndexes.Count - 1] + 1;
+            await _soundpad.AddSound(source + $"{soundName}.mp3", newSoundIndex, categoryIndex + 1);
+
+            // wait for sound to be added before printing category
+            await Task.Delay(2000);
+
+            // print out category that the sound was added to
+            await LoadSounds(true, categoryName, false);
+            await ReplyAsync("Sound added: " + soundName);
+        }
+
+        private void SaveMP3(string source, YouTubeVideo video, string soundName)
+        {
+            File.WriteAllBytes(source + video.FullName, video.GetBytes());
+
+            var inputFile = new MediaFile { Filename = source + video.FullName };
+            var outputFile = new MediaFile { Filename = source + $"{soundName}.mp3" };
+
+            using (var engine = new Engine())
             {
-                SaveMP3(source, videoURL, soundName);
-
-                // add downloaded sound to soundpad
-                Tuple<List<int>, bool> loadedSounds = await LoadSounds(false, null, false);
-                List<int> soundIndexes = loadedSounds.Item1;
-                int newSoundIndex = soundIndexes[soundIndexes.Count - 1] + 1;
-                await _soundpad.AddSound(source + $"{soundName}.mp3", newSoundIndex, categoryIndex + 1);
-
-                // wait for sound to be added before printing category
-                await Task.Delay(2000);
-
-                // print out category that the sound was added to
-                await LoadSounds(true, categoryName, false);
-                await ReplyAsync("Sound added: " + soundName);
+                engine.GetMetadata(inputFile);
+                engine.Convert(inputFile, outputFile);
             }
-            // video does not exist
-            catch (ArgumentException)
-            {
-                await ReplyAsync("Invalid YouTube video URL.");
-            }
+
+            // after creating the MP3, delete the created MP4 video
+            File.Delete(Path.Combine(source, video.FullName));
         }
         #endregion
     }

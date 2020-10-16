@@ -55,9 +55,13 @@ namespace cg_bot.Modules
 '**{0}add [YouTube video URL] [sound name]**' to add a YouTube to MP3 sound to the soundboard in the specified category.
 The bot will then ask you to select a category to add the sound to.
 
+'**{0}approve [user]**' to approve a user's existing request to add to the soundboard if you are an administrator.
+
 '**{0}categories**' to display all categories.
 
-'**{0}delete [sound number]**' to delete the sound with the corresponding number from the soundboard.
+'**{0}delete [sound number]**' to delete the sound with the corresponding number from the soundboard if you are an administrator.
+
+'**{0}deny [user]**' to deny a user's existing request to add to the soundboard if you are an administrator.
 
 '**{0}pause**' to pause/resume the sound currently playing.
 
