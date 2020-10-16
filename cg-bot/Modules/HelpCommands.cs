@@ -1,12 +1,11 @@
 ﻿using System.Threading.Tasks;
-using Discord.Addons.Interactive;
 using Discord.Commands;
 
 namespace cg_bot.Modules
 {
-	public class HelpCommands : InteractiveBase<SocketCommandContext>
+	public class HelpCommands : BaseCommandModule
     {
-        [Command("help")]
+        [Command("help", RunMode = RunMode.Async)]
         public async Task HelpCommand(params string[] args)
         {
             string subject = GetSingleArg(args);
@@ -32,13 +31,12 @@ namespace cg_bot.Modules
             {
                 output = HelpModernWarfareCommands();
             }
+            else
+            {
+                output = "The subject name '" + subject + "' does not exist.";
+            }
 
             await ReplyAsync(output);
-        }
-
-        private string GetSingleArg(string[] args)
-        {
-            return args.Length != 0 ? string.Join(" ", args) : null;
         }
 
         private string HelpHelpCommands()
@@ -47,7 +45,7 @@ namespace cg_bot.Modules
 
 '**{0}help**' to display information on all commands.
 
-'**{0}help** [subject]' to display information on all commands for a specific module.", Program.Prefix);
+'**{0}help** [subject]' to display information on all commands for a specific subject.", Program.Prefix);
         }
 
         private string HelpSoundboardCommands()

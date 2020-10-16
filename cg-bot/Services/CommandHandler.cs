@@ -35,16 +35,20 @@ namespace cg_bot.Services
         private async Task HandleCommandAsync(SocketMessage arg)
         {
             var message = arg as SocketUserMessage;
-            var context = new SocketCommandContext(_client, message);
 
-            // if another bot sent the message, then return
-            if (message.Author.IsBot) return;
-
-            int argPos = 0;
-            if (message.HasStringPrefix(Program.Prefix, ref argPos))
+            if (message != null)
             {
-                // execute command if one is found that matches
-                await _commandService.ExecuteAsync(context, argPos, _services);
+                var context = new SocketCommandContext(_client, message);
+
+                // if another bot sent the message, then return
+                if (message.Author.IsBot) return;
+
+                int argPos = 0;
+                if (message.HasStringPrefix(Program.Prefix, ref argPos))
+                {
+                    // execute command if one is found that matches
+                    await _commandService.ExecuteAsync(context, argPos, _services);
+                }
             }
         }
 
@@ -53,14 +57,21 @@ namespace cg_bot.Services
             // if a command isn't found, log that info to console and exit this method
             if (!command.IsSpecified)
             {
-                System.Console.WriteLine($"Command failed to execute for [{context.User.Username}] <-> [{result.ErrorReason}]!");
+                Console.WriteLine($"Command failed to execute for [{context.User.Username}] <-> [{result.ErrorReason}]!");
+                return;
+            }
+
+            // if command not given correct amount of arguments, log that info to console and exit this method
+            if (result.Error == CommandError.BadArgCount)
+            {
+				Console.WriteLine($"Command failed to execute for [{context.User.Username}] <-> [{result.ErrorReason}]!");
                 return;
             }
 
             // log success to the console and exit this method
             if (result.IsSuccess)
             {
-                System.Console.WriteLine($"Command [{command.Value.Name}] executed for -> [{context.User.Username}]");
+                Console.WriteLine($"Command [{command.Value.Name}] executed for -> [{context.User.Username}]");
                 return;
             }
 

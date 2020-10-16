@@ -262,6 +262,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Modules\BaseCommand.cs" />
     <Compile Include="Modules\HelpCommands.cs" />
     <Compile Include="Modules\ModernWarfareCommands.cs" />
     <Compile Include="Modules\SoundpadCommands.cs" />

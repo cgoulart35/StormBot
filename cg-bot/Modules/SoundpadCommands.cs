@@ -4,7 +4,6 @@ using System.IO;
 using System.Threading.Tasks;
 using cg_bot.Services;
 using Discord;
-using Discord.Addons.Interactive;
 using Discord.Commands;
 using MediaToolkit.Model;
 using VideoLibrary;
@@ -16,7 +15,7 @@ using MediaToolkit;
 
 namespace cg_bot.Modules
 {
-    public class SoundpadCommands : InteractiveBase<SocketCommandContext>
+	public class SoundpadCommands : BaseCommandModule
     {
         private readonly SoundpadService _soundpadService;
 
@@ -33,7 +32,7 @@ namespace cg_bot.Modules
             _categoryFoldersLocation = Program.CategoryFoldersLocation;
         }
 
-	    #region COMMAND FUNCTIONS
+        #region COMMAND FUNCTIONS
         [Command("add", RunMode = RunMode.Async)]
         public async Task AddCommand(params string[] args)
         {
@@ -69,7 +68,7 @@ namespace cg_bot.Modules
                 await ReplyAsync("The soundboard is not currently connected.");
         }
 
-        [Command("categories")]
+        [Command("categories", RunMode = RunMode.Async)]
         public async Task CategoriesCommand()
         {
             if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
@@ -97,7 +96,7 @@ namespace cg_bot.Modules
                 await ReplyAsync("The soundboard is not currently connected.");
         }
 
-        [Command("pause")]
+        [Command("pause", RunMode = RunMode.Async)]
         public async Task PauseCommand()
         {
             if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
@@ -144,7 +143,7 @@ namespace cg_bot.Modules
                 await ReplyAsync("The soundboard is not currently connected.");
         }
 
-        [Command("stop")]
+        [Command("stop", RunMode = RunMode.Async)]
         public async Task StopCommand()
         {
             if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
@@ -157,7 +156,7 @@ namespace cg_bot.Modules
         #endregion
 
         #region COMMAND HELPER FUNCTIONS
-	    private void SaveMP3(string source, string videoURL, string soundName)
+        private void SaveMP3(string source, string videoURL, string soundName)
 	    {
 		    var youtube = YouTube.Default;
 		    var video = youtube.GetVideo(videoURL);
@@ -175,11 +174,6 @@ namespace cg_bot.Modules
 		    // after creating the MP3, delete the created MP4 video
 		    File.Delete(Path.Combine(source, video.FullName));
 	    }
-
-        private string GetSingleArg(string[] args)
-        {
-            return args.Length != 0 ? string.Join(" ", args) : null;
-        }
 
         private async Task<Tuple<List<int>, bool>> LoadSounds(bool displayOutput, string categoryName = null, bool categoriesMode = false)
         {
@@ -280,13 +274,18 @@ namespace cg_bot.Modules
             // if response is not a number
             if (!(int.TryParse(requestedNumber, out int validatedNumber)))
             {
-                // if cancel then don't play sound
-                if (requestedNumber.ToLower() == "cancel")
+                // if nothing, don't do anything
+                if (requestedNumber == null)
+                {
+                    
+                }
+                // if response is cancel and waiting response, don't play sound and display cancelled message
+                else if (requestedNumber.ToLower() == "cancel" && waitingForAnswer)
                 {
                     await ReplyAsync("Request cancelled.");
                 }
                 // if same user starts another command while awaiting a response, end this one but don't display request cancelled
-                else if (requestedNumber != null && requestedNumber.StartsWith(Program.Prefix) && waitingForAnswer)
+                else if (requestedNumber.StartsWith(Program.Prefix) && waitingForAnswer)
                 {
                 }
                 // if not cancel, request another response
