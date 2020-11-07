@@ -16,7 +16,10 @@ namespace cg_bot
         private CommandService _commandService;
         private InteractiveService _interactiveService;
         private CommandHandler _commandHandler;
+        private BaseService _baseService;
         private SoundpadService _soundpadService;
+        private ModernWarfareService _modernWarfareService;
+        private HelpService _helpService;
         private IServiceProvider _services;
 
         private static string DiscordToken;
@@ -35,38 +38,47 @@ namespace cg_bot
             // get the discord bot token and soundboard notification channel ID from app.config
             ConfigureVariables();
 
-            // add singleton services
-            ConfigureServices();
-
+            _client = new DiscordSocketClient();
             _client.Log += Log;
-            _commandService.Log += Log;
 
-            // change boolean when ready
+            // change boolean when client is ready
             _client.Ready += SetAsReady;
 
             await _client.LoginAsync(TokenType.Bot, DiscordToken);
             await _client.StartAsync();
-            
+
+            // wait until discord client is ready
+            while (!isReady) { }
+
+            // add singleton services
+            ConfigureServices();
+
+            _commandService.Log += Log;
             await _commandHandler.InitializeAsync();
 
-            // when ready, start the soundpad service
-            while (!isReady) { }
-            await _soundpadService.StartService();
+            // ask the user if they want to start the soundpad service
+            PromptUserForStartup(_soundpadService);
+
+            // ask the user if they want to start the modern warfare service
+            PromptUserForStartup(_modernWarfareService);
+
+            // spacing for bot ouput visibility
+            Console.WriteLine("");
+
+            // only services that were selected will be started
+            _soundpadService.StartService();
+            _modernWarfareService.StartService();
+
+            // always start the help service 
+            _helpService.DoStart = true;
+            await _helpService.StartService();
+
+            // spacing for bot ouput visibility
+            Console.WriteLine("");
 
             // block this task until the program is closed.
             await Task.Delay(-1);
         }
-
-        private Task Log(LogMessage msg)
-        {
-            Console.WriteLine(msg.ToString());
-            return Task.CompletedTask;
-        }
-
-		private async Task SetAsReady()
-		{
-			isReady = true;
-		}
 
 		private void ConfigureVariables()
         {
@@ -107,18 +119,54 @@ namespace cg_bot
         private void ConfigureServices()
         {
             _services = new ServiceCollection()
-               .AddSingleton<DiscordSocketClient>()
-               .AddSingleton<CommandService>()
-               .AddSingleton<InteractiveService>()
-               .AddSingleton<CommandHandler>()
-               .AddSingleton<SoundpadService>()
-               .BuildServiceProvider();
+                .AddSingleton(_client)
+                .AddSingleton<CommandService>()
+                .AddSingleton<InteractiveService>()
+                .AddSingleton<CommandHandler>()
+                .AddSingleton<BaseService>()
+                .AddSingleton<SoundpadService>()
+                .AddSingleton<ModernWarfareService>()
+                .AddSingleton<HelpService>()
+                .BuildServiceProvider();
 
-            _client = _services.GetRequiredService<DiscordSocketClient>();
             _commandService = _services.GetRequiredService<CommandService>();
             _interactiveService = _services.GetRequiredService<InteractiveService>();
             _commandHandler = _services.GetRequiredService<CommandHandler>();
+            _baseService = _services.GetRequiredService<BaseService>();
             _soundpadService = _services.GetRequiredService<SoundpadService>();
+            _modernWarfareService = _services.GetRequiredService<ModernWarfareService>();
+            _helpService = _services.GetRequiredService<HelpService>();
+        }
+
+        private void PromptUserForStartup(BaseService service)
+        {
+            Console.WriteLine($"\nWould you like to start the {service.Name}? Please answer with 'y' or 'n'.");
+            string answer = Console.ReadLine();
+
+            if (answer.ToLower() == "yes" || answer.ToLower() == "y")
+            {
+                service.DoStart = true;
+            }
+            else if (answer.ToLower() == "no" || answer.ToLower() == "n")
+            {
+                service.DoStart = false;
+            }
+            else
+            {
+                Console.WriteLine("Input not valid: Please answer with 'y' or 'n'.");
+                PromptUserForStartup(service);
+            }
+        }
+
+        private Task Log(LogMessage msg)
+        {
+            Console.WriteLine(msg.ToString());
+            return Task.CompletedTask;
+        }
+
+        private async Task SetAsReady()
+        {
+            isReady = true;
         }
     }
 }

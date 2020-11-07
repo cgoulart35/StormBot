@@ -268,7 +268,10 @@
     <Compile Include="Modules\SoundpadCommands.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Services\BaseService.cs" />
     <Compile Include="Services\CommandHandler.cs" />
+    <Compile Include="Services\HelpService.cs" />
+    <Compile Include="Services\ModernWarfareService.cs" />
     <Compile Include="Services\SoundpadService.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -17,205 +17,233 @@ using System.Diagnostics;
 
 namespace cg_bot.Modules
 {
-	public class SoundpadCommands : BaseCommandModule
+    public class SoundpadCommands : BaseCommand
     {
-        private readonly SoundpadService _soundpadService;
+        private SoundpadService _service;
 
-        public Soundpad _soundpad;
+        private Soundpad _soundpad;
 
-        private string _categoryFoldersLocation = Program.CategoryFoldersLocation;
+        private readonly string _categoryFoldersLocation = Program.CategoryFoldersLocation;
 
         private static Dictionary<string, int> _adminApprovalRequests = new Dictionary<string, int>();
-
+        
         public SoundpadCommands(IServiceProvider services)
         {
-            _soundpadService = services.GetRequiredService<SoundpadService>();
-            _soundpad = _soundpadService._soundpad;
+            _service = services.GetRequiredService<SoundpadService>();
+            _soundpad = _service._soundpad;
         }
 
         #region COMMAND FUNCTIONS
+        // QA: how handled if executed by a non-administrator?
         [Command("add", RunMode = RunMode.Async)]
         public async Task AddCommand(params string[] args)
         {
-            if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
+            if (DisableIfServiceNotRunning(_service, "add"))
             {
-                // if arguments are valid
-                if (args.Length >= 2)
+                if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
                 {
-                    string videoURL = args[0];
-
-                    string[] soundNameArgs = new string[args.Length - 1];
-                    Array.Copy(args, 1, soundNameArgs, 0, args.Length - 1);
-                    string soundName = GetSingleArg(soundNameArgs);
-
-                    // display all category options to user
-                    Tuple<List<int>, bool> loadedSounds = await LoadSounds(true, null, true);
-                    List<int> categoryIndexes = loadedSounds.Item1;
-
-                    var user = Context.User as SocketGuildUser;
-
-                    // ask user what category to add to
-                    int categoryIndex = await AskUserForCategory(categoryIndexes, user.Username);
-
-                    // get instance of the YouTube video
-                    YouTubeVideo video = await GetYouTubeVideo(videoURL);
-
-                    // unless cancelled, continue adding the sound
-                    if (categoryIndex != -1)
+                    // if arguments are valid
+                    if (args.Length >= 2)
                     {
-                        // unless video doesn't exist, get admin approval 
-                        if (video != null)
+                        string videoURL = args[0];
+
+                        string[] soundNameArgs = new string[args.Length - 1];
+                        Array.Copy(args, 1, soundNameArgs, 0, args.Length - 1);
+                        string soundName = GetSingleArg(soundNameArgs);
+
+                        // display all category options to user
+                        Tuple<List<int>, bool> loadedSounds = await LoadSounds(true, null, true);
+                        List<int> categoryIndexes = loadedSounds.Item1;
+
+                        var user = Context.User as SocketGuildUser;
+
+                        // ask user what category to add to
+                        int categoryIndex = await AskUserForCategory(categoryIndexes, user.Username);
+
+                        // get instance of the YouTube video
+                        YouTubeVideo video = await GetYouTubeVideo(videoURL);
+
+                        // unless cancelled, continue adding the sound
+                        if (categoryIndex != -1)
                         {
-                            // add sound if admin or if an admin approves
-                            if (user.GuildPermissions.Administrator || await AskAdministratorForApproval(user.Username))
+                            // unless video doesn't exist, get admin approval 
+                            if (video != null)
                             {
-                                await AddNewSound(categoryIndex, video, soundName);
+                                // add sound if admin or if an admin approves
+                                if (user.GuildPermissions.Administrator || await AskAdministratorForApproval(user.Username))
+                                {
+                                    await AddNewSound(categoryIndex, video, soundName);
+                                }
                             }
                         }
                     }
+                    else
+                    {
+                        await ReplyAsync("Please enter all required arguments: [YouTube video URL] [sound name]");
+                    }
                 }
                 else
-                {
-                    await ReplyAsync("Please enter all required arguments: [YouTube video URL] [sound name]");
-                }
+                    await ReplyAsync("The soundboard is not currently connected.");
             }
-            else
-                await ReplyAsync("The soundboard is not currently connected.");
         }
 
-        // TODO: how handled if executed by a non-administrator?
+        // QA: how handled if executed by a non-administrator?
         [RequireUserPermission(GuildPermission.Administrator)]
         [Command("approve", RunMode = RunMode.Async)]
         public async Task ApproveCommand(SocketGuildUser user)
         {
-            if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
+            if (DisableIfServiceNotRunning(_service, "approve"))
             {
-                string username = user.Username;
-                if (_adminApprovalRequests.ContainsKey(username))
+                if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
                 {
-                    await ReplyAsync($"{username}'s request has been approved.");
-                    _adminApprovalRequests[username] = 1;
+                    string username = user.Username;
+                    if (_adminApprovalRequests.ContainsKey(username))
+                    {
+                        await ReplyAsync($"{username}'s request has been approved.");
+                        _adminApprovalRequests[username] = 1;
+                    }
+                    else
+                    {
+                        await ReplyAsync($"{username} is not awaiting an approval.");
+                    }
                 }
                 else
-                {
-                    await ReplyAsync($"{username} is not awaiting an approval.");
-                }
+                    await ReplyAsync("The soundboard is not currently connected.");
             }
-            else
-                await ReplyAsync("The soundboard is not currently connected.");
         }
 
         [Command("categories", RunMode = RunMode.Async)]
         public async Task CategoriesCommand()
         {
-            if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
+            if (DisableIfServiceNotRunning(_service, "categories"))
             {
-                await LoadSounds(true, null, true);
+                if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
+                {
+                    await LoadSounds(true, null, true);
+                }
+                else
+                    await ReplyAsync("The soundboard is not currently connected.");
             }
-            else
-                await ReplyAsync("The soundboard is not currently connected.");
         }
 
-        // TODO: how handled if executed by a non-administrator?
+        // QA: how handled if executed by a non-administrator?
         [RequireUserPermission(GuildPermission.Administrator)]
         [Command("delete", RunMode = RunMode.Async)]
         public async Task DeleteCommand(params string[] args) 
         {
-            if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
+            if (DisableIfServiceNotRunning(_service, "delete"))
             {
-                string soundNumber = GetSingleArg(args);
+                if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
+                {
+                    string soundNumber = GetSingleArg(args);
 
-                Tuple<List<int>, bool> loadedSounds = await LoadSounds(false);
-                List<int> soundIndexes = loadedSounds.Item1;
+                    Tuple<List<int>, bool> loadedSounds = await LoadSounds(false);
+                    List<int> soundIndexes = loadedSounds.Item1;
 
-                await PlayOrDeleteSoundNumber(soundIndexes, soundNumber, false, true);
+                    await PlayOrDeleteSoundNumber(soundIndexes, soundNumber, false, true);
+                }
+                else
+                    await ReplyAsync("The soundboard is not currently connected.");
             }
-            else
-                await ReplyAsync("The soundboard is not currently connected.");
         }
 
-        // TODO: how handled if executed by a non-administrator?
+        // QA: how handled if executed by a non-administrator?
         [RequireUserPermission(GuildPermission.Administrator)]
         [Command("deny", RunMode = RunMode.Async)]
         public async Task DenyCommand(SocketGuildUser user)
         {
-            if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
+            if (DisableIfServiceNotRunning(_service, "deny"))
             {
-                string username = user.Username;
-                if (_adminApprovalRequests.ContainsKey(username))
+                if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
                 {
-                    await ReplyAsync($"{username}'s request has been denied.");
-                    _adminApprovalRequests[username] = 0;
+                    string username = user.Username;
+                    if (_adminApprovalRequests.ContainsKey(username))
+                    {
+                        await ReplyAsync($"{username}'s request has been denied.");
+                        _adminApprovalRequests[username] = 0;
+                    }
+                    else
+                    {
+                        await ReplyAsync($"{username} is not awaiting an approval.");
+                    }
                 }
                 else
-                {
-                    await ReplyAsync($"{username} is not awaiting an approval.");
-                }
+                    await ReplyAsync("The soundboard is not currently connected.");
             }
-            else
-                await ReplyAsync("The soundboard is not currently connected.");
         }
 
         [Command("pause", RunMode = RunMode.Async)]
         public async Task PauseCommand()
         {
-            if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
+            if (DisableIfServiceNotRunning(_service, "pause"))
             {
-                await _soundpad.TogglePause();
+                if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
+                {
+                    await _soundpad.TogglePause();
+                }
+                else
+                    await ReplyAsync("The soundboard is not currently connected.");
             }
-            else
-                await ReplyAsync("The soundboard is not currently connected.");
         }
 
         [Command("play", RunMode = RunMode.Async)]
         public async Task PlayCommand(params string[] args)
         {
-            if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
+            if (DisableIfServiceNotRunning(_service, "play"))
             {
-                string soundNumber = GetSingleArg(args);
+                if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
+                {
+                    string soundNumber = GetSingleArg(args);
 
-                Tuple<List<int>, bool> loadedSounds = await LoadSounds(false);
-                List<int> soundIndexes = loadedSounds.Item1;
+                    Tuple<List<int>, bool> loadedSounds = await LoadSounds(false);
+                    List<int> soundIndexes = loadedSounds.Item1;
 
-                await PlayOrDeleteSoundNumber(soundIndexes, soundNumber);
+                    await PlayOrDeleteSoundNumber(soundIndexes, soundNumber);
+                }
+                else
+                    await ReplyAsync("The soundboard is not currently connected.");
             }
-            else
-                await ReplyAsync("The soundboard is not currently connected.");
         }
 
         [Command("sounds", RunMode = RunMode.Async)]
         public async Task SoundsCommand(params string[] args)
         {
-            if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
+            if (DisableIfServiceNotRunning(_service, "sounds"))
             {
-                string categoryName = GetSingleArg(args);
+                if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
+                {
+                    string categoryName = GetSingleArg(args);
 
-                Tuple<List<int>, bool> loadedSounds = await LoadSounds(true, categoryName);
-                List<int> soundIndexes = loadedSounds.Item1;
-                bool categoryExists = loadedSounds.Item2;
+                    Tuple<List<int>, bool> loadedSounds = await LoadSounds(true, categoryName);
+                    List<int> soundIndexes = loadedSounds.Item1;
+                    bool categoryExists = loadedSounds.Item2;
 
-                if (categoryName != null && !categoryExists)
-                    await ReplyAsync("The category name '" + categoryName + "' does not exist.");
+                    if (categoryName != null && !categoryExists)
+                        await ReplyAsync("The category name '" + categoryName + "' does not exist.");
+                    else
+                        await PlayOrDeleteUserSelectedSound(soundIndexes);
+                }
                 else
-                    await PlayOrDeleteUserSelectedSound(soundIndexes);
+                    await ReplyAsync("The soundboard is not currently connected.");
             }
-            else
-                await ReplyAsync("The soundboard is not currently connected.");
         }
 
         [Command("stop", RunMode = RunMode.Async)]
         public async Task StopCommand()
         {
-            if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
+            if (DisableIfServiceNotRunning(_service, "stop"))
             {
-                await _soundpad.StopSound();
+                if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
+                {
+                    await _soundpad.StopSound();
+                }
+                else
+                    await ReplyAsync("The soundboard is not currently connected.");
             }
-            else
-                await ReplyAsync("The soundboard is not currently connected.");
         }
         #endregion
 
-        #region COMMAND HELPER FUNCTIONS
+        #region COMMAND HELPER FUNCTIONS     
         private async Task<Tuple<List<int>, bool>> LoadSounds(bool displayOutput, string categoryName = null, bool categoriesMode = false)
         {
             CategoryListResponse categoryListResponse = await _soundpad.GetCategories(true);

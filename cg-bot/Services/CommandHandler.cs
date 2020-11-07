@@ -64,7 +64,7 @@ namespace cg_bot.Services
             // if command not given correct amount of arguments, log that info to console and exit this method
             if (result.Error == CommandError.BadArgCount || result.Error == CommandError.ObjectNotFound)
             {
-				Console.WriteLine($"Command failed to execute for [{context.User.Username}] <-> [{result.ErrorReason}]!");
+                Console.WriteLine($"Command failed to execute for [{context.User.Username}] <-> [{result.ErrorReason}]!");
                 return;
             }
 

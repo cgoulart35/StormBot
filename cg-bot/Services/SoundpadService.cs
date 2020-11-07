@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace cg_bot.Services
 {
-    class SoundpadService
+    class SoundpadService : BaseService
     {
         private readonly DiscordSocketClient _client;
 
@@ -15,37 +15,42 @@ namespace cg_bot.Services
 
         public IMessageChannel _soundboardNotificationChannel;
 
-        private bool isRunning;
         private bool displayedConnectingMessage;
+
+        public bool isSoundpadRunning { get; set; }
 
         public SoundpadService(IServiceProvider services)
         {
             _client = services.GetRequiredService<DiscordSocketClient>();
-        }
-
-        public async Task StartService()
-        {
-            isRunning = false;
-            displayedConnectingMessage = false;
-
             _soundboardNotificationChannel = _client.GetChannel(Program.SoundboardNotificationChannelID) as IMessageChannel;
 
-            _soundpad = new Soundpad();
-            _soundpad.AutoReconnect = true;
-            _soundpad.StatusChanged += SoundpadOnStatusChangedAsync;
+            Name = "Soundpad Service";
+            isServiceRunning = false;
+            isSoundpadRunning = false;
+            displayedConnectingMessage = false;
+        }
 
+        public override async Task StartService()
+        {
             string logStamp = GetLogStamp();
 
-            if (isRunning)
+            if (!DoStart)
             {
-                Console.WriteLine(logStamp + "Service already running.");
+                Console.WriteLine(logStamp + "Disabled.".PadLeft(45 - logStamp.Length));
+            }
+            else if (isServiceRunning)
+            {
+                Console.WriteLine(logStamp + "Service already running.".PadLeft(60 - logStamp.Length));
             }
             else
             {
-                Console.WriteLine(logStamp + "Starting service.");
+                Console.WriteLine(logStamp + "Starting service.".PadLeft(53 - logStamp.Length));
 
-                isRunning = true;
+                isServiceRunning = true;
 
+                _soundpad = new Soundpad();
+                _soundpad.AutoReconnect = true;
+                _soundpad.StatusChanged += SoundpadOnStatusChangedAsync;
                 await _soundpad.ConnectAsync();
             }
         }
@@ -61,33 +66,28 @@ namespace cg_bot.Services
             else if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
             {
                 displayedConnectingMessage = false;
-                isRunning = true;
+                isSoundpadRunning = true;
                 string message = "SOUNDBOARD CONNECTED.";
-                Console.WriteLine(logStamp + message);
+                Console.WriteLine(logStamp + message.PadLeft(57 - logStamp.Length));
                 await _soundboardNotificationChannel.SendMessageAsync("_**[    " + message + "    ]**_");
             }
-            else if (_soundpad.ConnectionStatus == ConnectionStatus.Disconnected && isRunning)
+            else if (_soundpad.ConnectionStatus == ConnectionStatus.Disconnected && isSoundpadRunning)
             {
                 displayedConnectingMessage = false;
                 string message = "SOUNDBOARD DISCONNECTED.";
-                Console.WriteLine(logStamp + message);
+                Console.WriteLine(logStamp + message.PadLeft(60 - logStamp.Length));
                 await _soundboardNotificationChannel.SendMessageAsync("_**[    " + message + "    ]**_");
             }
-            else if (_soundpad.ConnectionStatus == ConnectionStatus.Connecting && isRunning)
+            else if (_soundpad.ConnectionStatus == ConnectionStatus.Connecting && isSoundpadRunning)
             {
                 if (!displayedConnectingMessage)
                 {
                     displayedConnectingMessage = true;
-                    isRunning = false;
+                    isSoundpadRunning = false;
                     string message = "Listening for the soundboard application...";
-                    Console.WriteLine(logStamp + message);
+                    Console.WriteLine(logStamp + message.PadLeft(79 - logStamp.Length));
                 }
             }
-        }
-
-        private string GetLogStamp()
-        {
-            return DateTime.Now.ToString("HH:mm:ss ") + "Soundpad Service     ";
         }
     }
 }
