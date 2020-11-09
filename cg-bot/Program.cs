@@ -23,6 +23,7 @@ namespace cg_bot
         private IServiceProvider _services;
 
         private static string DiscordToken;
+        public static ulong ModernWarfareNotificationChannelID;
         public static ulong SoundboardNotificationChannelID;
         public static string CategoryFoldersLocation;
 
@@ -89,6 +90,10 @@ namespace cg_bot
                 {
                     variables += "DiscordToken ";
                 }
+                if (ConfigurationManager.AppSettings["ModernWarfareNotificationChannelID"] == "")
+                {
+                    variables += "ModernWarfareNotificationChannelID ";
+                }
                 if (ConfigurationManager.AppSettings["SoundboardNotificationChannelID"] == "")
                 {
                     variables += "SoundboardNotificationChannelID ";
@@ -112,6 +117,7 @@ namespace cg_bot
             }
 
             DiscordToken = ConfigurationManager.AppSettings["DiscordToken"];
+            ModernWarfareNotificationChannelID = ulong.Parse(ConfigurationManager.AppSettings["ModernWarfareNotificationChannelID"]);
             SoundboardNotificationChannelID = ulong.Parse(ConfigurationManager.AppSettings["SoundboardNotificationChannelID"]);
             CategoryFoldersLocation = ConfigurationManager.AppSettings["CategoryFoldersLocation"];
         }
