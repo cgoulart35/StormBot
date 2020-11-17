@@ -23,7 +23,7 @@ namespace cg_bot.Modules
 
         private Soundpad _soundpad;
 
-        private readonly string _categoryFoldersLocation = Program.CategoryFoldersLocation;
+        private readonly string _categoryFoldersLocation = Program.configurationSettingsModel.CategoryFoldersLocation;
 
         private static Dictionary<string, int> _adminApprovalRequests = new Dictionary<string, int>();
         
@@ -34,7 +34,6 @@ namespace cg_bot.Modules
         }
 
         #region COMMAND FUNCTIONS
-        // QA: how handled if executed by a non-administrator?
         [Command("add", RunMode = RunMode.Async)]
         public async Task AddCommand(params string[] args)
         {
@@ -87,7 +86,6 @@ namespace cg_bot.Modules
             }
         }
 
-        // QA: how handled if executed by a non-administrator?
         [RequireUserPermission(GuildPermission.Administrator)]
         [Command("approve", RunMode = RunMode.Async)]
         public async Task ApproveCommand(SocketGuildUser user)
@@ -126,7 +124,6 @@ namespace cg_bot.Modules
             }
         }
 
-        // QA: how handled if executed by a non-administrator?
         [RequireUserPermission(GuildPermission.Administrator)]
         [Command("delete", RunMode = RunMode.Async)]
         public async Task DeleteCommand(params string[] args) 
@@ -147,7 +144,6 @@ namespace cg_bot.Modules
             }
         }
 
-        // QA: how handled if executed by a non-administrator?
         [RequireUserPermission(GuildPermission.Administrator)]
         [Command("deny", RunMode = RunMode.Async)]
         public async Task DenyCommand(SocketGuildUser user)
@@ -302,21 +298,6 @@ namespace cg_bot.Modules
             return Tuple.Create(indexes, categoryExists);
         }
 
-        private List<string> ValidateOutputLimit(List<string> output, string messageToAdd)
-        {
-            string temp = output[output.Count - 1] + messageToAdd;
-            if (temp.Length <= 2000)
-            {
-                output[output.Count - 1] += messageToAdd;
-                return output;
-            }
-            else
-            {
-                output.Add("\n" + "...");
-                return ValidateOutputLimit(output, messageToAdd);
-            }
-        }
-
         private async Task PlayOrDeleteUserSelectedSound(List<int> soundIndexes, bool deleteMode = false)
         {
             string verb = "play";
@@ -356,7 +337,7 @@ namespace cg_bot.Modules
                     await ReplyAsync("Request cancelled.");
                 }
                 // if same user starts another command while awaiting a response, end this one but don't display request cancelled
-                else if (requestedNumber.StartsWith(Program.Prefix) && waitingForAnswer)
+                else if (requestedNumber.StartsWith(Program.configurationSettingsModel.Prefix) && waitingForAnswer)
                 {
                 }
                 // if not cancel, request another response
@@ -439,7 +420,7 @@ namespace cg_bot.Modules
                         return -1;
                     }
                     // if same user starts another command while awaiting a response, end this one but don't display request cancelled
-                    else if (requestedNumber != null && requestedNumber.StartsWith(Program.Prefix))
+                    else if (requestedNumber != null && requestedNumber.StartsWith(Program.configurationSettingsModel.Prefix))
                     {
                         return -1;
                     }

@@ -1,0 +1,12 @@
+{
+	"DiscordToken": "insert your token here",
+	"CallOfDutyNotificationChannelID": insert channel ID here,
+	"SoundboardNotificationChannelID": insert channel ID here,
+	"ModernWarfareWarzoneWinsRoleID": insert role ID here,
+	"ModernWarfareKillsRoleID": insert role ID here,
+	"BlackOpsColdWarKillsRoleID": insert role ID here,
+	"ActivisionEmail": "insert your Activision email here",
+	"ActivisionPassword": "insert your Activision password here",
+	"CategoryFoldersLocation": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Soundpad\\sounds\\Soundboard\\",
+	"Prefix": "."
+}

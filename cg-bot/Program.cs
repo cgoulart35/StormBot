@@ -1,12 +1,15 @@
 using System;
-using System.Configuration;
 using System.Threading.Tasks;
+using System.IO;
 using Microsoft.Extensions.DependencyInjection;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Discord.Addons.Interactive;
+using Newtonsoft.Json;
 using cg_bot.Services;
+using cg_bot.Models;
+using cg_bot.Models.CallOfDutyModels.Players.Data;
 
 namespace cg_bot
 {
@@ -18,16 +21,16 @@ namespace cg_bot
         private CommandHandler _commandHandler;
         private BaseService _baseService;
         private SoundpadService _soundpadService;
-        private ModernWarfareService _modernWarfareService;
+        private CallOfDutyService<ModernWarfareDataModel> _modernWarfareService;
+        private CallOfDutyService<BlackOpsColdWarDataModel> _blackOpsColdWarService;
         private HelpService _helpService;
         private IServiceProvider _services;
 
-        private static string DiscordToken;
-        public static ulong ModernWarfareNotificationChannelID;
-        public static ulong SoundboardNotificationChannelID;
-        public static string CategoryFoldersLocation;
+        public static ConfigurationSettingsModel configurationSettingsModel;
 
-        public static string Prefix = ".";
+        public static string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        public static string cgBotAppDataPath = Path.Combine(appDataPath, @"cg-bot\");
+        public static string cgBotConfigSettingsPath = Path.Combine(cgBotAppDataPath, @"ConfigurationSettings.json");
 
         private static bool isReady = false;
 
@@ -45,7 +48,7 @@ namespace cg_bot
             // change boolean when client is ready
             _client.Ready += SetAsReady;
 
-            await _client.LoginAsync(TokenType.Bot, DiscordToken);
+            await _client.LoginAsync(TokenType.Bot, configurationSettingsModel.DiscordToken);
             await _client.StartAsync();
 
             // wait until discord client is ready
@@ -63,12 +66,16 @@ namespace cg_bot
             // ask the user if they want to start the modern warfare service
             PromptUserForStartup(_modernWarfareService);
 
+            // ask the user if they want to start the black ops cold war service
+            PromptUserForStartup(_blackOpsColdWarService);
+
             // spacing for bot ouput visibility
             Console.WriteLine("");
 
             // only services that were selected will be started
             _soundpadService.StartService();
             _modernWarfareService.StartService();
+            _blackOpsColdWarService.StartService();
 
             // always start the help service 
             _helpService.DoStart = true;
@@ -83,43 +90,115 @@ namespace cg_bot
 
 		private void ConfigureVariables()
         {
-            try
+            // create app data directory if it doesn't exist
+            if (!Directory.Exists(cgBotAppDataPath))
             {
-                string variables = "";
-                if (ConfigurationManager.AppSettings["DiscordToken"] == "")
+                Console.WriteLine("The project folder %AppData%/Roaming/cg-bot does not exist.");
+                Console.WriteLine("Creating the project folder %AppData%/Roaming/cg-bot...");
+                Directory.CreateDirectory(cgBotAppDataPath);
+                CreateNewConfigFile();
+            }
+            // create configuration file if it doesn't exist
+            else if (!File.Exists(cgBotConfigSettingsPath))
+            {
+                Console.WriteLine("The file ConfigurationSettings.json does not exist.");
+                CreateNewConfigFile();
+            }
+            // if it does exist, read in values; if it's corrupt re-create file
+            else
+            {
+                bool createNewFile = true;
+                try
                 {
-                    variables += "DiscordToken ";
+                    configurationSettingsModel = new ConfigurationSettingsModel();
+                    configurationSettingsModel = JsonConvert.DeserializeObject<ConfigurationSettingsModel>(File.ReadAllText(cgBotConfigSettingsPath));
+
+                    if (configurationSettingsModel.DiscordToken == null || configurationSettingsModel.DiscordToken == "")
+                    {
+                        createNewFile = false;
+                        throw new Exception("Please fill out the DiscordToken.");
+                    }
+
+                    if (configurationSettingsModel.CallOfDutyNotificationChannelID == 0)
+                    {
+                        createNewFile = false;
+                        throw new Exception("Please fill out the CallOfDutyNotificationChannelID.");
+                    }
+
+                    if (configurationSettingsModel.SoundboardNotificationChannelID == 0)
+                    {
+                        createNewFile = false;
+                        throw new Exception("Please fill out the SoundboardNotificationChannelID.");
+                    }
+
+                    if (configurationSettingsModel.ModernWarfareWarzoneWinsRoleID == 0)
+                    {
+                        createNewFile = false;
+                        throw new Exception("Please fill out the ModernWarfareWarzoneWinsRoleID.");
+                    }
+
+                    if (configurationSettingsModel.ModernWarfareKillsRoleID == 0)
+                    {
+                        createNewFile = false;
+                        throw new Exception("Please fill out the ModernWarfareKillsRoleID.");
+                    }
+
+                    if (configurationSettingsModel.BlackOpsColdWarKillsRoleID == 0)
+                    {
+                        createNewFile = false;
+                        throw new Exception("Please fill out the BlackOpsColdWarKillsRoleID.");
+                    }
+
+                    if (configurationSettingsModel.ActivisionEmail == null || configurationSettingsModel.ActivisionEmail == "")
+                    {
+                        createNewFile = false;
+                        throw new Exception("Please fill out the ActivisionEmail.");
+                    }
+
+                    if (configurationSettingsModel.ActivisionPassword == null || configurationSettingsModel.ActivisionPassword == "")
+                    {
+                        createNewFile = false;
+                        throw new Exception("Please fill out the ActivisionPassword.");
+                    }
+
+                    if (configurationSettingsModel.CategoryFoldersLocation == null || configurationSettingsModel.CategoryFoldersLocation == "")
+                    {
+                        createNewFile = false;
+                        throw new Exception("Please fill out the CategoryFoldersLocation.");
+                    }
+
+                    if (configurationSettingsModel.Prefix == null || configurationSettingsModel.Prefix == "")
+                    {
+                        createNewFile = false;
+                        throw new Exception("Please fill out the Prefix.");
+                    }
                 }
-                if (ConfigurationManager.AppSettings["ModernWarfareNotificationChannelID"] == "")
+                catch(Exception error)
                 {
-                    variables += "ModernWarfareNotificationChannelID ";
-                }
-                if (ConfigurationManager.AppSettings["SoundboardNotificationChannelID"] == "")
-                {
-                    variables += "SoundboardNotificationChannelID ";
-                }
-                if (ConfigurationManager.AppSettings["CategoryFoldersLocation"] == "")
-                {
-                    variables += "CategoryFoldersLocation ";
-                }
-                if (variables != "")
-                {
-                    throw new Exception("The following App.config variable(s) need to be configured: " + variables);
+                    if (createNewFile)
+                    {
+                        Console.WriteLine("The file ConfigurationSettings.json was corrupt.");
+                        CreateNewConfigFile();
+                    }
+
+                    Console.WriteLine(error);
+                    System.Threading.Thread.Sleep(10000);
+                    Environment.Exit(1);
                 }
             }
+        }
 
-            // if the user has not configured the discord bot token and soundboard notification channel ID from app.config, show error for 10 seconds
-            catch (Exception error)
-            {
-                Console.WriteLine(error);
-                System.Threading.Thread.Sleep(10000);
-                Environment.Exit(1);
-            }
+        private void CreateNewConfigFile()
+        {
+            configurationSettingsModel = new ConfigurationSettingsModel();
 
-            DiscordToken = ConfigurationManager.AppSettings["DiscordToken"];
-            ModernWarfareNotificationChannelID = ulong.Parse(ConfigurationManager.AppSettings["ModernWarfareNotificationChannelID"]);
-            SoundboardNotificationChannelID = ulong.Parse(ConfigurationManager.AppSettings["SoundboardNotificationChannelID"]);
-            CategoryFoldersLocation = ConfigurationManager.AppSettings["CategoryFoldersLocation"];
+            Console.WriteLine("Creating ConfigurationSettings.json file...");
+            string json = JsonConvert.SerializeObject(configurationSettingsModel);
+            File.WriteAllText(cgBotConfigSettingsPath, json);
+
+            Console.WriteLine("Please fill out the configuration file completely, then re-run the application.");
+            System.Threading.Thread.Sleep(10000);
+            Environment.Exit(1);
         }
 
         private void ConfigureServices()
@@ -131,7 +210,8 @@ namespace cg_bot
                 .AddSingleton<CommandHandler>()
                 .AddSingleton<BaseService>()
                 .AddSingleton<SoundpadService>()
-                .AddSingleton<ModernWarfareService>()
+                .AddSingleton<CallOfDutyService<ModernWarfareDataModel>>()
+                .AddSingleton<CallOfDutyService<BlackOpsColdWarDataModel>>()
                 .AddSingleton<HelpService>()
                 .BuildServiceProvider();
 
@@ -140,7 +220,8 @@ namespace cg_bot
             _commandHandler = _services.GetRequiredService<CommandHandler>();
             _baseService = _services.GetRequiredService<BaseService>();
             _soundpadService = _services.GetRequiredService<SoundpadService>();
-            _modernWarfareService = _services.GetRequiredService<ModernWarfareService>();
+            _modernWarfareService = _services.GetRequiredService<CallOfDutyService<ModernWarfareDataModel>>();
+            _blackOpsColdWarService = _services.GetRequiredService<CallOfDutyService<BlackOpsColdWarDataModel>>();
             _helpService = _services.GetRequiredService<HelpService>();
         }
 

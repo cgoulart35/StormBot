@@ -1,0 +1,34 @@
+{
+	"accounts": [
+		{
+			"discordID": 1111,
+			"username": "UserA",
+			"tag": "1234",
+			"platform": "battle"
+		},
+		{
+			"discordID": 2222,
+			"username": "UserB",
+			"tag": "1234",
+			"platform": "uno"
+		},
+		{
+			"discordID": 3333,
+			"username": "UserC",
+			"tag": "1234",
+			"platform": "psn"
+		},
+		{
+			"discordID": 4444,
+			"username": "UserD",
+			"tag": "1234",
+			"platform": "xbl"
+		},
+		{
+			"discordID": 5555,
+			"username": "UserE",
+			"tag": "1234",
+			"platform": "steam"
+		}
+	]
+}

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using cg_bot.Services;
 using Discord.Addons.Interactive;
 using Discord.Commands;
@@ -31,6 +32,21 @@ namespace cg_bot.Modules
             {
                 // enabled
                 return true;
+            }
+        }
+
+        public List<string> ValidateOutputLimit(List<string> output, string messageToAdd)
+        {
+            string temp = output[output.Count - 1] + messageToAdd;
+            if (temp.Length <= 2000)
+            {
+                output[output.Count - 1] += messageToAdd;
+                return output;
+            }
+            else
+            {
+                output.Add("\n" + "...");
+                return ValidateOutputLimit(output, messageToAdd);
             }
         }
     }

@@ -44,7 +44,7 @@ namespace cg_bot.Services
                 if (message.Author.IsBot) return;
 
                 int argPos = 0;
-                if (message.HasStringPrefix(Program.Prefix, ref argPos))
+                if (message.HasStringPrefix(Program.configurationSettingsModel.Prefix, ref argPos))
                 {
                     // execute command if one is found that matches
                     await _commandService.ExecuteAsync(context, argPos, _services);
@@ -65,6 +65,14 @@ namespace cg_bot.Services
             if (result.Error == CommandError.BadArgCount || result.Error == CommandError.ObjectNotFound)
             {
                 Console.WriteLine($"Command failed to execute for [{context.User.Username}] <-> [{result.ErrorReason}]!");
+                return;
+            }
+
+            // if command was ran by user who was not an administrator when administrator privileges are needed
+            if (result.Error == CommandError.UnmetPrecondition)
+            {
+                Console.WriteLine($"Command failed to execute for [{context.User.Username}] <-> [{result.ErrorReason}]!");
+                await context.Channel.SendMessageAsync($"Sorry, {context.User.Username} only Administrators can run this command.");
                 return;
             }
 
