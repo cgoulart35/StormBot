@@ -28,6 +28,8 @@ namespace cg_bot.Modules
         {
             if (DisableIfServiceNotRunning(_helpService, "help"))
             {
+                await Context.Channel.TriggerTypingAsync();
+
                 string subject = GetSingleArg(args);
                 List<string> output = new List<string>();
                 output.Add("");
@@ -75,6 +77,8 @@ namespace cg_bot.Modules
         {
             if (DisableIfServiceNotRunning(_helpService, "subjects"))
             {
+                await Context.Channel.TriggerTypingAsync();
+
                 string output = "__**Subjects:**__\nHelp\n";
 
                 if (DisableIfServiceNotRunning(_soundpadService, "subjects (soundpad subject)"))
@@ -144,8 +148,10 @@ The bot will then ask you to enter the account name, tag, and platform.
 
 '**{0}mw rm participant [user]**' to remove an account from the list of Call of Duty accounts participating in the Modern Warfare services.
 
-'**{0}mw kills**' to display the total game kills of all participating players from highest to lowest.
+'**{0}mw weekly kills**' to display the weekly total game kills of all participating players from highest to lowest.
 The bot will then assign the <@&{1}> role to the player in first place.
+
+'**{0}mw lifetime kills**' to display the lifetime total game kills of all participating players from highest to lowest.
 
 '**{0}mw wz wins**' to display the total Warzone wins of all participating players from highest to lowest.
 The bot will then assign the <@&{2}> role to the player in first place.", Program.configurationSettingsModel.Prefix, Program.configurationSettingsModel.ModernWarfareKillsRoleID, Program.configurationSettingsModel.ModernWarfareWarzoneWinsRoleID) : null;
@@ -162,8 +168,10 @@ The bot will then ask you to enter the account name, tag, and platform.
 
 '**{0}bocw rm participant [user]**' to remove an account from the list of Call of Duty accounts participating in the Black Ops Cold War services.
 
-'**{0}bocw kills**' to display the total game kills of all participating players from highest to lowest.
-The bot will then assign the <@&{1}> role to the player in first place.", Program.configurationSettingsModel.Prefix, Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID) : null;
+'**{0}bocw weekly kills**' to display the weekly total game kills of all participating players from highest to lowest.
+The bot will then assign the <@&{1}> role to the player in first place.
+
+'**{0}bocw lifetime kills**' to display the lifetime total game kills of all participating players from highest to lowest.", Program.configurationSettingsModel.Prefix, Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID) : null;
         }
     }
 }

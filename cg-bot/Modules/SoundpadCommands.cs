@@ -39,6 +39,8 @@ namespace cg_bot.Modules
         {
             if (DisableIfServiceNotRunning(_service, "add"))
             {
+                await Context.Channel.TriggerTypingAsync();
+
                 if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
                 {
                     // if arguments are valid
@@ -90,6 +92,8 @@ namespace cg_bot.Modules
         [Command("approve", RunMode = RunMode.Async)]
         public async Task ApproveCommand(SocketGuildUser user)
         {
+            await Context.Channel.TriggerTypingAsync();
+
             if (DisableIfServiceNotRunning(_service, "approve"))
             {
                 if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
@@ -115,6 +119,8 @@ namespace cg_bot.Modules
         {
             if (DisableIfServiceNotRunning(_service, "categories"))
             {
+                await Context.Channel.TriggerTypingAsync();
+
                 if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
                 {
                     await LoadSounds(true, null, true);
@@ -130,6 +136,8 @@ namespace cg_bot.Modules
         {
             if (DisableIfServiceNotRunning(_service, "delete"))
             {
+                await Context.Channel.TriggerTypingAsync();
+
                 if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
                 {
                     string soundNumber = GetSingleArg(args);
@@ -150,6 +158,8 @@ namespace cg_bot.Modules
         {
             if (DisableIfServiceNotRunning(_service, "deny"))
             {
+                await Context.Channel.TriggerTypingAsync();
+
                 if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
                 {
                     string username = user.Username;
@@ -187,6 +197,8 @@ namespace cg_bot.Modules
         {
             if (DisableIfServiceNotRunning(_service, "play"))
             {
+                await Context.Channel.TriggerTypingAsync();
+
                 if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
                 {
                     string soundNumber = GetSingleArg(args);
@@ -206,6 +218,8 @@ namespace cg_bot.Modules
         {
             if (DisableIfServiceNotRunning(_service, "sounds"))
             {
+                await Context.Channel.TriggerTypingAsync();
+
                 if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
                 {
                     string categoryName = GetSingleArg(args);

@@ -9,7 +9,7 @@ namespace cg_bot.Modules.CallOfDutyModules
 {
 	public class BaseCallOfDutyCommands : BaseCommand
 	{
-        public async Task UnassignRoleFromAllUsers(ulong roleID)
+        public async Task UnassignRoleFromAllMembers(ulong roleID)
         {
             var role = Context.Guild.GetRole(roleID);
             IEnumerable<SocketGuildUser> roleMembers = Context.Guild.GetRole(roleID).Members;
@@ -22,7 +22,9 @@ namespace cg_bot.Modules.CallOfDutyModules
         public async Task GiveUserRole(ulong roleID, ulong discordID)
         {
             var role = Context.Guild.GetRole(roleID);
-            await Context.Guild.GetUser(discordID).AddRoleAsync(role);
+            var roleMember = Context.Guild.GetUser(discordID);
+
+            await roleMember.AddRoleAsync(role);
         }
 
         public async Task<bool> AddAParticipant<T>(CallOfDutyService<T> service, ulong discordID)

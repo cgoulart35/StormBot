@@ -68,6 +68,8 @@ namespace cg_bot.Services
 
                 isServiceRunning = true;
 
+                await _callOfDutyNotificationChannelID.SendMessageAsync("_**[    " + _dataModel.GameName.ToUpper() + " TRACKING ONLINE    ]**_");
+
                 // get all previously stored data
                 try
                 {
@@ -80,11 +82,26 @@ namespace cg_bot.Services
             }
         }
 
+        public override async Task StopService()
+        {
+            string logStamp = GetLogStamp();
+
+            if (isServiceRunning)
+            {
+                Console.WriteLine(logStamp + "Stopping service.".PadLeft(68 - logStamp.Length));
+
+                isServiceRunning = false;
+
+                await _callOfDutyNotificationChannelID.SendMessageAsync("_**[    " + _dataModel.GameName.ToUpper() + " TRACKING DISCONNECTED    ]**_");
+            }
+        }
+
         private CallOfDutyAllPlayersModel<T> ImportSavedPlayerData()
         {
             lock (_dataModel.SavedPlayerDataFileLock)
             {
-				return JsonConvert.DeserializeObject<CallOfDutyAllPlayersModel<T>>(File.ReadAllText(cgBotCallOfDutyGameSavedPlayerDataPath));
+                CallOfDutyAllPlayersModel<T> playerData = JsonConvert.DeserializeObject<CallOfDutyAllPlayersModel<T>>(File.ReadAllText(cgBotCallOfDutyGameSavedPlayerDataPath));
+                return playerData;
             }
         }
 

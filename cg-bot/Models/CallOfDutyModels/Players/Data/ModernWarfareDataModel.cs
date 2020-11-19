@@ -24,42 +24,63 @@ namespace cg_bot.Models.CallOfDutyModels.Players.Data
 
         [JsonProperty("lifetime")]
         public ModernWarfareLifetimeModel Lifetime { get; set; }
+
+        [JsonProperty("weekly")]
+        public ModernWarfareWeeklyModel Weekly { get; set; }
     }
 
     public class ModernWarfareLifetimeModel
     {
         [JsonProperty("all")]
-        public ModernWarfareAllModel All { get; set; }
+        public ModernWarfareLifetimeAllModel All { get; set; }
 
         [JsonProperty("mode")]
-        public ModernWarfareModeModel Mode { get; set; }
+        public ModernWarfareLifetimeModeModel Mode { get; set; }
     }
 
-    public class ModernWarfareModeModel
-    {
-        [JsonProperty("br")]
-        public ModernWarfareBattleRoyalModel BattleRoyal { get; set; }
-    }
-
-    public class ModernWarfareBattleRoyalModel
+    public class ModernWarfareLifetimeAllModel
     {
         [JsonProperty("properties")]
-        public ModernWarfareBattleRoyalPropertiesModel Properties { get; set; }
+        public ModernWarfareLifetimeAllPropertiesModel Properties { get; set; }
     }
 
-    public class ModernWarfareBattleRoyalPropertiesModel
+    public class ModernWarfareLifetimeAllPropertiesModel
+    {
+        [JsonProperty("kills")]
+        public double Kills { get; set; }
+    }
+
+    public class ModernWarfareLifetimeModeModel
+    {
+        [JsonProperty("br")]
+        public ModernWarfareLifetimeBattleRoyalModel BattleRoyal { get; set; }
+    }
+
+    public class ModernWarfareLifetimeBattleRoyalModel
+    {
+        [JsonProperty("properties")]
+        public ModernWarfareLifetimeBattleRoyalPropertiesModel Properties { get; set; }
+    }
+
+    public class ModernWarfareLifetimeBattleRoyalPropertiesModel
     {
         [JsonProperty("wins")]
         public double Wins { get; set; }
     }
 
-    public class ModernWarfareAllModel
+    public class ModernWarfareWeeklyModel
     {
-        [JsonProperty("properties")]
-        public ModernWarfareAllPropertiesModel Properties { get; set; }
+        [JsonProperty("all")]
+        public ModernWarfareWeeklyAllModel All { get; set; }
     }
 
-    public class ModernWarfareAllPropertiesModel
+    public class ModernWarfareWeeklyAllModel
+    {
+        [JsonProperty("properties")]
+        public ModernWarfareWeeklyAllPropertiesModel Properties { get; set; }
+    }
+
+    public class ModernWarfareWeeklyAllPropertiesModel
     {
         [JsonProperty("kills")]
         public double Kills { get; set; }

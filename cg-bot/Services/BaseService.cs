@@ -34,6 +34,18 @@ namespace cg_bot.Services
 			}
 		}
 
+		public virtual async Task StopService()
+		{
+			string logStamp = GetLogStamp();
+
+			if (isServiceRunning)
+			{
+				Console.WriteLine(logStamp + "Stopping service.".PadLeft(68 - logStamp.Length));
+
+				isServiceRunning = false;
+			}
+		}
+
 		public string GetLogStamp()
 		{
 			return DateTime.Now.ToString("HH:mm:ss ") + Name;

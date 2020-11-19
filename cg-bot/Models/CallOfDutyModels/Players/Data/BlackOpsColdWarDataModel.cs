@@ -24,21 +24,42 @@ namespace cg_bot.Models.CallOfDutyModels.Players.Data
 
         [JsonProperty("lifetime")]
         public BlackOpsColdWarLifetimeModel Lifetime { get; set; }
+
+        [JsonProperty("weekly")]
+        public BlackOpsColdWarWeeklyModel Weekly { get; set; }
     }
 
     public class BlackOpsColdWarLifetimeModel
     {
         [JsonProperty("all")]
-        public BlackOpsColdWarAllModel All { get; set; }
+        public BlackOpsColdWarLifetimeAllModel All { get; set; }
     }
 
-    public class BlackOpsColdWarAllModel
+    public class BlackOpsColdWarLifetimeAllModel
     {
         [JsonProperty("properties")]
-        public BlackOpsColdWarAllPropertiesModel Properties { get; set; }
+        public BlackOpsColdWarLifetimeAllPropertiesModel Properties { get; set; }
     }
 
-    public class BlackOpsColdWarAllPropertiesModel
+    public class BlackOpsColdWarLifetimeAllPropertiesModel
+    {
+        [JsonProperty("kills")]
+        public double Kills { get; set; }
+    }
+
+    public class BlackOpsColdWarWeeklyModel
+    {
+        [JsonProperty("all")]
+        public BlackOpsColdWarWeeklyAllModel All { get; set; }
+    }
+
+    public class BlackOpsColdWarWeeklyAllModel
+    {
+        [JsonProperty("properties")]
+        public BlackOpsColdWarWeeklyAllPropertiesModel Properties { get; set; }
+    }
+
+    public class BlackOpsColdWarWeeklyAllPropertiesModel
     {
         [JsonProperty("kills")]
         public double Kills { get; set; }

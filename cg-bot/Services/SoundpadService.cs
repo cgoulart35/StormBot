@@ -55,6 +55,25 @@ namespace cg_bot.Services
             }
         }
 
+        public override async Task StopService()
+        {
+            string logStamp = GetLogStamp();
+
+            if (isServiceRunning)
+            {
+                Console.WriteLine(logStamp + "Stopping service.".PadLeft(68 - logStamp.Length));
+
+                isServiceRunning = false;
+
+                if (isSoundpadRunning)
+                {
+                    string message = "SOUNDBOARD DISCONNECTED.";
+                    Console.WriteLine(logStamp + message.PadLeft(75 - logStamp.Length));
+                    await _soundboardNotificationChannel.SendMessageAsync("_**[    " + message + "    ]**_");
+                }
+            }
+        }
+
         private async void SoundpadOnStatusChangedAsync(object sender, EventArgs e)
         {
             string logStamp = GetLogStamp();
@@ -68,14 +87,14 @@ namespace cg_bot.Services
                 displayedConnectingMessage = false;
                 isSoundpadRunning = true;
                 string message = "SOUNDBOARD CONNECTED.";
-                Console.WriteLine(logStamp + message.PadLeft(57 - logStamp.Length));
+                Console.WriteLine(logStamp + message.PadLeft(72 - logStamp.Length));
                 await _soundboardNotificationChannel.SendMessageAsync("_**[    " + message + "    ]**_");
             }
             else if (_soundpad.ConnectionStatus == ConnectionStatus.Disconnected && isSoundpadRunning)
             {
                 displayedConnectingMessage = false;
                 string message = "SOUNDBOARD DISCONNECTED.";
-                Console.WriteLine(logStamp + message.PadLeft(60 - logStamp.Length));
+                Console.WriteLine(logStamp + message.PadLeft(75 - logStamp.Length));
                 await _soundboardNotificationChannel.SendMessageAsync("_**[    " + message + "    ]**_");
             }
             else if (_soundpad.ConnectionStatus == ConnectionStatus.Connecting && isSoundpadRunning)
@@ -85,7 +104,7 @@ namespace cg_bot.Services
                     displayedConnectingMessage = true;
                     isSoundpadRunning = false;
                     string message = "Listening for the soundboard application...";
-                    Console.WriteLine(logStamp + message.PadLeft(79 - logStamp.Length));
+                    Console.WriteLine(logStamp + message.PadLeft(94 - logStamp.Length));
                 }
             }
         }

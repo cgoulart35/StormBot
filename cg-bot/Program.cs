@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using System.IO;
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
 using Discord;
 using Discord.Commands;
@@ -10,6 +11,7 @@ using Newtonsoft.Json;
 using cg_bot.Services;
 using cg_bot.Models;
 using cg_bot.Models.CallOfDutyModels.Players.Data;
+
 
 namespace cg_bot
 {
@@ -34,7 +36,40 @@ namespace cg_bot
 
         private static bool isReady = false;
 
-        public static void Main(string[] args)
+        #region ON PROGRAM EXIT CODE
+        [DllImport("Kernel32")]
+        private static extern bool SetConsoleCtrlHandler(EventHandler handler, bool add);
+
+        private delegate bool EventHandler(CtrlType sig);
+        static EventHandler ConsoleApplicationClosed;
+
+        enum CtrlType
+        {
+            CTRL_C_EVENT = 0,
+            CTRL_BREAK_EVENT = 1,
+            CTRL_CLOSE_EVENT = 2,
+            CTRL_LOGOFF_EVENT = 5,
+            CTRL_SHUTDOWN_EVENT = 6
+        }
+
+        private bool CloseHandler(CtrlType sig)
+        {
+            // spacing for bot ouput visibility
+            Console.WriteLine("");
+
+            _soundpadService.StopService();
+            _modernWarfareService.StopService();
+            _blackOpsColdWarService.StopService();
+            _helpService.StopService();
+
+            System.Threading.Thread.Sleep(5000);
+            Environment.Exit(1);
+
+            return false;
+        }
+		#endregion
+
+		public static void Main(string[] args)
             => new Program().MainAsync().GetAwaiter().GetResult();
 
         public async Task MainAsync()
@@ -80,6 +115,10 @@ namespace cg_bot
             // always start the help service 
             _helpService.DoStart = true;
             await _helpService.StartService();
+
+            // set stop service functions to be called on console application exit in close handler function
+            ConsoleApplicationClosed += new EventHandler(CloseHandler);
+            SetConsoleCtrlHandler(ConsoleApplicationClosed, true);
 
             // spacing for bot ouput visibility
             Console.WriteLine("");
@@ -230,11 +269,11 @@ namespace cg_bot
             Console.WriteLine($"\nWould you like to start the {service.Name}? Please answer with 'y' or 'n'.");
             string answer = Console.ReadLine();
 
-            if (answer.ToLower() == "yes" || answer.ToLower() == "y")
+            if (answer != null && (answer.ToLower() == "yes" || answer.ToLower() == "y"))
             {
                 service.DoStart = true;
             }
-            else if (answer.ToLower() == "no" || answer.ToLower() == "n")
+            else if (answer != null && (answer.ToLower() == "no" || answer.ToLower() == "n"))
             {
                 service.DoStart = false;
             }

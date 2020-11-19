@@ -9,6 +9,13 @@
 							"kills": 8.0
 						}
 					}
+				},
+				"weekly": {
+					"all": {
+						"properties": {
+							"kills": 125.0
+						}
+					}
 				}
 			},
 			"discordID": 1111,
@@ -21,6 +28,13 @@
 					"all": {
 						"properties": {
 							"kills": 451.0
+						}
+					}
+				},
+				"weekly": {
+					"all": {
+						"properties": {
+							"kills": 125.0
 						}
 					}
 				}
@@ -36,6 +50,11 @@
 						"properties": {
 							"kills": 105.0
 						}
+					}
+				},
+				"weekly": {
+					"all": {
+						"properties": null
 					}
 				}
 			},
