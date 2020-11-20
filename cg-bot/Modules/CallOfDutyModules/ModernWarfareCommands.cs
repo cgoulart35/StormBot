@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Linq;
-using System.Collections.Generic;
-using Discord;
 using Discord.Commands;
-using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using cg_bot.Services;
 using cg_bot.Models.CallOfDutyModels.Players;
@@ -12,7 +9,7 @@ using cg_bot.Models.CallOfDutyModels.Players.Data;
 
 namespace cg_bot.Modules.CallOfDutyModules
 {
-    public class ModernWarfareCommands : BaseCallOfDutyCommands
+	public class ModernWarfareCommands : BaseCallOfDutyCommands
     {
         private CallOfDutyService<ModernWarfareDataModel> _service;
 
@@ -82,7 +79,16 @@ namespace cg_bot.Modules.CallOfDutyModules
                     int playerCount = 1;
                     foreach (CallOfDutyPlayerModel<ModernWarfareDataModel> player in newData.Players)
                     {
-                        output += string.Format(@"**{0}.)** <@!{1}> has {2} total game kills.", playerCount, player.DiscordID, player.Data.Lifetime.All.Properties.Kills) + "\n";
+                        double kills = 0;
+
+                        // if user has played
+                        if (player.Data.Lifetime.All.Properties == null)
+                            kills = 0;
+                        // if user has not played
+                        else
+                            kills = player.Data.Lifetime.All.Properties.Kills;
+
+                        output += string.Format(@"**{0}.)** <@!{1}> has {2} total game kills.", playerCount, player.DiscordID, kills) + "\n";
                         playerCount++;
                     }
 
@@ -114,7 +120,16 @@ namespace cg_bot.Modules.CallOfDutyModules
                     int playerCount = 1;
                     foreach (CallOfDutyPlayerModel<ModernWarfareDataModel> player in newData.Players)
                     {
-                        output += string.Format(@"**{0}.)** <@!{1}> has {2} total Warzone wins.", playerCount, player.DiscordID, player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins) + "\n";
+                        double wins = 0;
+
+                        // if user has played
+                        if (player.Data.Lifetime.All.Properties == null)
+                            wins = 0;
+                        // if user has not played
+                        else
+                            wins = player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins;
+
+                        output += string.Format(@"**{0}.)** <@!{1}> has {2} total Warzone wins.", playerCount, player.DiscordID, wins) + "\n";
                         playerCount++;
                     }
 
