@@ -2,6 +2,8 @@
 
 cg-bot is a Discord server bot that has functionality for Soundpad control (the soundboard program available on Steam), and Call of Duty statistic tracking (Black Ops Cold War, and Modern Warfare).
 
+The latest master branch is a .NET Core application. There is a separate branch for the .NET Framework version of the application, however it is being discontinued and won't receive any new features.
+
 ## Commands!
 
 ### Help: Help Commands
