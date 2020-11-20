@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
-VisualStudioVersion = 16.0.30621.155
+VisualStudioVersion = 16.0.30717.126
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "cg-bot", "cg-bot\cg-bot.csproj", "{63FD7F5E-3C76-4BCC-8EB5-58F13A80C3A1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "cg-bot", "cg-bot\cg-bot.csproj", "{EFA2CCC3-40B5-4E69-AD43-60991E319573}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,15 +11,15 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{63FD7F5E-3C76-4BCC-8EB5-58F13A80C3A1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{63FD7F5E-3C76-4BCC-8EB5-58F13A80C3A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{63FD7F5E-3C76-4BCC-8EB5-58F13A80C3A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{63FD7F5E-3C76-4BCC-8EB5-58F13A80C3A1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EFA2CCC3-40B5-4E69-AD43-60991E319573}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EFA2CCC3-40B5-4E69-AD43-60991E319573}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EFA2CCC3-40B5-4E69-AD43-60991E319573}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EFA2CCC3-40B5-4E69-AD43-60991E319573}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {D777BC89-E552-4CE9-BA07-8C60656F8EE4}
+		SolutionGuid = {FD24E0F8-3BE0-4483-ADB9-5ACED4E40D6E}
 	EndGlobalSection
 EndGlobal

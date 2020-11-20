@@ -2,18 +2,16 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using System.Diagnostics;
 using cg_bot.Services;
 using Discord;
 using Discord.Commands;
-using MediaToolkit.Model;
-using VideoLibrary;
+using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using SoundpadConnector;
 using SoundpadConnector.Response;
 using SoundpadConnector.XML;
-using MediaToolkit;
-using Discord.WebSocket;
-using System.Diagnostics;
+using VideoLibrary;
 
 namespace cg_bot.Modules
 {
@@ -557,7 +555,15 @@ namespace cg_bot.Modules
 
         private void SaveMP3(string source, YouTubeVideo video, string soundName)
         {
-            File.WriteAllBytes(source + video.FullName, video.GetBytes());
+            string fileName = source + soundName + ".mp4";
+            File.WriteAllBytes(fileName, video.GetBytes());
+            File.Move(fileName, Path.ChangeExtension(fileName, ".mp3"));
+
+            /* DEPRECATED
+             * 
+             * MediaToolKit not supported on .NET CORE
+
+            File.WriteAllBytes(fileName, video.GetBytes());
 
             var inputFile = new MediaFile { Filename = source + video.FullName };
             var outputFile = new MediaFile { Filename = source + $"{soundName}.mp3" };
@@ -570,6 +576,7 @@ namespace cg_bot.Modules
 
             // after creating the MP3, delete the created MP4 video
             File.Delete(Path.Combine(source, video.FullName));
+            */
         }
         #endregion
     }

@@ -62,7 +62,7 @@ namespace cg_bot
             _blackOpsColdWarService.StopService();
             _helpService.StopService();
 
-            System.Threading.Thread.Sleep(5000);
+            System.Threading.Thread.Sleep(4000);
             Environment.Exit(1);
 
             return false;
