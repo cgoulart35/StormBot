@@ -194,7 +194,7 @@ namespace cg_bot.Services
 
         private void InitializeAPI(ref CookieContainer cookieJar, ref string XSRFTOKEN)
         {
-            RestClient client = new RestClient("https://profile.callofduty.com/login");
+            RestClient client = new RestClient("https://profile.callofduty.com/null/login");
             client.CookieContainer = cookieJar;
             client.Timeout = -1;
             RestRequest request = new RestRequest(Method.GET);
@@ -202,7 +202,7 @@ namespace cg_bot.Services
             client.UnsafeAuthenticatedConnectionSharing = true;
             client.Execute(request);
 
-            XSRFTOKEN = client.CookieContainer.GetCookies(new Uri("https://profile.callofduty.com/login"))["XSRF-TOKEN"].Value;
+            XSRFTOKEN = client.CookieContainer.GetCookies(new Uri("https://profile.callofduty.com/null/login"))["XSRF-TOKEN"].Value;
         }
 
         private void LoginAPI(ref CookieContainer cookieJar, string XSRFTOKEN)
