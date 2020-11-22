@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using System.Linq;
 using Discord.Commands;
+using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using cg_bot.Services;
 using cg_bot.Models.CallOfDutyModels.Players;
@@ -12,10 +13,104 @@ namespace cg_bot.Modules.CallOfDutyModules
 	public class ModernWarfareCommands : BaseCallOfDutyCommands
     {
         private CallOfDutyService<ModernWarfareDataModel> _service;
+        private AnnouncementsService _announcementsService;
 
         public ModernWarfareCommands(IServiceProvider services)
         {
             _service = services.GetRequiredService<CallOfDutyService<ModernWarfareDataModel>>();
+            _announcementsService = services.GetRequiredService<AnnouncementsService>();
+
+            _announcementsService.CallOfDutyAnnouncement += WeeklyCompetitionUpdates;
+        }
+
+        public async Task WeeklyCompetitionUpdates(object sender, EventArgs args)
+        {
+            // if service is running, display updates
+            if (DisableIfServiceNotRunning(_service))
+            {
+                SocketGuild guild = _service._client.Guilds.First();
+                string output = "";
+                output += await GetWeeklyKills(guild) + "\n";
+                output += await GetWeeklyWins(guild);
+                await _service._callOfDutyNotificationChannelID.SendMessageAsync(output);
+            }
+        }
+
+        public async Task<string> GetWeeklyKills(SocketGuild guild = null)
+        {
+            if (guild == null)
+                guild = Context.Guild;
+
+            CallOfDutyAllPlayersModel<ModernWarfareDataModel> newData = _service.GetNewPlayerData();
+
+            if (newData != null)
+            {
+                string output = "__**Modern Warfare Weekly Kills**__\n";
+                newData.Players = newData.Players.OrderByDescending(player => player.Data.Weekly.All.Properties != null ? player.Data.Weekly.All.Properties.Kills : 0).ToList();
+
+                int playerCount = 1;
+                foreach (CallOfDutyPlayerModel<ModernWarfareDataModel> player in newData.Players)
+                {
+                    double kills;
+
+                    // if user has played this week
+                    if (player.Data.Weekly.All.Properties == null)
+                        kills = 0;
+                    // if user has not played this week
+                    else
+                        kills = player.Data.Weekly.All.Properties.Kills;
+
+                    output += string.Format(@"**{0}.)** <@!{1}> has {2} kills this week.", playerCount, player.DiscordID, kills) + "\n";
+                    playerCount++;
+                }
+
+                await UnassignRoleFromAllMembers(Program.configurationSettingsModel.ModernWarfareKillsRoleID, guild);
+                await GiveUserRole(Program.configurationSettingsModel.ModernWarfareKillsRoleID, newData.Players[0].DiscordID, guild);
+
+                output += "\n" + string.Format(@"Congratulations <@!{0}>, you have the most kills out of all Modern Warfare participants this week! You have been assigned the role <@&{1}>!", newData.Players[0].DiscordID, Program.configurationSettingsModel.ModernWarfareKillsRoleID);
+                return output;
+            }
+            else
+                return "No data returned.";
+        }
+        
+        public async Task<string> GetWeeklyWins(SocketGuild guild = null)
+        {
+            if (guild == null)
+                guild = Context.Guild;
+
+            CallOfDutyAllPlayersModel<ModernWarfareDataModel> newData = _service.GetNewPlayerData();
+
+            if (newData != null)
+            {
+                string output = "__**Modern Warfare Warzone Wins**__\n";
+                newData.Players = newData.Players.OrderByDescending(player => player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins).ToList();
+
+                int playerCount = 1;
+                foreach (CallOfDutyPlayerModel<ModernWarfareDataModel> player in newData.Players)
+                {
+                    double wins = 0;
+
+                    // if user has played
+                    if (player.Data.Lifetime.All.Properties == null)
+                        wins = 0;
+                    // if user has not played
+                    else
+                        wins = player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins;
+
+                    output += string.Format(@"**{0}.)** <@!{1}> has {2} total Warzone wins.", playerCount, player.DiscordID, wins) + "\n";
+                    playerCount++;
+                }
+
+                await UnassignRoleFromAllMembers(Program.configurationSettingsModel.ModernWarfareWarzoneWinsRoleID, guild);
+                await GiveUserRole(Program.configurationSettingsModel.ModernWarfareWarzoneWinsRoleID, newData.Players[0].DiscordID, guild);
+
+                output += "\n" + string.Format(@"Congratulations <@!{0}>, you have the most Warzone wins out of all Modern Warfare participants! You have been assigned the role <@&{1}>!", newData.Players[0].DiscordID, Program.configurationSettingsModel.ModernWarfareWarzoneWinsRoleID);
+
+                return output;
+            }
+            else
+                return "No data returned.";
         }
 
         [Command("mw weekly kills", RunMode = RunMode.Async)]
@@ -24,41 +119,17 @@ namespace cg_bot.Modules.CallOfDutyModules
             if (DisableIfServiceNotRunning(_service, "mw weekly kills"))
             {
                 await Context.Channel.TriggerTypingAsync();
+                await ReplyAsync(await GetWeeklyKills());
+            }
+        }
 
-                CallOfDutyAllPlayersModel<ModernWarfareDataModel> newData = _service.GetNewPlayerData();
-
-                if (newData != null)
-                {
-                    string output = "__**Modern Warfare Weekly Kills**__\n";
-                    newData.Players = newData.Players.OrderByDescending(player => player.Data.Weekly.All.Properties != null ? player.Data.Weekly.All.Properties.Kills : 0).ToList();
-
-                    int playerCount = 1;
-                    foreach (CallOfDutyPlayerModel<ModernWarfareDataModel> player in newData.Players)
-                    {
-                        double kills;
-
-                        // if user has played this week
-                        if (player.Data.Weekly.All.Properties == null)
-                            kills = 0;
-                        // if user has not played this week
-                        else
-                            kills = player.Data.Weekly.All.Properties.Kills;
-
-                        output += string.Format(@"**{0}.)** <@!{1}> has {2} kills this week.", playerCount, player.DiscordID, kills) + "\n";
-                        playerCount++;
-                    }
-
-                    await UnassignRoleFromAllMembers(Program.configurationSettingsModel.ModernWarfareKillsRoleID);
-                    await GiveUserRole(Program.configurationSettingsModel.ModernWarfareKillsRoleID, newData.Players[0].DiscordID);
-
-                    output += "\n" + string.Format(@"Congratulations <@!{0}>, you have the most kills out of all Modern Warfare participants this week! You have been assigned the role <@&{1}>!", newData.Players[0].DiscordID, Program.configurationSettingsModel.ModernWarfareKillsRoleID);
-
-                    await ReplyAsync(output);
-                }
-                else
-                {
-                    await ReplyAsync("No data returned.");
-                }
+        [Command("mw wz wins", RunMode = RunMode.Async)]
+        public async Task WinsCommand()
+        {
+            if (DisableIfServiceNotRunning(_service, "mw wz wins"))
+            {
+                await Context.Channel.TriggerTypingAsync();
+                await ReplyAsync(await GetWeeklyWins());
             }
         }
 
@@ -93,50 +164,6 @@ namespace cg_bot.Modules.CallOfDutyModules
                     }
 
                     output += "\n" + string.Format(@"Congratulations <@!{0}>, you have the most kills in your lifetime out of all Modern Warfare participants!", newData.Players[0].DiscordID);
-
-                    await ReplyAsync(output);
-                }
-                else
-                {
-                    await ReplyAsync("No data returned.");
-                }
-            }
-        }
-
-        [Command("mw wz wins", RunMode = RunMode.Async)]
-        public async Task WinsCommand()
-        {
-            if (DisableIfServiceNotRunning(_service, "mw wz wins"))
-            {
-                await Context.Channel.TriggerTypingAsync();
-
-                CallOfDutyAllPlayersModel<ModernWarfareDataModel> newData = _service.GetNewPlayerData();
-
-                if (newData != null)
-                {
-                    string output = "__**Modern Warfare Warzone Wins**__\n";
-                    newData.Players = newData.Players.OrderByDescending(player => player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins).ToList();
-
-                    int playerCount = 1;
-                    foreach (CallOfDutyPlayerModel<ModernWarfareDataModel> player in newData.Players)
-                    {
-                        double wins = 0;
-
-                        // if user has played
-                        if (player.Data.Lifetime.All.Properties == null)
-                            wins = 0;
-                        // if user has not played
-                        else
-                            wins = player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins;
-
-                        output += string.Format(@"**{0}.)** <@!{1}> has {2} total Warzone wins.", playerCount, player.DiscordID, wins) + "\n";
-                        playerCount++;
-                    }
-
-                    await UnassignRoleFromAllMembers(Program.configurationSettingsModel.ModernWarfareWarzoneWinsRoleID);
-                    await GiveUserRole(Program.configurationSettingsModel.ModernWarfareWarzoneWinsRoleID, newData.Players[0].DiscordID);
-
-                    output += "\n" + string.Format(@"Congratulations <@!{0}>, you have the most Warzone wins out of all Modern Warfare participants! You have been assigned the role <@&{1}>!", newData.Players[0].DiscordID, Program.configurationSettingsModel.ModernWarfareWarzoneWinsRoleID);
 
                     await ReplyAsync(output);
                 }

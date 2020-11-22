@@ -9,20 +9,20 @@ namespace cg_bot.Modules.CallOfDutyModules
 {
 	public class BaseCallOfDutyCommands : BaseCommand
 	{
-        public async Task UnassignRoleFromAllMembers(ulong roleID)
+        public async Task UnassignRoleFromAllMembers(ulong roleID, SocketGuild guild)
         {
-            var role = Context.Guild.GetRole(roleID);
-            IEnumerable<SocketGuildUser> roleMembers = Context.Guild.GetRole(roleID).Members;
+            var role = guild.GetRole(roleID);
+            IEnumerable<SocketGuildUser> roleMembers = guild.GetRole(roleID).Members;
             foreach (SocketGuildUser roleMember in roleMembers)
             {
                 await roleMember.RemoveRoleAsync(role);
             }
         }
 
-        public async Task GiveUserRole(ulong roleID, ulong discordID)
+        public async Task GiveUserRole(ulong roleID, ulong discordID, SocketGuild guild)
         {
-            var role = Context.Guild.GetRole(roleID);
-            var roleMember = Context.Guild.GetUser(discordID);
+            var role = guild.GetRole(roleID);
+            var roleMember = guild.GetUser(discordID);
 
             await roleMember.AddRoleAsync(role);
         }

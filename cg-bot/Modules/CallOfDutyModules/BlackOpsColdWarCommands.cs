@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using System.Linq;
 using Discord.Commands;
+using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using cg_bot.Services;
 using cg_bot.Models.CallOfDutyModels.Players;
@@ -12,53 +13,76 @@ namespace cg_bot.Modules.CallOfDutyModules
 	public class BlackOpsColdWarCommands : BaseCallOfDutyCommands
     {
         private CallOfDutyService<BlackOpsColdWarDataModel> _service;
+        private AnnouncementsService _announcementsService;
 
         public BlackOpsColdWarCommands(IServiceProvider services)
         {
             _service = services.GetRequiredService<CallOfDutyService<BlackOpsColdWarDataModel>>();
+            _announcementsService = services.GetRequiredService<AnnouncementsService>();
+
+            _announcementsService.CallOfDutyAnnouncement += WeeklyCompetitionUpdates;
         }
 
+        public async Task WeeklyCompetitionUpdates(object sender, EventArgs args)
+        {
+            // if service is running, display updates
+            if (DisableIfServiceNotRunning(_service))
+            {
+                SocketGuild guild = _service._client.Guilds.First();
+                string output = "";
+                output += await GetWeeklyKills(guild);
+                await _service._callOfDutyNotificationChannelID.SendMessageAsync(output);
+            }
+        }
+
+        public async Task<string> GetWeeklyKills(SocketGuild guild = null)
+        {
+            if (guild == null)
+                guild = Context.Guild;
+
+            CallOfDutyAllPlayersModel<BlackOpsColdWarDataModel> newData = _service.GetNewPlayerData();
+
+            if (newData != null)
+            {
+                string output = "__** Black Ops Cold War Weekly Kills**__\n";
+                newData.Players = newData.Players.OrderByDescending(player => player.Data.Weekly.All.Properties != null ? player.Data.Weekly.All.Properties.Kills : 0).ToList();
+
+                int playerCount = 1;
+                foreach (CallOfDutyPlayerModel<BlackOpsColdWarDataModel> player in newData.Players)
+                {
+                    double kills;
+
+                    // if user has played this week
+                    if (player.Data.Weekly.All.Properties == null)
+                        kills = 0;
+                    // if user has not played this week
+                    else
+                        kills = player.Data.Weekly.All.Properties.Kills;
+
+                    output += string.Format(@"**{0}.)** <@!{1}> has {2} kills this week.", playerCount, player.DiscordID, kills) + "\n";
+                    playerCount++;
+                }
+
+                await UnassignRoleFromAllMembers(Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID, guild);
+                await GiveUserRole(Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID, newData.Players[0].DiscordID, guild);
+
+                output += "\n" + string.Format(@"Congratulations <@!{0}>, you have the most kills out of all Black Ops Cold War participants this week! You have been assigned the role <@&{1}>!", newData.Players[0].DiscordID, Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID);
+
+                return output;
+            }
+            else
+            {
+                return "No data returned.";
+            }
+        }
+        
         [Command("bocw weekly kills", RunMode = RunMode.Async)]
         public async Task WeeklyKillsCommand()
         {
             if (DisableIfServiceNotRunning(_service, "bocw weekly kills"))
             {
                 await Context.Channel.TriggerTypingAsync();
-
-                CallOfDutyAllPlayersModel<BlackOpsColdWarDataModel> newData = _service.GetNewPlayerData();
-
-                if (newData != null)
-                {
-                    string output = "__** Black Ops Cold War Weekly Kills**__\n";
-                    newData.Players = newData.Players.OrderByDescending(player => player.Data.Weekly.All.Properties != null ? player.Data.Weekly.All.Properties.Kills : 0).ToList();
-
-                    int playerCount = 1;
-                    foreach (CallOfDutyPlayerModel<BlackOpsColdWarDataModel> player in newData.Players)
-                    {
-                        double kills;
-
-                        // if user has played this week
-                        if (player.Data.Weekly.All.Properties == null)
-                            kills = 0;
-                        // if user has not played this week
-                        else
-                            kills = player.Data.Weekly.All.Properties.Kills;
-
-                        output += string.Format(@"**{0}.)** <@!{1}> has {2} kills this week.", playerCount, player.DiscordID, kills) + "\n";
-                        playerCount++;
-                    }
-
-                    await UnassignRoleFromAllMembers(Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID);
-                    await GiveUserRole(Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID, newData.Players[0].DiscordID);
-
-                    output += "\n" + string.Format(@"Congratulations <@!{0}>, you have the most kills out of all Black Ops Cold War participants this week! You have been assigned the role <@&{1}>!", newData.Players[0].DiscordID, Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID);
-
-                    await ReplyAsync(output);
-                }
-                else
-                {
-                    await ReplyAsync("No data returned.");
-                }
+                await ReplyAsync(await GetWeeklyKills());
             }
         }
 

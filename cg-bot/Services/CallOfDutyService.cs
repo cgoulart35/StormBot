@@ -16,7 +16,7 @@ namespace cg_bot.Services
 {
 	public class CallOfDutyService<T> : BaseService
     {
-        private readonly DiscordSocketClient _client;
+        public readonly DiscordSocketClient _client;
 
         public IMessageChannel _callOfDutyNotificationChannelID;
 
@@ -68,7 +68,7 @@ namespace cg_bot.Services
 
                 isServiceRunning = true;
 
-                await _callOfDutyNotificationChannelID.SendMessageAsync("_**[    " + _dataModel.GameName.ToUpper() + " TRACKING ONLINE    ]**_");
+                await _callOfDutyNotificationChannelID.SendMessageAsync("_**[    " + _dataModel.GameName.ToUpper() + " TRACKING ONLINE.    ]**_");
 
                 // get all previously stored data
                 try
@@ -92,7 +92,7 @@ namespace cg_bot.Services
 
                 isServiceRunning = false;
 
-                await _callOfDutyNotificationChannelID.SendMessageAsync("_**[    " + _dataModel.GameName.ToUpper() + " TRACKING DISCONNECTED    ]**_");
+                await _callOfDutyNotificationChannelID.SendMessageAsync("_**[    " + _dataModel.GameName.ToUpper() + " TRACKING DISCONNECTED.    ]**_");
             }
         }
 

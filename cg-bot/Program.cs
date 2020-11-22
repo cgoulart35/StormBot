@@ -23,6 +23,7 @@ namespace cg_bot
         private CommandHandler _commandHandler;
         private BaseService _baseService;
         private SoundpadService _soundpadService;
+        private AnnouncementsService _announcementsService;
         private CallOfDutyService<ModernWarfareDataModel> _modernWarfareService;
         private CallOfDutyService<BlackOpsColdWarDataModel> _blackOpsColdWarService;
         private HelpService _helpService;
@@ -107,12 +108,16 @@ namespace cg_bot
             // spacing for bot ouput visibility
             Console.WriteLine("");
 
+            // always start the announcements service
+            _announcementsService.DoStart = true;
+            _announcementsService.StartService();
+
             // only services that were selected will be started
             _soundpadService.StartService();
             _modernWarfareService.StartService();
             _blackOpsColdWarService.StartService();
 
-            // always start the help service 
+            // always start the help service
             _helpService.DoStart = true;
             await _helpService.StartService();
 
@@ -249,6 +254,7 @@ namespace cg_bot
                 .AddSingleton<CommandHandler>()
                 .AddSingleton<BaseService>()
                 .AddSingleton<SoundpadService>()
+                .AddSingleton<AnnouncementsService>()
                 .AddSingleton<CallOfDutyService<ModernWarfareDataModel>>()
                 .AddSingleton<CallOfDutyService<BlackOpsColdWarDataModel>>()
                 .AddSingleton<HelpService>()
@@ -259,6 +265,7 @@ namespace cg_bot
             _commandHandler = _services.GetRequiredService<CommandHandler>();
             _baseService = _services.GetRequiredService<BaseService>();
             _soundpadService = _services.GetRequiredService<SoundpadService>();
+            _announcementsService = _services.GetRequiredService<AnnouncementsService>();
             _modernWarfareService = _services.GetRequiredService<CallOfDutyService<ModernWarfareDataModel>>();
             _blackOpsColdWarService = _services.GetRequiredService<CallOfDutyService<BlackOpsColdWarDataModel>>();
             _helpService = _services.GetRequiredService<HelpService>();
