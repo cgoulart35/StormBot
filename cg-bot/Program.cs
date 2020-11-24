@@ -23,9 +23,9 @@ namespace cg_bot
         private CommandHandler _commandHandler;
         private BaseService _baseService;
         private SoundpadService _soundpadService;
-        private AnnouncementsService _announcementsService;
         private CallOfDutyService<ModernWarfareDataModel> _modernWarfareService;
         private CallOfDutyService<BlackOpsColdWarDataModel> _blackOpsColdWarService;
+        private AnnouncementsService _announcementsService;
         private HelpService _helpService;
         private IServiceProvider _services;
 
@@ -58,10 +58,10 @@ namespace cg_bot
             // spacing for bot ouput visibility
             Console.WriteLine("");
 
-            _announcementsService.StopService();
             _soundpadService.StopService();
             _modernWarfareService.StopService();
             _blackOpsColdWarService.StopService();
+            _announcementsService.StopService();
             _helpService.StopService();
 
             System.Threading.Thread.Sleep(4000);
@@ -109,14 +109,14 @@ namespace cg_bot
             // spacing for bot ouput visibility
             Console.WriteLine("");
 
-            // always start the announcements service
-            _announcementsService.DoStart = true;
-            _announcementsService.StartService();
-
             // only services that were selected will be started
             _soundpadService.StartService();
-            _modernWarfareService.StartService();
-            _blackOpsColdWarService.StartService();
+            await _modernWarfareService.StartService();
+            await _blackOpsColdWarService.StartService();
+
+            // always start the announcements service
+            _announcementsService.DoStart = true;
+            await _announcementsService.StartService();
 
             // always start the help service
             _helpService.DoStart = true;
@@ -254,8 +254,8 @@ namespace cg_bot
                 .AddSingleton<InteractiveService>()
                 .AddSingleton<CommandHandler>()
                 .AddSingleton<BaseService>()
-                .AddSingleton<SoundpadService>()
                 .AddSingleton<AnnouncementsService>()
+                .AddSingleton<SoundpadService>()
                 .AddSingleton<CallOfDutyService<ModernWarfareDataModel>>()
                 .AddSingleton<CallOfDutyService<BlackOpsColdWarDataModel>>()
                 .AddSingleton<HelpService>()

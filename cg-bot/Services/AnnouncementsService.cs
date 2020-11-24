@@ -13,6 +13,9 @@ namespace cg_bot.Services
 		public event OnAnnouncementHandler WeeklyCallOfDutyAnnouncement;
 		public event OnAnnouncementHandler DailyCallOfDutyAnnouncement;
 
+		private bool weeklySent;
+		private bool dailySent;
+
 		private readonly DiscordSocketClient _client;
 
 		public IMessageChannel _callOfDutyNotificationChannelID;
@@ -43,6 +46,8 @@ namespace cg_bot.Services
 				Console.WriteLine(logStamp + "Starting service.".PadLeft(68 - logStamp.Length));
 
 				isServiceRunning = true;
+				weeklySent = false;
+				dailySent = false;
 
 				StartCallOfDutyWeeklyAnnouncements();
 				StartCallOfDutyDailyAnnouncements();
@@ -55,12 +60,16 @@ namespace cg_bot.Services
 			while (isServiceRunning)
 			{
 				DateTime currentTime = DateTime.Now;
-				if (currentTime.DayOfWeek == DayOfWeek.Saturday && currentTime.Hour == 1 && currentTime.Minute == 0 && WeeklyCallOfDutyAnnouncement != null)
+				if (!weeklySent && currentTime.DayOfWeek == DayOfWeek.Saturday && currentTime.Hour == 1 && currentTime.Minute == 0 && WeeklyCallOfDutyAnnouncement != null)
 				{
 					await _callOfDutyNotificationChannelID.SendMessageAsync("```fix\nHERE ARE THIS WEEK'S WINNERS!!!! CONGRATULATIONS!!!\n```");
 					await WeeklyCallOfDutyAnnouncement.Invoke(this, EventArgs.Empty);
+
+					weeklySent = true;
 				}
-				
+				else
+					weeklySent = false;
+
 				await Task.Delay(60000);
 			}
 		}
@@ -71,11 +80,15 @@ namespace cg_bot.Services
 			while (isServiceRunning)
 			{
 				DateTime currentTime = DateTime.Now;
-				if (currentTime.DayOfWeek != DayOfWeek.Saturday && currentTime.Hour == 22 && currentTime.Minute == 0 && WeeklyCallOfDutyAnnouncement != null)
+				if (!dailySent && currentTime.DayOfWeek != DayOfWeek.Saturday && currentTime.Hour == 22 && currentTime.Minute == 0 && WeeklyCallOfDutyAnnouncement != null)
 				{
 					await _callOfDutyNotificationChannelID.SendMessageAsync("```fix\nHERE ARE THIS WEEK'S CURRENT RANKINGS!\n```");
 					await DailyCallOfDutyAnnouncement.Invoke(this, EventArgs.Empty);
+
+					dailySent = true;
 				}
+				else
+					dailySent = false;
 
 				await Task.Delay(60000);
 			}

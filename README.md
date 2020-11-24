@@ -48,11 +48,15 @@ The bot will then ask you to enter the account name, tag, and platform.
 
 - **'.mw rm participant [user]'** to remove an account from the list of Call of Duty accounts participating in the Modern Warfare services.
 
-- **'.mw kills'** to display the total game kills of all participating players from highest to lowest.
-The bot will then assign the @___ role to the player in first place.
+- **'.mw weekly kills'** to display the total game kills so far this week of all participating players from highest to lowest.
+The bot will only assign the @__ role to the player in first place at the end of the week.
+
+- **'.mw lifetime kills'** to display the lifetime total game kills of all participating players from highest to lowest.
 
 - **'.mw wz wins'** to display the total Warzone wins of all participating players from highest to lowest.
-The bot will then assign the @___ role to the player in first place.
+The bot will only assign the @__ role to the player in first place at the end of the week.
+
+
 
 ### Help: Black Ops Cold War Commands
 
@@ -63,5 +67,7 @@ The bot will then ask you to enter the account name, tag, and platform.
 
 - **'.bocw rm participant [user]'** to remove an account from the list of Call of Duty accounts participating in the Black Ops Cold War services.
 
-- **'.bocw kills'** to display the total game kills of all participating players from highest to lowest.
-The bot will then assign the @___ role to the player in first place.
+- **'.bocw weekly kills'** to display the total game kills so far this week of all participating players from highest to lowest.
+The bot will only assign the @__ role to the player in first place at the end of the week.
+
+- **'.bocw lifetime kills'** to display the lifetime total game kills of all participating players from highest to lowest.
