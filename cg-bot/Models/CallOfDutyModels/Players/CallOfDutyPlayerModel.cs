@@ -5,6 +5,9 @@ namespace cg_bot.Models.CallOfDutyModels.Players
 {
     public class CallOfDutyPlayerModel<T>
     {
+        [JsonProperty("status")]
+        public string Status { get; set; }
+
         [JsonProperty("data")]
         public T Data { get; set; }
 

@@ -230,6 +230,14 @@ namespace cg_bot.Services
             foreach (CallOfDutyAccountModel account in participatingAccountsData.Accounts)
             {
                 CallOfDutyPlayerModel<T> playerData = GetAPlayersDataAPI(cookieJar, account);
+
+                if (playerData.Status == null || playerData.Status != "success")
+                {
+                    string logStamp = GetLogStamp();
+                    Console.WriteLine(logStamp + $"Error getting data for the Call of Duty account: ".PadLeft(100 - logStamp.Length) + account.Username);
+                    return null;
+                }
+
                 playerData.DiscordID = account.DiscordID;
                 playerData.Date = DateTime.Now;
                 allPlayerData.Add(playerData);
