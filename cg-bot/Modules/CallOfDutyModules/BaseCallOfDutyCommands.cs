@@ -33,13 +33,13 @@ namespace cg_bot.Modules.CallOfDutyModules
 
             account.DiscordID = discordID;
 
-            await ReplyAsync(string.Format("What is <@!{0}>'s Call of Duty username? Do not include the '#number' tag after the name. (on Battle.net, PlayStation, Xbox, Steam, Activision)", discordID));
+            await ReplyAsync(string.Format("What is <@!{0}>'s Call of Duty username? Capitalization matters. Do not include the '#number' tag after the name. (on Battle.net, PlayStation, Xbox, Steam, Activision)", discordID));
             account.Username = await PromptUserForStringForPartcipant();
 
             if (account.Username == "cancel")
                 return false;
 
-            await ReplyAsync(string.Format("What is <@!{0}>'s Call of Duty username's tag? If there is no tag, say 'none'. Do not include the '#' symbol in your answer. (Example: 1292 in StormerG#1292)", discordID));
+            await ReplyAsync(string.Format("What is <@!{0}>'s Call of Duty username's tag? If there is no tag, say 'none'. Do not include the '#' symbol in your answer. (Example: 1234 in User#1234)", discordID));
             account.Tag = await PromptUserForStringForPartcipant(true);
 
             if (account.Tag == "cancel")

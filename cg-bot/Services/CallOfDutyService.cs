@@ -127,7 +127,7 @@ namespace cg_bot.Services
             }
         }
 
-        public CallOfDutyAllPlayersModel<T> GetNewPlayerData()
+        public CallOfDutyAllPlayersModel<T> GetNewPlayerData(bool overwriteStoredData = false)
         {
             // get list of participating players
             CallOfDutyAllAccountsModel participatingAccountsData = ReadParticipatingAccounts();
@@ -139,10 +139,6 @@ namespace cg_bot.Services
                 Console.WriteLine(logStamp + "Cannot retrieve player data for zero participants. Please add participants.".PadLeft(126 - logStamp.Length));
                 return null;
             }
-
-            // keep track of the last retrieved data by setting the old data equal to the current new data (only if new data has already been retrieved)
-            if (newPlayerDataModel != null)
-                storedPlayerDataModel = newPlayerDataModel;
 
             CookieContainer cookieJar = new CookieContainer();
             string XSRFTOKEN = "";
@@ -156,8 +152,15 @@ namespace cg_bot.Services
             // retrieve updated data via Call of Duty: Modern Warefare API for all participating players with cookie tokens obtained from login
             newPlayerDataModel = GetAllPlayersDataAPI(cookieJar, participatingAccountsData);
 
-            // store the data in the json file
-            ExportNewPlayerData();
+            if (overwriteStoredData)
+            {
+                // keep track of the last retrieved data by setting the new data ro the stored data (only if new data has already been retrieved)
+                if (newPlayerDataModel != null)
+                    storedPlayerDataModel = newPlayerDataModel;
+
+                // store the data in the json file
+                ExportNewPlayerData();
+            }
 
             return newPlayerDataModel;
         }

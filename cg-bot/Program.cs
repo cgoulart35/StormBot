@@ -58,6 +58,7 @@ namespace cg_bot
             // spacing for bot ouput visibility
             Console.WriteLine("");
 
+            _announcementsService.StopService();
             _soundpadService.StopService();
             _modernWarfareService.StopService();
             _blackOpsColdWarService.StopService();
