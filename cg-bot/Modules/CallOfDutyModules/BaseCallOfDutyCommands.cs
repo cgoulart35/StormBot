@@ -82,11 +82,13 @@ namespace cg_bot.Modules.CallOfDutyModules
         {
             var userSelectResponse = await NextMessageAsync(true, true, new TimeSpan(0, 1, 0));
 
-            string requestedString = userSelectResponse.Content;
+            string requestedString = null;
 
             // if user responds in time
             if (userSelectResponse != null)
             {
+                requestedString = userSelectResponse.Content;
+
                 if (forTag && requestedString == "none")
                 {
                     return "";
