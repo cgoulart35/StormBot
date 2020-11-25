@@ -56,11 +56,11 @@ namespace cg_bot.Services
 
 		public async Task StartCallOfDutyWeeklyAnnouncements()
 		{
-			// send out weekly winners announcement at 1:00 AM (EST) on Saturdays
+			// send out weekly winners announcement at 1:00 AM (EST) on Sunday mornings
 			while (isServiceRunning)
 			{
 				DateTime currentTime = DateTime.Now;
-				if (!weeklySent && currentTime.DayOfWeek == DayOfWeek.Saturday && currentTime.Hour == 1 && currentTime.Minute == 0 && WeeklyCallOfDutyAnnouncement != null)
+				if (!weeklySent && currentTime.DayOfWeek == DayOfWeek.Sunday && currentTime.Hour == 1 && currentTime.Minute == 0 && WeeklyCallOfDutyAnnouncement != null)
 				{
 					await _callOfDutyNotificationChannelID.SendMessageAsync("```fix\nHERE ARE THIS WEEK'S WINNERS!!!! CONGRATULATIONS!!!\n```");
 					await WeeklyCallOfDutyAnnouncement.Invoke(this, EventArgs.Empty);
@@ -80,7 +80,7 @@ namespace cg_bot.Services
 			while (isServiceRunning)
 			{
 				DateTime currentTime = DateTime.Now;
-				if (!dailySent && currentTime.DayOfWeek != DayOfWeek.Saturday && currentTime.Hour == 22 && currentTime.Minute == 0 && WeeklyCallOfDutyAnnouncement != null)
+				if (!dailySent && currentTime.Hour == 22 && currentTime.Minute == 0 && WeeklyCallOfDutyAnnouncement != null)
 				{
 					await _callOfDutyNotificationChannelID.SendMessageAsync("```fix\nHERE ARE THIS WEEK'S CURRENT RANKINGS!\n```");
 					await DailyCallOfDutyAnnouncement.Invoke(this, EventArgs.Empty);
