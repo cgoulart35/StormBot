@@ -31,7 +31,11 @@ namespace cg_bot.Modules.CallOfDutyModules
             if (DisableIfServiceNotRunning(_service))
             {
                 SocketGuild guild = _service._client.Guilds.First();
-                List<string> output = await GetLast7DaysKills(guild);
+
+                // pass true to keep track of lifetime total kills every week
+                CallOfDutyAllPlayersModel<BlackOpsColdWarDataModel> newData = _service.GetNewPlayerData(true);
+
+                List<string> output = await GetLast7DaysKills(newData, guild);
                 
                 if (output[0] != "")
                 {
@@ -49,7 +53,10 @@ namespace cg_bot.Modules.CallOfDutyModules
             if (DisableIfServiceNotRunning(_service))
             {
                 SocketGuild guild = _service._client.Guilds.First();
-                List<string> output = GetWeeklyKills(guild);
+
+                CallOfDutyAllPlayersModel<BlackOpsColdWarDataModel> newData = _service.GetNewPlayerData();
+
+                List<string> output = GetWeeklyKills(newData, guild);
 
                 if (output[0] != "")
                 {
@@ -61,13 +68,10 @@ namespace cg_bot.Modules.CallOfDutyModules
             }
         }
 
-        public async Task<List<string>> GetLast7DaysKills(SocketGuild guild = null)
+        public async Task<List<string>> GetLast7DaysKills(CallOfDutyAllPlayersModel<BlackOpsColdWarDataModel> newData, SocketGuild guild = null)
         {
             if (guild == null)
                 guild = Context.Guild;
-
-            // pass true to keep track of lifetime total kills every week
-            CallOfDutyAllPlayersModel<BlackOpsColdWarDataModel> newData = _service.GetNewPlayerData(true);
 
             List<string> output = new List<string>();
 
@@ -106,13 +110,12 @@ namespace cg_bot.Modules.CallOfDutyModules
             }
         }
 
-        public List<string> GetWeeklyKills(SocketGuild guild = null)
+        public List<string> GetWeeklyKills(CallOfDutyAllPlayersModel<BlackOpsColdWarDataModel> newData, SocketGuild guild = null)
         {
             if (guild == null)
                 guild = Context.Guild;
 
             CallOfDutyAllPlayersModel<BlackOpsColdWarDataModel> storedData = _service.storedPlayerDataModel;
-            CallOfDutyAllPlayersModel<BlackOpsColdWarDataModel> newData = _service.GetNewPlayerData();
             List<CallOfDutyPlayerModel<BlackOpsColdWarDataModel>> outputPlayers = new List<CallOfDutyPlayerModel<BlackOpsColdWarDataModel>>();
 
             List<string> output = new List<string>();
@@ -188,7 +191,9 @@ namespace cg_bot.Modules.CallOfDutyModules
             {
                 await Context.Channel.TriggerTypingAsync();
 
-                List<string> output = GetWeeklyKills();
+                CallOfDutyAllPlayersModel<BlackOpsColdWarDataModel> newData = _service.GetNewPlayerData();
+
+                List<string> output = GetWeeklyKills(newData);
                 if (output[0] != "")
                 {
                     foreach (string chunk in output)

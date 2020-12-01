@@ -80,7 +80,7 @@ namespace cg_bot.Services
 			while (isServiceRunning)
 			{
 				DateTime currentTime = DateTime.Now;
-				if (!dailySent && currentTime.Hour == 22 && currentTime.Minute == 0 && WeeklyCallOfDutyAnnouncement != null)
+				if (!dailySent && currentTime.Hour == 22 && currentTime.Minute == 0 && DailyCallOfDutyAnnouncement != null)
 				{
 					await _callOfDutyNotificationChannelID.SendMessageAsync("```fix\nHERE ARE THIS WEEK'S CURRENT RANKINGS!\n```");
 					await DailyCallOfDutyAnnouncement.Invoke(this, EventArgs.Empty);

@@ -31,9 +31,13 @@ namespace cg_bot.Modules.CallOfDutyModules
             if (DisableIfServiceNotRunning(_service))
             {
                 SocketGuild guild = _service._client.Guilds.First();
+
+                // pass true to keep track of lifetime total kills every week
+                CallOfDutyAllPlayersModel<ModernWarfareDataModel> newData = _service.GetNewPlayerData(true);
+
                 List<string> output = new List<string>();
-                output.AddRange(await GetLast7DaysKills(guild));
-                output.AddRange(await GetWarzoneWins(guild, true));
+                output.AddRange(await GetLast7DaysKills(newData, guild));
+                output.AddRange(await GetWarzoneWins(newData, guild, true));
 
                 if (output[0] != "")
                 {
@@ -51,9 +55,12 @@ namespace cg_bot.Modules.CallOfDutyModules
             if (DisableIfServiceNotRunning(_service))
             {
                 SocketGuild guild = _service._client.Guilds.First();
+
+                CallOfDutyAllPlayersModel<ModernWarfareDataModel> newData = _service.GetNewPlayerData();
+
                 List<string> output = new List<string>();
-                output.AddRange(GetWeeklyKills(guild));
-                output.AddRange(await GetWarzoneWins(guild));
+                output.AddRange(GetWeeklyKills(newData, guild));
+                output.AddRange(await GetWarzoneWins(newData, guild));
 
                 if (output[0] != "")
                 {
@@ -65,13 +72,10 @@ namespace cg_bot.Modules.CallOfDutyModules
             }
         }
 
-        public async Task<List<string>> GetLast7DaysKills(SocketGuild guild = null)
+        public async Task<List<string>> GetLast7DaysKills(CallOfDutyAllPlayersModel<ModernWarfareDataModel> newData, SocketGuild guild = null)
         {
             if (guild == null)
                 guild = Context.Guild;
-
-            // pass true to keep track of lifetime total kills every week
-            CallOfDutyAllPlayersModel<ModernWarfareDataModel> newData = _service.GetNewPlayerData(true);
 
             List<string> output = new List<string>();
 
@@ -110,12 +114,10 @@ namespace cg_bot.Modules.CallOfDutyModules
             }
         }
         
-        public async Task<List<string>> GetWarzoneWins(SocketGuild guild = null, bool updateRoles = false)
+        public async Task<List<string>> GetWarzoneWins(CallOfDutyAllPlayersModel<ModernWarfareDataModel> newData, SocketGuild guild = null, bool updateRoles = false)
         {
             if (guild == null)
                 guild = Context.Guild;
-
-            CallOfDutyAllPlayersModel<ModernWarfareDataModel> newData = _service.GetNewPlayerData();
 
             List<string> output = new List<string>();
 
@@ -160,13 +162,12 @@ namespace cg_bot.Modules.CallOfDutyModules
             }
         }
 
-        public List<string> GetWeeklyKills(SocketGuild guild = null)
+        public List<string> GetWeeklyKills(CallOfDutyAllPlayersModel<ModernWarfareDataModel> newData, SocketGuild guild = null)
         {
             if (guild == null)
                 guild = Context.Guild;
 
             CallOfDutyAllPlayersModel<ModernWarfareDataModel> storedData = _service.storedPlayerDataModel;
-            CallOfDutyAllPlayersModel<ModernWarfareDataModel> newData = _service.GetNewPlayerData();
             List<CallOfDutyPlayerModel<ModernWarfareDataModel>> outputPlayers = new List<CallOfDutyPlayerModel<ModernWarfareDataModel>>();
 
             List<string> output = new List<string>();
@@ -242,7 +243,9 @@ namespace cg_bot.Modules.CallOfDutyModules
             {
                 await Context.Channel.TriggerTypingAsync();
 
-                List<string> output = GetWeeklyKills();
+                CallOfDutyAllPlayersModel<ModernWarfareDataModel> newData = _service.GetNewPlayerData();
+
+                List<string> output = GetWeeklyKills(newData);
                 if (output[0] != "")
                 {
                     foreach (string chunk in output)
@@ -260,7 +263,9 @@ namespace cg_bot.Modules.CallOfDutyModules
             {
                 await Context.Channel.TriggerTypingAsync();
 
-                List<string> output = await GetWarzoneWins();
+                CallOfDutyAllPlayersModel<ModernWarfareDataModel> newData = _service.GetNewPlayerData();
+
+                List<string> output = await GetWarzoneWins(newData);
                 if (output[0] != "")
                 {
                     foreach (string chunk in output)
