@@ -114,8 +114,13 @@ namespace cg_bot
             await _modernWarfareService.StartService();
             await _blackOpsColdWarService.StartService();
 
-            // always start the announcements service
-            _announcementsService.DoStart = true;
+
+            // start the announcements service if the Modern Warfare service or the Black Ops Cold War service is running
+            _announcementsService.DoStart = false;
+            if (_modernWarfareService.isServiceRunning || _blackOpsColdWarService.isServiceRunning)
+            {
+                _announcementsService.DoStart = true;
+            }
             await _announcementsService.StartService();
 
             // always start the help service
