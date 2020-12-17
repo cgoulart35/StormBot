@@ -11,6 +11,9 @@ namespace cg_bot.Models.CallOfDutyModels.Players.Data
         public object SavedPlayerDataFileLock { get; set; }
 
         [JsonIgnore]
+        public string ParticipatingAccountsFileName { get { return "BlackOpsColdWar"; } }
+
+        [JsonIgnore]
         public string GameName { get { return "Black Ops Cold War"; } }
 
         [JsonIgnore]

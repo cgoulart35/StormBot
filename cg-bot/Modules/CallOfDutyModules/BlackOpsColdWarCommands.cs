@@ -81,25 +81,35 @@ namespace cg_bot.Modules.CallOfDutyModules
                 newData.Players = newData.Players.OrderByDescending(player => player.Data.Weekly.All.Properties != null ? player.Data.Weekly.All.Properties.Kills : 0).ToList();
 
                 int playerCount = 1;
+                bool atleastOnePlayer = false;
                 foreach (CallOfDutyPlayerModel<BlackOpsColdWarDataModel> player in newData.Players)
                 {
-                    double kills;
+                    double kills = 0;
 
-                    // if user has played this week
-                    if (player.Data.Weekly.All.Properties == null)
-                        kills = 0;
                     // if user has not played this week
+                    if (player.Data.Weekly.All.Properties == null)
+                        continue;
+                    // if user has played this week
                     else
+                    {
+                        atleastOnePlayer = true;
                         kills = player.Data.Weekly.All.Properties.Kills;
+                    }
 
                     output = ValidateOutputLimit(output, string.Format(@"**{0}.)** <@!{1}> has {2} kills in the last 7 days.", playerCount, player.DiscordID, kills) + "\n");
+                    
                     playerCount++;
                 }
 
-                await UnassignRoleFromAllMembers(Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID, guild);
-                await GiveUserRole(Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID, newData.Players[0].DiscordID, guild);
+                if (atleastOnePlayer)
+                {
+                    await UnassignRoleFromAllMembers(Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID, guild);
+                    await GiveUserRole(Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID, newData.Players[0].DiscordID, guild);
 
-                output = ValidateOutputLimit(output, "\n" + string.Format(@"Congratulations <@!{0}>, you have the most kills out of all Black Ops Cold War participants in the last 7 days! You have been assigned the role <@&{1}>!", newData.Players[0].DiscordID, Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID));
+                    output = ValidateOutputLimit(output, "\n" + string.Format(@"Congratulations <@!{0}>, you have the most kills out of all Black Ops Cold War participants in the last 7 days! You have been assigned the role <@&{1}>!", newData.Players[0].DiscordID, Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID));
+                }
+                else
+                    output = ValidateOutputLimit(output, "\n" + "No active players this week.");
 
                 return output;
             }
@@ -136,18 +146,17 @@ namespace cg_bot.Modules.CallOfDutyModules
                     {
                         // if player kill count saved last week, set kills this week
                         if (storedData.Players.Find(storedPlayer => storedPlayer.DiscordID == player.DiscordID) != null)
-                        {
                             kills = player.Data.Lifetime.All.Properties.Kills - storedData.Players.Find(storedPlayer => storedPlayer.DiscordID == player.DiscordID).Data.Lifetime.All.Properties.Kills;
-                        }
                         // if player kill count not saved last week, set kills = -1
                         else
-                        {
                             kills = -1;
-                        }
                     }
 
-                    outputPlayer.Data.Lifetime.All.Properties.Kills = kills;
-                    outputPlayers.Add(outputPlayer);
+                    if (kills != 0)
+                    {
+                        outputPlayer.Data.Lifetime.All.Properties.Kills = kills;
+                        outputPlayers.Add(outputPlayer);
+                    }
                 }
 
                 // sort weekly kill counts
@@ -155,6 +164,7 @@ namespace cg_bot.Modules.CallOfDutyModules
 
                 // print weekly kills
                 int playerCount = 1;
+                bool atleastOnePlayer = false;
                 string nextWeekMessages = "";
                 foreach (CallOfDutyPlayerModel<BlackOpsColdWarDataModel> player in outputPlayers)
                 {
@@ -162,6 +172,7 @@ namespace cg_bot.Modules.CallOfDutyModules
                         nextWeekMessages += string.Format(@"<@!{0}> will be included in daily updates starting next week.", player.DiscordID) + "\n";
                     else
                     {
+                        atleastOnePlayer = true;
                         output = ValidateOutputLimit(output, string.Format(@"**{0}.)** <@!{1}> has {2} kills so far this week.", playerCount, player.DiscordID, player.Data.Lifetime.All.Properties.Kills) + "\n");
                         playerCount++;
                     }
@@ -173,7 +184,10 @@ namespace cg_bot.Modules.CallOfDutyModules
                 // never update roles here; updated only once every week
                 // weekly kills at end of competition should be equal to last 7 days values from API
 
-                output = ValidateOutputLimit(output, "\n" + string.Format(@"Looks like <@!{0}> is currently in the lead with the most Black Ops Cold War kills this week!", outputPlayers[0].DiscordID));
+                if (atleastOnePlayer)
+                    output = ValidateOutputLimit(output, "\n" + string.Format(@"Looks like <@!{0}> is currently in the lead with the most Black Ops Cold War kills this week!", outputPlayers[0].DiscordID));
+                else
+                    output = ValidateOutputLimit(output, "\n" + "No active players this week.");
 
                 return output;
             }
@@ -221,29 +235,48 @@ namespace cg_bot.Modules.CallOfDutyModules
                     newData.Players = newData.Players.OrderByDescending(player => player.Data.Lifetime.All.Properties.Kills).ToList();
 
                     int playerCount = 1;
+                    bool atleastOnePlayer = false;
                     foreach (CallOfDutyPlayerModel<BlackOpsColdWarDataModel> player in newData.Players)
                     {
                         double kills = 0;
 
                         // if user has not played
-                        if (player.Data.Lifetime.All.Properties == null)
-                            kills = 0;
+                        if (player.Data.Lifetime.All.Properties == null || player.Data.Lifetime.All.Properties.Kills == 0)
+                            continue;
                         // if user has played
                         else
+                        {
+                            atleastOnePlayer = true;
                             kills = player.Data.Lifetime.All.Properties.Kills;
+                        }
 
                         output = ValidateOutputLimit(output, string.Format(@"**{0}.)** <@!{1}> has {2} total game kills.", playerCount, player.DiscordID, kills) + "\n");
 
                         playerCount++;
                     }
 
-                    output = ValidateOutputLimit(output, "\n" + string.Format(@"Congratulations <@!{0}>, you have the most kills in your lifetime out of all Black Ops Cold War participants!", newData.Players[0].DiscordID));
-
-                    if (output[0] != "")
+                    if (atleastOnePlayer)
                     {
-                        foreach (string chunk in output)
+                        output = ValidateOutputLimit(output, "\n" + string.Format(@"Congratulations <@!{0}>, you have the most kills in your lifetime out of all Black Ops Cold War participants!", newData.Players[0].DiscordID));
+
+                        if (output[0] != "")
                         {
-                            await ReplyAsync(chunk);
+                            foreach (string chunk in output)
+                            {
+                                await ReplyAsync(chunk);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        output = ValidateOutputLimit(output, "\n" + "No active players.");
+
+                        if (output[0] != "")
+                        {
+                            foreach (string chunk in output)
+                            {
+                                await ReplyAsync(chunk);
+                            }
                         }
                     }
                 }

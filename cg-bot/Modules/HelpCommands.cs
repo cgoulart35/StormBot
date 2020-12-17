@@ -13,6 +13,7 @@ namespace cg_bot.Modules
         private HelpService _helpService;
         private SoundpadService _soundpadService;
         private CallOfDutyService<ModernWarfareDataModel> _modernWarfareService;
+        private CallOfDutyService<WarzoneDataModel> _warzoneService;
         private CallOfDutyService<BlackOpsColdWarDataModel> _blackOpsColdWarService;
 
         public HelpCommands(IServiceProvider services)
@@ -20,6 +21,7 @@ namespace cg_bot.Modules
             _helpService = services.GetRequiredService<HelpService>();
             _soundpadService = services.GetRequiredService<SoundpadService>();
             _modernWarfareService = services.GetRequiredService<CallOfDutyService<ModernWarfareDataModel>>();
+            _warzoneService = services.GetRequiredService<CallOfDutyService<WarzoneDataModel>>();
             _blackOpsColdWarService = services.GetRequiredService<CallOfDutyService<BlackOpsColdWarDataModel>>();
         }
 
@@ -39,6 +41,7 @@ namespace cg_bot.Modules
                     output = ValidateOutputLimit(output, HelpHelpCommands());
                     output = ValidateOutputLimit(output, HelpSoundboardCommands());
                     output = ValidateOutputLimit(output, HelpModernWarfareCommands());
+                    output = ValidateOutputLimit(output, HelpWarzoneCommands());
                     output = ValidateOutputLimit(output, HelpBlackOpsColdWarCommands());
                 }
                 else if (subject.ToLower() == "help")
@@ -52,6 +55,10 @@ namespace cg_bot.Modules
                 else if (subject.ToLower() == "mw" || subject.ToLower() == "modern warfare" || subject.ToLower() == "modernwarfare")
                 {
                     output = ValidateOutputLimit(output, HelpModernWarfareCommands());
+                }
+                else if (subject.ToLower() == "wz" || subject.ToLower() == "warzone")
+                {
+                    output = ValidateOutputLimit(output, HelpWarzoneCommands());
                 }
                 else if (subject.ToLower() == "bocw" || subject.ToLower() == "black ops cold war" || subject.ToLower() == "blackopscoldwar" || subject.ToLower() == "cw" || subject.ToLower() == "cold war" || subject.ToLower() == "coldwar")
                 {
@@ -88,6 +95,10 @@ namespace cg_bot.Modules
                 if (DisableIfServiceNotRunning(_modernWarfareService, "subjects (Modern Warfare subject)"))
                 {
                     output += "Modern Warfare\n";
+                }
+                if (DisableIfServiceNotRunning(_warzoneService, "subjects (Warzone subject)"))
+                {
+                    output += "Warzone\n";
                 }
                 if (DisableIfServiceNotRunning(_blackOpsColdWarService, "subjects (Black Ops Cold War subject)"))
                 {
@@ -148,13 +159,19 @@ The bot will then ask you to enter the account name, tag, and platform.
 
 '**{0}mw rm participant [user]**' to remove an account from the list of Call of Duty accounts participating in the Modern Warfare services.
 
-'**{0}mw weekly kills**' to display the total game kills so far this week of all participating players from highest to lowest.
-The bot will only assign the <@&{1}> role to the player in first place at the end of the week.
+'**{0}mw wz lifetime kills**' to display the lifetime total game kills (Modern Warfare + Warzone) of all participating Modern Warfare players from highest to lowest.
 
-'**{0}mw lifetime kills**' to display the lifetime total game kills of all participating players from highest to lowest.
+'**{0}mw wz weekly kills**' to display the total game kills (Modern Warfare + Warzone) so far this week of all participating players from highest to lowest.
+The bot will only assign the <@&{1}> role for Modern Warfare kills to the player in first place at the end of the week with the most multiplayer kills (not Warzone).", Program.configurationSettingsModel.Prefix, Program.configurationSettingsModel.ModernWarfareKillsRoleID) : null;
+        }
 
-'**{0}mw wz wins**' to display the total Warzone wins of all participating players from highest to lowest.
-The bot will only assign the <@&{2}> role to the player in first place at the end of the week.", Program.configurationSettingsModel.Prefix, Program.configurationSettingsModel.ModernWarfareKillsRoleID, Program.configurationSettingsModel.ModernWarfareWarzoneWinsRoleID) : null;
+        private string HelpWarzoneCommands()
+        {
+            return DisableIfServiceNotRunning(_warzoneService) ? string.Format("\n\n" + @"__**Help: Warzone Commands**__
+
+'**{0}wz wins**' to display the total Warzone wins of all participating players from highest to lowest.
+The bot will only assign the <@&{1}> role for Warzone wins to the player in first place at the end of the week.
+The bot will only assign the <@&{2}> role for Warzone kills to the player in first place at the end of the week with the most Warzone kills (not multiplayer).", Program.configurationSettingsModel.Prefix, Program.configurationSettingsModel.WarzoneWinsRoleID, Program.configurationSettingsModel.WarzoneKillsRoleID) : null;
         }
 
         private string HelpBlackOpsColdWarCommands()
@@ -168,10 +185,10 @@ The bot will then ask you to enter the account name, tag, and platform.
 
 '**{0}bocw rm participant [user]**' to remove an account from the list of Call of Duty accounts participating in the Black Ops Cold War services.
 
-'**{0}bocw weekly kills**' to display the total game kills so far this week of all participating players from highest to lowest.
-The bot will only assign the <@&{1}> role to the player in first place at the end of the week.
+'**{0}bocw lifetime kills**' to display the lifetime total game kills of all participating players from highest to lowest.
 
-'**{0}bocw lifetime kills**' to display the lifetime total game kills of all participating players from highest to lowest.", Program.configurationSettingsModel.Prefix, Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID) : null;
+'**{0}bocw weekly kills**' to display the total game kills so far this week of all participating players from highest to lowest.
+The bot will only assign the <@&{1}> role for Black Ops Cold War kills to the player in first place at the end of the week.", Program.configurationSettingsModel.Prefix, Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID) : null;
         }
     }
 }

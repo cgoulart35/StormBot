@@ -46,7 +46,7 @@ namespace cg_bot.Services
 
             pathGameName = _dataModel.GameName.Replace(" ", string.Empty);
 
-            cgBotCallOfDutyGameParticipatingAccountsDataPath = Path.Combine(Program.cgBotAppDataPath, string.Format(@"{0}ParticipatingAccounts.json", pathGameName));
+            cgBotCallOfDutyGameParticipatingAccountsDataPath = Path.Combine(Program.cgBotAppDataPath, string.Format(@"{0}ParticipatingAccounts.json", _dataModel.ParticipatingAccountsFileName));
             cgBotCallOfDutyGameSavedPlayerDataPath = Path.Combine(Program.cgBotAppDataPath, string.Format(@"{0}SavedPlayerData.json", pathGameName));
         }
 

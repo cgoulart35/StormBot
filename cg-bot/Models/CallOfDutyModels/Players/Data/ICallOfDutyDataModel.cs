@@ -7,6 +7,8 @@ namespace cg_bot.Models.CallOfDutyModels.Players.Data
 
 		object SavedPlayerDataFileLock { get; set; }
 
+		string ParticipatingAccountsFileName { get; }
+
 		string GameName { get; }
 
 		string GameAbbrevAPI { get; }

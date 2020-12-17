@@ -24,6 +24,7 @@ namespace cg_bot
         private BaseService _baseService;
         private SoundpadService _soundpadService;
         private CallOfDutyService<ModernWarfareDataModel> _modernWarfareService;
+        private CallOfDutyService<WarzoneDataModel> _warzoneService;
         private CallOfDutyService<BlackOpsColdWarDataModel> _blackOpsColdWarService;
         private AnnouncementsService _announcementsService;
         private HelpService _helpService;
@@ -60,6 +61,7 @@ namespace cg_bot
 
             _soundpadService.StopService();
             _modernWarfareService.StopService();
+            _warzoneService.StopService();
             _blackOpsColdWarService.StopService();
             _announcementsService.StopService();
             _helpService.StopService();
@@ -100,8 +102,10 @@ namespace cg_bot
             // ask the user if they want to start the soundpad service
             PromptUserForStartup(_soundpadService);
 
-            // ask the user if they want to start the modern warfare service
+            // ask the user if they want to start the modern warfare/warzone services
             PromptUserForStartup(_modernWarfareService);
+            _warzoneService.DoStart = _modernWarfareService.DoStart;
+            _warzoneService._dataModel.ParticipatingAccountsFileLock = _modernWarfareService._dataModel.ParticipatingAccountsFileLock;
 
             // ask the user if they want to start the black ops cold war service
             PromptUserForStartup(_blackOpsColdWarService);
@@ -112,12 +116,13 @@ namespace cg_bot
             // only services that were selected will be started
             _soundpadService.StartService();
             await _modernWarfareService.StartService();
+            await _warzoneService.StartService();
             await _blackOpsColdWarService.StartService();
 
 
-            // start the announcements service if the Modern Warfare service or the Black Ops Cold War service is running
+            // start the announcements service if the Modern Warfare/Warzone services or the Black Ops Cold War service is running
             _announcementsService.DoStart = false;
-            if (_modernWarfareService.isServiceRunning || _blackOpsColdWarService.isServiceRunning)
+            if ((_modernWarfareService.isServiceRunning && _warzoneService.isServiceRunning) || _blackOpsColdWarService.isServiceRunning)
             {
                 _announcementsService.DoStart = true;
             }
@@ -181,10 +186,16 @@ namespace cg_bot
                         throw new Exception("Please fill out the SoundboardNotificationChannelID.");
                     }
 
-                    if (configurationSettingsModel.ModernWarfareWarzoneWinsRoleID == 0)
+                    if (configurationSettingsModel.WarzoneWinsRoleID == 0)
                     {
                         createNewFile = false;
-                        throw new Exception("Please fill out the ModernWarfareWarzoneWinsRoleID.");
+                        throw new Exception("Please fill out the WarzoneWinsRoleID.");
+                    }
+
+                    if (configurationSettingsModel.WarzoneKillsRoleID == 0)
+                    {
+                        createNewFile = false;
+                        throw new Exception("Please fill out the WarzoneKillsRoleID.");
                     }
 
                     if (configurationSettingsModel.ModernWarfareKillsRoleID == 0)
@@ -262,6 +273,7 @@ namespace cg_bot
                 .AddSingleton<AnnouncementsService>()
                 .AddSingleton<SoundpadService>()
                 .AddSingleton<CallOfDutyService<ModernWarfareDataModel>>()
+                .AddSingleton<CallOfDutyService<WarzoneDataModel>>()
                 .AddSingleton<CallOfDutyService<BlackOpsColdWarDataModel>>()
                 .AddSingleton<HelpService>()
                 .BuildServiceProvider();
@@ -273,6 +285,7 @@ namespace cg_bot
             _soundpadService = _services.GetRequiredService<SoundpadService>();
             _announcementsService = _services.GetRequiredService<AnnouncementsService>();
             _modernWarfareService = _services.GetRequiredService<CallOfDutyService<ModernWarfareDataModel>>();
+            _warzoneService = _services.GetRequiredService<CallOfDutyService<WarzoneDataModel>>();
             _blackOpsColdWarService = _services.GetRequiredService<CallOfDutyService<BlackOpsColdWarDataModel>>();
             _helpService = _services.GetRequiredService<HelpService>();
         }

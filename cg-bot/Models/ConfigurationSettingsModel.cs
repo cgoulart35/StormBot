@@ -13,8 +13,11 @@ namespace cg_bot.Models
 		[JsonProperty("SoundboardNotificationChannelID")]
 		public ulong SoundboardNotificationChannelID { get; set; }
 
-		[JsonProperty("ModernWarfareWarzoneWinsRoleID")]
-		public ulong ModernWarfareWarzoneWinsRoleID { get; set; }
+		[JsonProperty("WarzoneWinsRoleID")]
+		public ulong WarzoneWinsRoleID { get; set; }
+
+		[JsonProperty("WarzoneKillsRoleID")]
+		public ulong WarzoneKillsRoleID { get; set; }
 
 		[JsonProperty("ModernWarfareKillsRoleID")]
 		public ulong ModernWarfareKillsRoleID { get; set; }

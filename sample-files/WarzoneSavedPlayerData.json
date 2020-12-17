@@ -4,9 +4,11 @@
 			"data": {
 				"username": "UserA#1234",
 				"lifetime": {
-					"all": {
-						"properties": {
-							"kills": 22979.0
+					"mode": {
+						"br": {
+							"properties": {
+								"wins": 3.0
+							}
 						}
 					}
 				},
@@ -25,9 +27,11 @@
 			"data": {
 				"username": "UserB#1234",
 				"lifetime": {
-					"all": {
-						"properties": {
-							"kills": 52465.0
+					"mode": {
+						"br": {
+							"properties": {
+								"wins": 7.0
+							}
 						}
 					}
 				},
@@ -46,9 +50,11 @@
 			"data": {
 				"username": "UserC#1234",
 				"lifetime": {
-					"all": {
-						"properties": {
-							"kills": 5014.0
+					"mode": {
+						"br": {
+							"properties": {
+								"wins": 3.0
+							}
 						}
 					}
 				},

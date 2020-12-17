@@ -11,6 +11,9 @@ namespace cg_bot.Models.CallOfDutyModels.Players.Data
         public object SavedPlayerDataFileLock { get; set; }
 
         [JsonIgnore]
+        public string ParticipatingAccountsFileName { get { return "ModernWarfare"; } }
+
+        [JsonIgnore]
         public string GameName { get { return "Modern Warfare"; } }
 
         [JsonIgnore]
@@ -33,9 +36,6 @@ namespace cg_bot.Models.CallOfDutyModels.Players.Data
     {
         [JsonProperty("all")]
         public ModernWarfareLifetimeAllModel All { get; set; }
-
-        [JsonProperty("mode")]
-        public ModernWarfareLifetimeModeModel Mode { get; set; }
     }
 
     public class ModernWarfareLifetimeAllModel
@@ -48,24 +48,6 @@ namespace cg_bot.Models.CallOfDutyModels.Players.Data
     {
         [JsonProperty("kills")]
         public double Kills { get; set; }
-    }
-
-    public class ModernWarfareLifetimeModeModel
-    {
-        [JsonProperty("br")]
-        public ModernWarfareLifetimeBattleRoyalModel BattleRoyal { get; set; }
-    }
-
-    public class ModernWarfareLifetimeBattleRoyalModel
-    {
-        [JsonProperty("properties")]
-        public ModernWarfareLifetimeBattleRoyalPropertiesModel Properties { get; set; }
-    }
-
-    public class ModernWarfareLifetimeBattleRoyalPropertiesModel
-    {
-        [JsonProperty("wins")]
-        public double Wins { get; set; }
     }
 
     public class ModernWarfareWeeklyModel

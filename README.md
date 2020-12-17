@@ -48,15 +48,16 @@ The bot will then ask you to enter the account name, tag, and platform.
 
 - **'.mw rm participant [user]'** to remove an account from the list of Call of Duty accounts participating in the Modern Warfare services.
 
-- **'.mw weekly kills'** to display the total game kills so far this week of all participating players from highest to lowest.
-The bot will only assign the @__ role to the player in first place at the end of the week.
+- **'.mw wz lifetime kills'** to display the lifetime total game kills (Modern Warfare + Warzone) of all participating Modern Warfare players from highest to lowest.
 
-- **'.mw lifetime kills'** to display the lifetime total game kills of all participating players from highest to lowest.
+- **'.mw wz weekly kills'** to display the total game kills (Modern Warfare + Warzone) so far this week of all participating players from highest to lowest.
+The bot will only assign the @__ role for Modern Warfare kills to the player in first place at the end of the week with the most multiplayer kills (not Warzone).
 
-- **'.mw wz wins'** to display the total Warzone wins of all participating players from highest to lowest.
-The bot will only assign the @__ role to the player in first place at the end of the week.
+### Help: Warzone Commands
 
-
+- **'.wz wins'** to display the total Warzone wins of all participating players from highest to lowest.
+The bot will only assign the @__ role for Warzone wins to the player in first place at the end of the week.
+The bot will only assign the @__ role for Warzone kills to the player in first place at the end of the week with the most Warzone kills (not multiplayer).
 
 ### Help: Black Ops Cold War Commands
 
@@ -67,7 +68,7 @@ The bot will then ask you to enter the account name, tag, and platform.
 
 - **'.bocw rm participant [user]'** to remove an account from the list of Call of Duty accounts participating in the Black Ops Cold War services.
 
+- **'.bocw lifetime kills'** to display the lifetime total game kills of all participating players from highest to lowest.
+
 - **'.bocw weekly kills'** to display the total game kills so far this week of all participating players from highest to lowest.
 The bot will only assign the @__ role to the player in first place at the end of the week.
-
-- **'.bocw lifetime kills'** to display the lifetime total game kills of all participating players from highest to lowest.
