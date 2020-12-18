@@ -13,6 +13,22 @@ namespace cg_bot.Modules
 			return args.Length != 0 ? string.Join(" ", args) : null;
 		}
 
+        public ulong GetDiscordUserID(string input)
+        {
+            // if no name given
+            if (input == null)
+                throw new Exception();
+
+            string trimmedInput = input.Substring(3, 18);
+            ulong discordID = Convert.ToUInt64(trimmedInput);
+
+            // if user exists in the server
+            if (Context.Guild.GetUser(discordID) == null)
+                throw new Exception();
+
+            return discordID;
+        }
+
         public bool DisableIfServiceNotRunning(BaseService service, string command = null)
         {
             string serviceName = service.Name;

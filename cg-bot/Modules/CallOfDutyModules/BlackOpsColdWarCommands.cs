@@ -309,16 +309,7 @@ namespace cg_bot.Modules.CallOfDutyModules
                 {
                     string input = GetSingleArg(args);
 
-                    // if no name given
-                    if (input == null)
-                        throw new Exception();
-
-                    string trimmedInput = input.Substring(3, 18);
-                    ulong discordID = Convert.ToUInt64(trimmedInput);
-
-                    // if user exists in the server
-                    if (Context.Guild.GetUser(discordID) == null)
-                        throw new Exception();
+                    ulong discordID = GetDiscordUserID(input);
 
                     if (await AddAParticipant(_service, discordID))
                         await ReplyAsync(string.Format("<@!{0}> has been added to the Black Ops Cold War participant list.", discordID));
@@ -341,16 +332,7 @@ namespace cg_bot.Modules.CallOfDutyModules
                 {
                     string input = GetSingleArg(args);
 
-                    // if no name given
-                    if (input == null)
-                        throw new Exception();
-
-                    string trimmedInput = input.Substring(3, 18);
-                    ulong discordID = Convert.ToUInt64(trimmedInput);
-
-                    // if user exists in the server
-                    if (Context.Guild.GetUser(discordID) == null)
-                        throw new Exception();
+                    ulong discordID = GetDiscordUserID(input);
 
                     if (await RemoveAParticipant(_service, discordID))
                         await ReplyAsync(string.Format("<@!{0}> has been removed from the Black Ops Cold War participant list.", discordID));
