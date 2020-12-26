@@ -38,6 +38,7 @@ namespace cg_bot
 
         private static bool isReady = false;
 
+        /* TODO: replace for linux compatibility
         #region ON PROGRAM EXIT CODE
         [DllImport("Kernel32")]
         private static extern bool SetConsoleCtrlHandler(EventHandler handler, bool add);
@@ -72,6 +73,7 @@ namespace cg_bot
             return false;
         }
 		#endregion
+        */
 
 		public static void Main(string[] args)
             => new Program().MainAsync().GetAwaiter().GetResult();
@@ -132,9 +134,11 @@ namespace cg_bot
             _helpService.DoStart = true;
             await _helpService.StartService();
 
+            /*
             // set stop service functions to be called on console application exit in close handler function
             ConsoleApplicationClosed += new EventHandler(CloseHandler);
             SetConsoleCtrlHandler(ConsoleApplicationClosed, true);
+            */
 
             // spacing for bot ouput visibility
             Console.WriteLine("");
