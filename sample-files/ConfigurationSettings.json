@@ -1,4 +1,5 @@
 {
+	"RemoteBootMode": false,
 	"DiscordToken": "insert your token here",
 	"CallOfDutyNotificationChannelID": insert channel ID here,
 	"SoundboardNotificationChannelID": insert channel ID here,

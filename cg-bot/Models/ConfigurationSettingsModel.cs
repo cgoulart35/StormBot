@@ -4,6 +4,9 @@ namespace cg_bot.Models
 {
 	public class ConfigurationSettingsModel
 	{
+		[JsonProperty("RemoteBootMode")]
+		public bool RemoteBootMode { get; set; }
+
 		[JsonProperty("DiscordToken")]
 		public string DiscordToken { get; set; }
 

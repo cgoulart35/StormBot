@@ -101,16 +101,30 @@ namespace cg_bot
             _commandService.Log += Log;
             await _commandHandler.InitializeAsync();
 
-            // ask the user if they want to start the soundpad service
-            PromptUserForStartup(_soundpadService);
+            if (!configurationSettingsModel.RemoteBootMode)
+            {
+                // ask the user if they want to start the soundpad service
+                PromptUserForStartup(_soundpadService);
 
-            // ask the user if they want to start the modern warfare/warzone services
-            PromptUserForStartup(_modernWarfareService);
-            _warzoneService.DoStart = _modernWarfareService.DoStart;
-            _warzoneService._dataModel.ParticipatingAccountsFileLock = _modernWarfareService._dataModel.ParticipatingAccountsFileLock;
+                // ask the user if they want to start the modern warfare/warzone services
+                PromptUserForStartup(_modernWarfareService);
+                _warzoneService.DoStart = _modernWarfareService.DoStart;
+                _warzoneService._dataModel.ParticipatingAccountsFileLock = _modernWarfareService._dataModel.ParticipatingAccountsFileLock;
 
-            // ask the user if they want to start the black ops cold war service
-            PromptUserForStartup(_blackOpsColdWarService);
+                // ask the user if they want to start the black ops cold war service
+                PromptUserForStartup(_blackOpsColdWarService);
+            }
+            else
+            {
+                _soundpadService.DoStart = false;
+
+                _modernWarfareService.DoStart = true;
+
+                _warzoneService.DoStart = _modernWarfareService.DoStart;
+                _warzoneService._dataModel.ParticipatingAccountsFileLock = _modernWarfareService._dataModel.ParticipatingAccountsFileLock;
+                
+                _blackOpsColdWarService.DoStart = true;
+            }
 
             // spacing for bot ouput visibility
             Console.WriteLine("");
