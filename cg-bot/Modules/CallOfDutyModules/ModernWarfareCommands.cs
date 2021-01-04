@@ -16,13 +16,20 @@ namespace cg_bot.Modules.CallOfDutyModules
         private CallOfDutyService<ModernWarfareDataModel> _service;
         private AnnouncementsService _announcementsService;
 
+        static bool handlersSet = false;
+
         public ModernWarfareCommands(IServiceProvider services)
         {
             _service = services.GetRequiredService<CallOfDutyService<ModernWarfareDataModel>>();
             _announcementsService = services.GetRequiredService<AnnouncementsService>();
 
-            _announcementsService.WeeklyCallOfDutyAnnouncement += WeeklyCompetitionUpdates;
-            _announcementsService.DailyCallOfDutyAnnouncement += DailyCompetitionUpdates;
+            if (!handlersSet)
+            {
+                _announcementsService.WeeklyCallOfDutyAnnouncement += WeeklyCompetitionUpdates;
+                _announcementsService.DailyCallOfDutyAnnouncement += DailyCompetitionUpdates;
+
+                handlersSet = true;
+            }
         }
 
         public async Task WeeklyCompetitionUpdates(object sender, EventArgs args)

@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using System.IO;
-using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
 using Discord;
 using Discord.Commands;
@@ -288,11 +287,11 @@ namespace cg_bot
                 .AddSingleton<InteractiveService>()
                 .AddSingleton<CommandHandler>()
                 .AddSingleton<BaseService>()
-                .AddSingleton<AnnouncementsService>()
                 .AddSingleton<SoundpadService>()
                 .AddSingleton<CallOfDutyService<ModernWarfareDataModel>>()
                 .AddSingleton<CallOfDutyService<WarzoneDataModel>>()
                 .AddSingleton<CallOfDutyService<BlackOpsColdWarDataModel>>()
+                .AddSingleton<AnnouncementsService>()
                 .AddSingleton<HelpService>()
                 .BuildServiceProvider();
 
@@ -301,10 +300,10 @@ namespace cg_bot
             _commandHandler = _services.GetRequiredService<CommandHandler>();
             _baseService = _services.GetRequiredService<BaseService>();
             _soundpadService = _services.GetRequiredService<SoundpadService>();
-            _announcementsService = _services.GetRequiredService<AnnouncementsService>();
             _modernWarfareService = _services.GetRequiredService<CallOfDutyService<ModernWarfareDataModel>>();
             _warzoneService = _services.GetRequiredService<CallOfDutyService<WarzoneDataModel>>();
             _blackOpsColdWarService = _services.GetRequiredService<CallOfDutyService<BlackOpsColdWarDataModel>>();
+            _announcementsService = _services.GetRequiredService<AnnouncementsService>();
             _helpService = _services.GetRequiredService<HelpService>();
         }
 

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using cg_bot.Models.CallOfDutyModels.Players.Data;
 using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
