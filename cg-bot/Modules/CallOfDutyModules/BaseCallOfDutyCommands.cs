@@ -19,12 +19,15 @@ namespace cg_bot.Modules.CallOfDutyModules
             }
         }
 
-        public async Task GiveUserRole(ulong roleID, ulong discordID, SocketGuild guild)
+        public async Task GiveUsersRole(ulong roleID, List<ulong> discordIDS, SocketGuild guild)
         {
             var role = guild.GetRole(roleID);
-            var roleMember = guild.GetUser(discordID);
 
-            await roleMember.AddRoleAsync(role);
+            foreach (ulong discordID in discordIDS)
+            {
+                var roleMember = guild.GetUser(discordID);
+                await roleMember.AddRoleAsync(role);
+            }
         }
 
         public async Task<bool> AddAParticipant<T>(CallOfDutyService<T> service, ulong discordID)

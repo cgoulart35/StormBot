@@ -113,9 +113,18 @@ namespace cg_bot.Modules.CallOfDutyModules
                 if (atleastOnePlayer)
                 {
                     await UnassignRoleFromAllMembers(Program.configurationSettingsModel.ModernWarfareKillsRoleID, guild);
-                    await GiveUserRole(Program.configurationSettingsModel.ModernWarfareKillsRoleID, newData.Players[0].DiscordID, guild);
 
-                    output = ValidateOutputLimit(output, "\n" + string.Format(@"Congratulations <@!{0}>, you have the most Modern Warfare kills out of all Modern Warfare participants in the last 7 days! You have been assigned the role <@&{1}>!", newData.Players[0].DiscordID, Program.configurationSettingsModel.ModernWarfareKillsRoleID));
+                    double topScore = newData.Players[0].Data.Weekly.All.Properties.Kills;
+                    List<ulong> topPlayersDiscordIDs = newData.Players.Where(player => player.Data.Weekly.All.Properties?.Kills == topScore).Select(player => player.DiscordID).ToList();
+                    await GiveUsersRole(Program.configurationSettingsModel.ModernWarfareKillsRoleID, topPlayersDiscordIDs, guild);
+
+                    string winners = "";
+                    foreach (ulong DiscordID in topPlayersDiscordIDs)
+                    {
+                        winners += string.Format(@" <@!{0}>,", DiscordID);
+                    }
+
+                    output = ValidateOutputLimit(output, "\n" + string.Format(@"Congratulations{0} you have the most Modern Warfare kills out of all Modern Warfare participants in the last 7 days! You have been assigned the role <@&{1}>!", winners, Program.configurationSettingsModel.ModernWarfareKillsRoleID));
                 }
                 else
                     output = ValidateOutputLimit(output, "\n" + "No active players this week.");
@@ -194,7 +203,18 @@ namespace cg_bot.Modules.CallOfDutyModules
                 // weekly kills at end of competition should be equal to last 7 days values from API
 
                 if (atleastOnePlayer)
-                    output = ValidateOutputLimit(output, "\n" + string.Format(@"Looks like <@!{0}> is currently in the lead with the most Modern Warfare + Warzone kills this week!", outputPlayers[0].DiscordID));
+                {
+                    double topScore = outputPlayers[0].Data.Lifetime.All.Properties.Kills;
+                    List<ulong> topPlayersDiscordIDs = outputPlayers.Where(player => player.Data.Lifetime.All.Properties?.Kills == topScore).Select(player => player.DiscordID).ToList();
+
+                    string winners = "";
+                    foreach (ulong DiscordID in topPlayersDiscordIDs)
+                    {
+                        winners += string.Format(@"<@!{0}>, ", DiscordID);
+                    }
+
+                    output = ValidateOutputLimit(output, "\n" + string.Format(@"{0}you are currently in the lead with the most Modern Warfare + Warzone kills this week!", winners));
+                }
                 else
                     output = ValidateOutputLimit(output, "\n" + "No active players this week.");
 

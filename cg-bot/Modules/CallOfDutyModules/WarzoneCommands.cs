@@ -114,9 +114,18 @@ namespace cg_bot.Modules.CallOfDutyModules
                 if (atleastOnePlayer)
                 {
                     await UnassignRoleFromAllMembers(Program.configurationSettingsModel.WarzoneKillsRoleID, guild);
-                    await GiveUserRole(Program.configurationSettingsModel.WarzoneKillsRoleID, newData.Players[0].DiscordID, guild);
 
-                    output = ValidateOutputLimit(output, "\n" + string.Format(@"Congratulations <@!{0}>, you have the most Warzone kills out of all Warzone participants in the last 7 days! You have been assigned the role <@&{1}>!", newData.Players[0].DiscordID, Program.configurationSettingsModel.WarzoneKillsRoleID));
+                    double topScore = newData.Players[0].Data.Weekly.All.Properties.Kills;
+                    List<ulong> topPlayersDiscordIDs = newData.Players.Where(player => player.Data.Weekly.All.Properties?.Kills == topScore).Select(player => player.DiscordID).ToList();
+                    await GiveUsersRole(Program.configurationSettingsModel.WarzoneKillsRoleID, topPlayersDiscordIDs, guild);
+
+                    string winners = "";
+                    foreach (ulong DiscordID in topPlayersDiscordIDs)
+                    {
+                        winners += string.Format(@" <@!{0}>,", DiscordID);
+                    }
+
+                    output = ValidateOutputLimit(output, "\n" + string.Format(@"Congratulations{0} you have the most Warzone kills out of all Warzone participants in the last 7 days! You have been assigned the role <@&{1}>!", winners, Program.configurationSettingsModel.WarzoneKillsRoleID));
                 }
                 else
                     output = ValidateOutputLimit(output, "\n" + "No active players this week.");
@@ -164,13 +173,22 @@ namespace cg_bot.Modules.CallOfDutyModules
 
                 if (atleastOnePlayer)
                 {
-                    output = ValidateOutputLimit(output, "\n" + string.Format(@"<@!{0}>, you have the most Warzone wins out of all Warzone participants!", newData.Players[0].DiscordID));
+                    double topScore = newData.Players[0].Data.Lifetime.Mode.BattleRoyal.Properties.Wins;
+                    List<ulong> topPlayersDiscordIDs = newData.Players.Where(player => player.Data.Lifetime.Mode.BattleRoyal.Properties?.Wins == topScore).Select(player => player.DiscordID).ToList();
+
+                    string winners = "";
+                    foreach (ulong DiscordID in topPlayersDiscordIDs)
+                    {
+                        winners += string.Format(@"<@!{0}>, ", DiscordID);
+                    }
+
+                    output = ValidateOutputLimit(output, "\n" + string.Format(@"{0}you have the most Warzone wins out of all Warzone participants!", winners));
 
                     // update the roles only every week
                     if (updateRoles)
                     {
                         await UnassignRoleFromAllMembers(Program.configurationSettingsModel.WarzoneWinsRoleID, guild);
-                        await GiveUserRole(Program.configurationSettingsModel.WarzoneWinsRoleID, newData.Players[0].DiscordID, guild);
+                        await GiveUsersRole(Program.configurationSettingsModel.WarzoneWinsRoleID, topPlayersDiscordIDs, guild);
 
                         output = ValidateOutputLimit(output, string.Format(" Congratulations, you have been assigned the role <@&{0}>!", Program.configurationSettingsModel.WarzoneWinsRoleID));
                     }

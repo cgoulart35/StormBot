@@ -11,7 +11,7 @@ using cg_bot.Models.CallOfDutyModels.Players.Data;
 
 namespace cg_bot.Modules.CallOfDutyModules
 {
-	public class BlackOpsColdWarCommands : BaseCallOfDutyCommands
+    public class BlackOpsColdWarCommands : BaseCallOfDutyCommands
     {
         private CallOfDutyService<BlackOpsColdWarDataModel> _service;
         private AnnouncementsService _announcementsService;
@@ -43,7 +43,7 @@ namespace cg_bot.Modules.CallOfDutyModules
                 CallOfDutyAllPlayersModel<BlackOpsColdWarDataModel> newData = _service.GetNewPlayerData(true);
 
                 List<string> output = await GetLast7DaysKills(newData, guild);
-                
+
                 if (output[0] != "")
                 {
                     foreach (string chunk in output)
@@ -104,16 +104,25 @@ namespace cg_bot.Modules.CallOfDutyModules
                     }
 
                     output = ValidateOutputLimit(output, string.Format(@"**{0}.)** <@!{1}> has {2} kills in the last 7 days.", playerCount, player.DiscordID, kills) + "\n");
-                    
+
                     playerCount++;
                 }
 
                 if (atleastOnePlayer)
                 {
                     await UnassignRoleFromAllMembers(Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID, guild);
-                    await GiveUserRole(Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID, newData.Players[0].DiscordID, guild);
 
-                    output = ValidateOutputLimit(output, "\n" + string.Format(@"Congratulations <@!{0}>, you have the most kills out of all Black Ops Cold War participants in the last 7 days! You have been assigned the role <@&{1}>!", newData.Players[0].DiscordID, Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID));
+                    double topScore = newData.Players[0].Data.Weekly.All.Properties.Kills;
+                    List<ulong> topPlayersDiscordIDs = newData.Players.Where(player => player.Data.Weekly.All.Properties?.Kills == topScore).Select(player => player.DiscordID).ToList();
+                    await GiveUsersRole(Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID, topPlayersDiscordIDs, guild);
+
+                    string winners = "";
+                    foreach (ulong DiscordID in topPlayersDiscordIDs)
+                    {
+                        winners += string.Format(@" <@!{0}>,", DiscordID);
+                    }
+
+                    output = ValidateOutputLimit(output, "\n" + string.Format(@"Congratulations{0} you have the most kills out of all Black Ops Cold War participants in the last 7 days! You have been assigned the role <@&{1}>!", winners, Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID));
                 }
                 else
                     output = ValidateOutputLimit(output, "\n" + "No active players this week.");
@@ -192,7 +201,18 @@ namespace cg_bot.Modules.CallOfDutyModules
                 // weekly kills at end of competition should be equal to last 7 days values from API
 
                 if (atleastOnePlayer)
-                    output = ValidateOutputLimit(output, "\n" + string.Format(@"Looks like <@!{0}> is currently in the lead with the most Black Ops Cold War kills this week!", outputPlayers[0].DiscordID));
+                {
+                    double topScore = outputPlayers[0].Data.Lifetime.All.Properties.Kills;
+                    List<ulong> topPlayersDiscordIDs = outputPlayers.Where(player => player.Data.Lifetime.All.Properties?.Kills == topScore).Select(player => player.DiscordID).ToList();
+
+                    string winners = "";
+                    foreach (ulong DiscordID in topPlayersDiscordIDs)
+                    {
+                        winners += string.Format(@"<@!{0}>, ", DiscordID);
+                    }
+
+                    output = ValidateOutputLimit(output, "\n" + string.Format(@"{0}you are currently in the lead with the most Black Ops Cold War kills this week!", winners));
+                }
                 else
                     output = ValidateOutputLimit(output, "\n" + "No active players this week.");
 
