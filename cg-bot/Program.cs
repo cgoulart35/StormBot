@@ -37,43 +37,6 @@ namespace cg_bot
 
         private static bool isReady = false;
 
-        /* TODO: replace for linux compatibility
-        #region ON PROGRAM EXIT CODE
-        [DllImport("Kernel32")]
-        private static extern bool SetConsoleCtrlHandler(EventHandler handler, bool add);
-
-        private delegate bool EventHandler(CtrlType sig);
-        static EventHandler ConsoleApplicationClosed;
-
-        enum CtrlType
-        {
-            CTRL_C_EVENT = 0,
-            CTRL_BREAK_EVENT = 1,
-            CTRL_CLOSE_EVENT = 2,
-            CTRL_LOGOFF_EVENT = 5,
-            CTRL_SHUTDOWN_EVENT = 6
-        }
-
-        private bool CloseHandler(CtrlType sig)
-        {
-            // spacing for bot ouput visibility
-            Console.WriteLine("");
-
-            _soundpadService.StopService();
-            _modernWarfareService.StopService();
-            _warzoneService.StopService();
-            _blackOpsColdWarService.StopService();
-            _announcementsService.StopService();
-            _helpService.StopService();
-
-            System.Threading.Thread.Sleep(4000);
-            Environment.Exit(1);
-
-            return false;
-        }
-		#endregion
-        */
-
 		public static void Main(string[] args)
             => new Program().MainAsync().GetAwaiter().GetResult();
 
@@ -149,11 +112,8 @@ namespace cg_bot
             _helpService.DoStart = true;
             await _helpService.StartService();
 
-            /*
             // set stop service functions to be called on console application exit in close handler function
-            ConsoleApplicationClosed += new EventHandler(CloseHandler);
-            SetConsoleCtrlHandler(ConsoleApplicationClosed, true);
-            */
+            Console.CancelKeyPress += new ConsoleCancelEventHandler(ShutdownHandler);
 
             // spacing for bot ouput visibility
             Console.WriteLine("");
@@ -281,6 +241,17 @@ namespace cg_bot
             Environment.Exit(1);
         }
 
+        private Task Log(LogMessage msg)
+        {
+            Console.WriteLine(msg.ToString());
+            return Task.CompletedTask;
+        }
+
+        private async Task SetAsReady()
+        {
+            isReady = true;
+        }
+
         private void ConfigureServices()
         {
             _services = new ServiceCollection()
@@ -329,15 +300,20 @@ namespace cg_bot
             }
         }
 
-        private Task Log(LogMessage msg)
+        private void ShutdownHandler(object sender, ConsoleCancelEventArgs args)
         {
-            Console.WriteLine(msg.ToString());
-            return Task.CompletedTask;
-        }
+            // spacing for bot ouput visibility
+            Console.WriteLine("");
 
-        private async Task SetAsReady()
-        {
-            isReady = true;
+            _soundpadService.StopService();
+            _modernWarfareService.StopService();
+            _warzoneService.StopService();
+            _blackOpsColdWarService.StopService();
+            _announcementsService.StopService();
+            _helpService.StopService();
+
+            System.Threading.Thread.Sleep(8000);
+            Environment.Exit(1);
         }
     }
 }
