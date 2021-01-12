@@ -94,6 +94,8 @@ namespace cg_bot
             // wait until discord client is ready
             while (!isReady) { }
 
+            await _client.SetGameAsync(configurationSettingsModel.Prefix + "help", null, ActivityType.Listening);
+
             // add singleton services
             ConfigureServices();
 

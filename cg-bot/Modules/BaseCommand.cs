@@ -19,7 +19,16 @@ namespace cg_bot.Modules
             if (input == null)
                 throw new Exception();
 
-            string trimmedInput = input.Substring(3, 18);
+            string trimmedInput = "";
+
+            // if username is in <@!xxxxxxxxxxxxxxxxxx> format
+            if (input.Length == 22)
+                trimmedInput = input.Substring(3, 18);
+
+            // if username is in <@xxxxxxxxxxxxxxxxxx> format
+            else if (input.Length == 21)
+                trimmedInput = input.Substring(2, 18);
+
             ulong discordID = Convert.ToUInt64(trimmedInput);
 
             // if user exists in the server
