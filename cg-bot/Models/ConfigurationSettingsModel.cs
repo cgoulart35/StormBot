@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace cg_bot.Models
+namespace cg_bot.Entities
 {
 	public class ConfigurationSettingsModel
 	{
@@ -10,23 +10,8 @@ namespace cg_bot.Models
 		[JsonProperty("DiscordToken")]
 		public string DiscordToken { get; set; }
 
-		[JsonProperty("CallOfDutyNotificationChannelID")]
-		public ulong CallOfDutyNotificationChannelID { get; set; }
-
-		[JsonProperty("SoundboardNotificationChannelID")]
-		public ulong SoundboardNotificationChannelID { get; set; }
-
-		[JsonProperty("WarzoneWinsRoleID")]
-		public ulong WarzoneWinsRoleID { get; set; }
-
-		[JsonProperty("WarzoneKillsRoleID")]
-		public ulong WarzoneKillsRoleID { get; set; }
-
-		[JsonProperty("ModernWarfareKillsRoleID")]
-		public ulong ModernWarfareKillsRoleID { get; set; }
-
-		[JsonProperty("BlackOpsColdWarKillsRoleID")]
-		public ulong BlackOpsColdWarKillsRoleID { get; set; }
+		[JsonProperty("PrivateMessagePrefix")]
+		public string PrivateMessagePrefix { get; set; }
 
 		[JsonProperty("ActivisionEmail")]
 		public string ActivisionEmail { get; set; }
@@ -36,8 +21,5 @@ namespace cg_bot.Models
 
 		[JsonProperty("CategoryFoldersLocation")]
 		public string CategoryFoldersLocation { get; set; }
-
-		[JsonProperty("Prefix")]
-		public string Prefix { get; set; }
 	}
 }

@@ -1,32 +1,32 @@
 using System;
 using System.Threading.Tasks;
 using System.IO;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Discord.Addons.Interactive;
 using Newtonsoft.Json;
 using cg_bot.Services;
-using cg_bot.Models;
-using cg_bot.Models.CallOfDutyModels.Players.Data;
-
+using cg_bot.Entities;
+using cg_bot.Database;
+using cg_bot.Database.Entities;
 
 namespace cg_bot
 {
 	public class Program
     { 
         private DiscordSocketClient _client;
+        private CgBotContext _db;
         private CommandService _commandService;
         private InteractiveService _interactiveService;
         private CommandHandler _commandHandler;
         private BaseService _baseService;
         private SoundpadService _soundpadService;
-        private CallOfDutyService<ModernWarfareDataModel> _modernWarfareService;
-        private CallOfDutyService<WarzoneDataModel> _warzoneService;
-        private CallOfDutyService<BlackOpsColdWarDataModel> _blackOpsColdWarService;
+        private CallOfDutyService _callOfDutyService;
         private AnnouncementsService _announcementsService;
-        private HelpService _helpService;
         private IServiceProvider _services;
 
         public static ConfigurationSettingsModel configurationSettingsModel;
@@ -42,7 +42,7 @@ namespace cg_bot
 
         public async Task MainAsync()
         {
-            // get the discord bot token and soundboard notification channel ID from app.config
+            // get the config file settings
             ConfigureVariables();
 
             _client = new DiscordSocketClient();
@@ -51,13 +51,19 @@ namespace cg_bot
             // change boolean when client is ready
             _client.Ready += SetAsReady;
 
+            // add server data with default values in database when added to server
+            _client.JoinedGuild += AddServerToDatabase;
+
+            // remove server data in database when added to server
+            _client.LeftGuild += RemoveServerFromDatabase;
+
             await _client.LoginAsync(TokenType.Bot, configurationSettingsModel.DiscordToken);
             await _client.StartAsync();
 
             // wait until discord client is ready
             while (!isReady) { }
 
-            await _client.SetGameAsync(configurationSettingsModel.Prefix + "help", null, ActivityType.Listening);
+            await _client.SetGameAsync(".help", null, ActivityType.Listening);
 
             // add singleton services
             ConfigureServices();
@@ -70,24 +76,25 @@ namespace cg_bot
                 // ask the user if they want to start the soundpad service
                 PromptUserForStartup(_soundpadService);
 
-                // ask the user if they want to start the modern warfare/warzone services
-                PromptUserForStartup(_modernWarfareService);
-                _warzoneService.DoStart = _modernWarfareService.DoStart;
-                _warzoneService._dataModel.ParticipatingAccountsFileLock = _modernWarfareService._dataModel.ParticipatingAccountsFileLock;
+                // ask the user if they want to start the call of duty services
+                PromptUserForStartup(_callOfDutyService);
 
-                // ask the user if they want to start the black ops cold war service
-                PromptUserForStartup(_blackOpsColdWarService);
+                // ask the user what call of duty service components to enable if the service is enabled
+                if (_callOfDutyService.DoStart == true)
+                {        
+                    PromptUserForStartup(_callOfDutyService.ModernWarfareComponent);
+                    PromptUserForStartup(_callOfDutyService.WarzoneComponent);
+                    PromptUserForStartup(_callOfDutyService.BlackOpsColdWarComponent);
+                }
             }
+            // start all services except soundpad service if in remote boot mode
             else
             {
                 _soundpadService.DoStart = false;
-
-                _modernWarfareService.DoStart = true;
-
-                _warzoneService.DoStart = _modernWarfareService.DoStart;
-                _warzoneService._dataModel.ParticipatingAccountsFileLock = _modernWarfareService._dataModel.ParticipatingAccountsFileLock;
-                
-                _blackOpsColdWarService.DoStart = true;
+                _callOfDutyService.DoStart = true;
+                _callOfDutyService.ModernWarfareComponent.DoStart = true;
+                _callOfDutyService.WarzoneComponent.DoStart = true;
+                _callOfDutyService.BlackOpsColdWarComponent.DoStart = true;
             }
 
             // spacing for bot ouput visibility
@@ -95,22 +102,15 @@ namespace cg_bot
 
             // only services that were selected will be started
             _soundpadService.StartService();
-            await _modernWarfareService.StartService();
-            await _warzoneService.StartService();
-            await _blackOpsColdWarService.StartService();
+            await _callOfDutyService.StartService();
 
-
-            // start the announcements service if the Modern Warfare/Warzone services or the Black Ops Cold War service is running
+            // start the announcements service if a call f duty service is running
             _announcementsService.DoStart = false;
-            if ((_modernWarfareService.isServiceRunning && _warzoneService.isServiceRunning) || _blackOpsColdWarService.isServiceRunning)
+            if (_callOfDutyService.isServiceRunning)
             {
                 _announcementsService.DoStart = true;
             }
             await _announcementsService.StartService();
-
-            // always start the help service
-            _helpService.DoStart = true;
-            await _helpService.StartService();
 
             // set stop service functions to be called on console application exit in close handler function
             Console.CancelKeyPress += new ConsoleCancelEventHandler(ShutdownHandler);
@@ -153,40 +153,10 @@ namespace cg_bot
                         throw new Exception("Please fill out the DiscordToken.");
                     }
 
-                    if (configurationSettingsModel.CallOfDutyNotificationChannelID == 0)
+                    if (configurationSettingsModel.PrivateMessagePrefix == null || configurationSettingsModel.PrivateMessagePrefix == "")
                     {
                         createNewFile = false;
-                        throw new Exception("Please fill out the CallOfDutyNotificationChannelID.");
-                    }
-
-                    if (configurationSettingsModel.SoundboardNotificationChannelID == 0)
-                    {
-                        createNewFile = false;
-                        throw new Exception("Please fill out the SoundboardNotificationChannelID.");
-                    }
-
-                    if (configurationSettingsModel.WarzoneWinsRoleID == 0)
-                    {
-                        createNewFile = false;
-                        throw new Exception("Please fill out the WarzoneWinsRoleID.");
-                    }
-
-                    if (configurationSettingsModel.WarzoneKillsRoleID == 0)
-                    {
-                        createNewFile = false;
-                        throw new Exception("Please fill out the WarzoneKillsRoleID.");
-                    }
-
-                    if (configurationSettingsModel.ModernWarfareKillsRoleID == 0)
-                    {
-                        createNewFile = false;
-                        throw new Exception("Please fill out the ModernWarfareKillsRoleID.");
-                    }
-
-                    if (configurationSettingsModel.BlackOpsColdWarKillsRoleID == 0)
-                    {
-                        createNewFile = false;
-                        throw new Exception("Please fill out the BlackOpsColdWarKillsRoleID.");
+                        throw new Exception("Please fill out the PrivateMessagePrefix.");
                     }
 
                     if (configurationSettingsModel.ActivisionEmail == null || configurationSettingsModel.ActivisionEmail == "")
@@ -205,12 +175,6 @@ namespace cg_bot
                     {
                         createNewFile = false;
                         throw new Exception("Please fill out the CategoryFoldersLocation.");
-                    }
-
-                    if (configurationSettingsModel.Prefix == null || configurationSettingsModel.Prefix == "")
-                    {
-                        createNewFile = false;
-                        throw new Exception("Please fill out the Prefix.");
                     }
                 }
                 catch(Exception error)
@@ -252,32 +216,75 @@ namespace cg_bot
             isReady = true;
         }
 
+        private async Task AddServerToDatabase(SocketGuild guild)
+        {
+            ServersEntity newServerData = new ServersEntity()
+            {
+                ServerID = guild.Id,
+                ServerName = guild.Name,
+                PrefixUsed = configurationSettingsModel.PrivateMessagePrefix,
+                AllowServerPermissionBlackOpsColdWarTracking = true,
+                ToggleBlackOpsColdWarTracking = false,
+                AllowServerPermissionModernWarfareTracking = true,
+                ToggleModernWarfareTracking = false,
+                AllowServerPermissionWarzoneTracking = true,
+                ToggleWarzoneTracking = false,
+                AllowServerPermissionSoundpadCommands = true,
+                ToggleSoundpadCommands = false,
+                CallOfDutyNotificationChannelID = 0,
+                SoundboardNotificationChannelID = 0,
+                AdminRoleID = 0,
+                WarzoneWinsRoleID = 0,
+                WarzoneKillsRoleID = 0,
+                ModernWarfareKillsRoleID = 0,
+                BlackOpsColdWarKillsRoleID = 0
+            };
+
+            _db.Servers.Add(newServerData);
+            await _db.SaveChangesAsync();
+        }
+
+        private async Task RemoveServerFromDatabase(SocketGuild guild)
+        {
+            var s = await _db.Servers
+                .AsQueryable()
+                .Where(s => s.ServerID == guild.Id)
+                .AsAsyncEnumerable()
+                .ToListAsync();
+
+            var c = await _db.CallOfDutyPlayerData
+                .AsQueryable()
+                .Where(c => c.ServerID == guild.Id)
+                .AsAsyncEnumerable()
+                .ToListAsync();
+
+            _db.RemoveRange(s);
+            _db.RemoveRange(c);
+            await _db.SaveChangesAsync();
+        }
+
         private void ConfigureServices()
         {
             _services = new ServiceCollection()
                 .AddSingleton(_client)
+                .AddDbContext<CgBotContext>()
                 .AddSingleton<CommandService>()
                 .AddSingleton<InteractiveService>()
                 .AddSingleton<CommandHandler>()
                 .AddSingleton<BaseService>()
                 .AddSingleton<SoundpadService>()
-                .AddSingleton<CallOfDutyService<ModernWarfareDataModel>>()
-                .AddSingleton<CallOfDutyService<WarzoneDataModel>>()
-                .AddSingleton<CallOfDutyService<BlackOpsColdWarDataModel>>()
+                .AddSingleton<CallOfDutyService>()
                 .AddSingleton<AnnouncementsService>()
-                .AddSingleton<HelpService>()
                 .BuildServiceProvider();
 
+            _db = _services.GetRequiredService<CgBotContext>();
             _commandService = _services.GetRequiredService<CommandService>();
             _interactiveService = _services.GetRequiredService<InteractiveService>();
             _commandHandler = _services.GetRequiredService<CommandHandler>();
             _baseService = _services.GetRequiredService<BaseService>();
             _soundpadService = _services.GetRequiredService<SoundpadService>();
-            _modernWarfareService = _services.GetRequiredService<CallOfDutyService<ModernWarfareDataModel>>();
-            _warzoneService = _services.GetRequiredService<CallOfDutyService<WarzoneDataModel>>();
-            _blackOpsColdWarService = _services.GetRequiredService<CallOfDutyService<BlackOpsColdWarDataModel>>();
+            _callOfDutyService = _services.GetRequiredService<CallOfDutyService>();
             _announcementsService = _services.GetRequiredService<AnnouncementsService>();
-            _helpService = _services.GetRequiredService<HelpService>();
         }
 
         private void PromptUserForStartup(BaseService service)
@@ -306,11 +313,8 @@ namespace cg_bot
             Console.WriteLine("");
 
             _soundpadService.StopService();
-            _modernWarfareService.StopService();
-            _warzoneService.StopService();
-            _blackOpsColdWarService.StopService();
+            _callOfDutyService.StopService();
             _announcementsService.StopService();
-            _helpService.StopService();
 
             System.Threading.Thread.Sleep(8000);
             Environment.Exit(1);

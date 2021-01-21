@@ -1,4 +1,5 @@
-﻿using System;
+﻿using cg_bot.Database;
+using System;
 using System.Threading.Tasks;
 
 namespace cg_bot.Services
@@ -10,6 +11,8 @@ namespace cg_bot.Services
 		public bool DoStart { get; set; }
 
 		public bool isServiceRunning { get; set; }
+
+		public CgBotContext _db { get; set; }
 
 		public virtual async Task StartService()
 		{

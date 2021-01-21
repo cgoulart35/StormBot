@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using cg_bot.Services;
+using System.Threading.Tasks;
+using System.Linq;
+using Microsoft.EntityFrameworkCore;
 using Discord.Addons.Interactive;
 using Discord.Commands;
+using cg_bot.Services;
+using cg_bot.Database;
 
 namespace cg_bot.Modules
 {
@@ -13,7 +17,7 @@ namespace cg_bot.Modules
 			return args.Length != 0 ? string.Join(" ", args) : null;
 		}
 
-        public ulong GetDiscordUserID(string input)
+        public ulong GetDiscordID(string input, bool isUser = true, bool isChannel = true)
         {
             // if no name given
             if (input == null)
@@ -31,9 +35,27 @@ namespace cg_bot.Modules
 
             ulong discordID = Convert.ToUInt64(trimmedInput);
 
-            // if user exists in the server
-            if (Context.Guild.GetUser(discordID) == null)
-                throw new Exception();
+            if (isUser)
+            {
+                // if user exists in the server
+                if (Context.Guild.GetUser(discordID) == null)
+                    throw new Exception();
+            }
+            else
+            {
+                if (isChannel)
+                {
+                    // if channel exists in the server
+                    if (Context.Guild.GetChannel(discordID) == null)
+                        throw new Exception();
+                }
+                else
+                {
+                    // if role exists in the server
+                    if (Context.Guild.GetRole(discordID) == null)
+                        throw new Exception();
+                }
+            }
 
             return discordID;
         }
@@ -73,6 +95,183 @@ namespace cg_bot.Modules
                 output.Add("\n" + "...");
                 return ValidateOutputLimit(output, messageToAdd);
             }
+        }
+
+        public async Task<string> GetServerPrefix(CgBotContext _db)
+        {
+            if (!Context.IsPrivate)
+            {
+                return await _db.Servers
+                    .AsQueryable()
+                    .Where(s => s.ServerID == Context.Guild.Id)
+                    .Select(s => s.PrefixUsed)
+                    .SingleAsync();
+            }
+            else
+            {
+                return Program.configurationSettingsModel.PrivateMessagePrefix;
+            }
+        }
+
+        public async Task<ulong> GetServerAdminRole(CgBotContext _db)
+        {
+            return await _db.Servers
+                .AsQueryable()
+                .Where(s => s.ServerID == Context.Guild.Id)
+                .Select(s => s.AdminRoleID)
+                .SingleAsync();
+        }
+
+        public async Task<bool> GetServerToggleBlackOpsColdWarTracking(CgBotContext _db)
+        {
+            if (!Context.IsPrivate)
+            {
+                bool flag = await _db.Servers
+                    .AsQueryable()
+                    .Where(s => s.ServerID == Context.Guild.Id)
+                    .Select(s => s.ToggleBlackOpsColdWarTracking)
+                    .SingleAsync();
+
+                if (!flag)
+                    Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {Context.Guild.Name} ({Context.Guild.Id})");
+
+                return flag;
+            }
+            else
+                return true;
+        }
+
+        public async Task<bool> GetServerToggleModernWarfareTracking(CgBotContext _db)
+        {
+            if (!Context.IsPrivate)
+            {
+                bool flag = await _db.Servers
+                .AsQueryable()
+                .Where(s => s.ServerID == Context.Guild.Id)
+                .Select(s => s.ToggleModernWarfareTracking)
+                .SingleAsync();
+
+                if (!flag)
+                    Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {Context.Guild.Name} ({Context.Guild.Id})");
+
+                return flag;
+            }
+            else
+                return true;
+        }
+
+        public async Task<bool> GetServerToggleWarzoneTracking(CgBotContext _db)
+        {
+            if (!Context.IsPrivate)
+            {
+                bool flag = await _db.Servers
+                .AsQueryable()
+                .Where(s => s.ServerID == Context.Guild.Id)
+                .Select(s => s.ToggleModernWarfareTracking)
+                .SingleAsync();
+
+                if (!flag)
+                    Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {Context.Guild.Name} ({Context.Guild.Id})");
+
+                return flag;
+            }
+            else
+                return true;
+        }
+
+        public async Task<bool> GetServerToggleSoundpadCommands(CgBotContext _db)
+        {
+            if (!Context.IsPrivate)
+            {
+                bool flag = await _db.Servers
+                .AsQueryable()
+                .Where(s => s.ServerID == Context.Guild.Id)
+                .Select(s => s.ToggleSoundpadCommands)
+                .SingleAsync();
+
+                if (!flag)
+                    Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {Context.Guild.Name} ({Context.Guild.Id})");
+
+                return flag;
+            }
+            else
+                return true;
+        }
+
+        public async Task<bool> GetServerAllowServerPermissionBlackOpsColdWarTracking(CgBotContext _db)
+        {
+            if (!Context.IsPrivate)
+            {
+                bool flag = await _db.Servers
+                .AsQueryable()
+                .Where(s => s.ServerID == Context.Guild.Id)
+                .Select(s => s.AllowServerPermissionBlackOpsColdWarTracking)
+                .SingleAsync();
+
+                if (!flag)
+                    Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {Context.Guild.Name} ({Context.Guild.Id})");
+
+                return flag;
+            }
+            else
+                return true;
+        }
+
+        public async Task<bool> GetServerAllowServerPermissionModernWarfareTracking(CgBotContext _db)
+        {
+            if (!Context.IsPrivate)
+            {
+                bool flag = await _db.Servers
+                .AsQueryable()
+                .Where(s => s.ServerID == Context.Guild.Id)
+                .Select(s => s.AllowServerPermissionModernWarfareTracking)
+                .SingleAsync();
+
+                if (!flag)
+                    Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {Context.Guild.Name} ({Context.Guild.Id})");
+
+                return flag;
+            }
+            else
+                return true;
+        }
+
+        public async Task<bool> GetServerAllowServerPermissionWarzoneTracking(CgBotContext _db)
+        {
+            if (!Context.IsPrivate)
+            {
+                bool flag = await _db.Servers
+                .AsQueryable()
+                .Where(s => s.ServerID == Context.Guild.Id)
+                .Select(s => s.AllowServerPermissionWarzoneTracking)
+                .SingleAsync();
+
+                if (!flag)
+                    Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {Context.Guild.Name} ({Context.Guild.Id})");
+
+                return flag;
+            }
+            else
+                return true;
+        }
+
+        public async Task<bool> GetServerAllowServerPermissionSoundpadCommands(CgBotContext _db)
+        {
+            if (!Context.IsPrivate)
+            {
+                bool flag = await _db.Servers
+                .AsQueryable()
+                .Where(s => s.ServerID == Context.Guild.Id)
+                .Select(s => s.AllowServerPermissionSoundpadCommands)
+                .SingleAsync();
+
+                if (!flag)
+                    Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {Context.Guild.Name} ({Context.Guild.Id})");
+
+                return flag;
+            }
+            else
+                return true;
         }
     }
 }

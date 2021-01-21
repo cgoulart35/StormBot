@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using cg_bot.Models.CallOfDutyModels.Accounts;
-using cg_bot.Services;
+using System.Linq;
+using Discord;
 using Discord.WebSocket;
+using Microsoft.EntityFrameworkCore;
+using cg_bot.Services;
+using cg_bot.Database.Entities;
 
 namespace cg_bot.Modules.CallOfDutyModules
 {
@@ -19,71 +22,68 @@ namespace cg_bot.Modules.CallOfDutyModules
             }
         }
 
-        public async Task GiveUsersRole(ulong roleID, List<ulong> discordIDS, SocketGuild guild)
+        public async Task GiveUsersRole(ulong roleID, List<ulong> discordIDs, SocketGuild guild)
         {
             var role = guild.GetRole(roleID);
 
-            foreach (ulong discordID in discordIDS)
+            foreach (ulong discordID in discordIDs)
             {
                 var roleMember = guild.GetUser(discordID);
                 await roleMember.AddRoleAsync(role);
             }
         }
 
-        public async Task<bool> AddAParticipant<T>(CallOfDutyService<T> service, ulong discordID)
+        public async Task<bool> AddAParticipant(CallOfDutyService service, ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
         {
-            CallOfDutyAccountModel account = new CallOfDutyAccountModel();
+            CallOfDutyPlayerDataEntity newAccount = new CallOfDutyPlayerDataEntity();
 
-            account.DiscordID = discordID;
+            newAccount.ServerID = serverID;
+            newAccount.DiscordID = discordID;
+            newAccount.GameAbbrev = gameAbbrev;
+            newAccount.ModeAbbrev = modeAbbrev;
 
-            await ReplyAsync(string.Format("What is <@!{0}>'s Call of Duty username? Capitalization matters. Do not include the '#number' tag after the name. (on Battle.net, PlayStation, Xbox, Steam, Activision)", discordID));
-            account.Username = await PromptUserForStringForPartcipant();
+            await Context.User.SendMessageAsync(string.Format("What is <@!{0}>'s Call of Duty username? Capitalization matters. Do not include the '#number' tag after the name. (on Battle.net, PlayStation, Xbox, Steam, Activision)", discordID));
+            newAccount.Username = await PromptUserForStringForPartcipant(service);
 
-            if (account.Username == "cancel")
+            if (newAccount.Username == "cancel")
                 return false;
 
-            await ReplyAsync(string.Format("What is <@!{0}>'s Call of Duty username's tag? If there is no tag, say 'none'. Do not include the '#' symbol in your answer. (Example: 1234 in User#1234)", discordID));
-            account.Tag = await PromptUserForStringForPartcipant(true);
+            await Context.User.SendMessageAsync(string.Format("What is <@!{0}>'s Call of Duty username's tag? If there is no tag, say 'none'. Do not include the '#' symbol in your answer. (Example: 1234 in User#1234)", discordID));
+            newAccount.Tag = await PromptUserForStringForPartcipant(service, true);
 
-            if (account.Tag == "cancel")
+            if (newAccount.Tag == "cancel")
                 return false;
 
-            account.Platform = await AskPlatform(discordID);
+            newAccount.Platform = await AskPlatform(service, discordID);
 
-            if (account.Platform == "cancel")
+            if (newAccount.Platform == "cancel")
                 return false;
 
-            service.AddParticipantToFile(account);
+            service.AddParticipantToDatabase(newAccount);
+            
             return true;
         }
 
-        public async Task<bool> RemoveAParticipant<T>(CallOfDutyService<T> service, ulong discordID)
+        public async Task<bool> RemoveAParticipant(CallOfDutyService service, ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
         {
-            CallOfDutyAllAccountsModel participatingAccountsData = service.ReadParticipatingAccounts();
+            CallOfDutyPlayerDataEntity removeAccount = await GetCallOfDutyPlayerDataEntity(service, serverID, discordID, gameAbbrev, modeAbbrev);
 
-            if (participatingAccountsData.Accounts.Count != 0)
+            if (removeAccount != null)
             {
-                foreach (CallOfDutyAccountModel account in participatingAccountsData.Accounts)
-                {
-                    if (account.DiscordID == discordID)
-                    {
-                        service.RemoveParticipantFromFile(account);
-                        return true;
-                    }
-                }
+                service.RemoveParticipantFromDatabase(removeAccount);
 
-                await ReplyAsync("This user isn't participating.");
-                return false;
+                return true;
             }
             else
             {
+                await ReplyAsync("This user isn't participating.");
                 return false;
             }
         }
 
-        public async Task<string> PromptUserForStringForPartcipant(bool forTag = false)
+        public async Task<string> PromptUserForStringForPartcipant(CallOfDutyService service, bool forTag = false)
         {
-            var userSelectResponse = await NextMessageAsync(true, true, new TimeSpan(0, 1, 0));
+            var userSelectResponse = await NextMessageAsync(true, false, new TimeSpan(0, 1, 0));
 
             string requestedString = null;
 
@@ -99,11 +99,11 @@ namespace cg_bot.Modules.CallOfDutyModules
                 // if response is cancel, don't add participant
                 if (requestedString.ToLower() == "cancel")
                 {
-                    await ReplyAsync("Request cancelled.");
+                    await Context.User.SendMessageAsync("Request cancelled.");
                     return "cancel";
                 }
                 // if same user starts another command while awaiting a response, end this one but don't display request cancelled
-                else if (requestedString.StartsWith(Program.configurationSettingsModel.Prefix))
+                else if (requestedString.StartsWith(await GetServerPrefix(service._db)))
                 {
                     return "cancel";
                 }
@@ -111,19 +111,19 @@ namespace cg_bot.Modules.CallOfDutyModules
             // if user doesn't respond in time
             else
             {
-                await ReplyAsync("You did not reply before the timeout.");
+                await Context.User.SendMessageAsync("You did not reply before the timeout.");
                 return "cancel";
             }
 
             return requestedString;
         }
 
-        public async Task<string> AskPlatform(ulong discordID)
+        public async Task<string> AskPlatform(CallOfDutyService service, ulong discordID)
         {
             string platforms = "**1.)** Battle.net\n**2.)** PlayStation\n**3.)** Xbox\n**4.)** Steam\n**5.)** Activision\n";
 
-            await ReplyAsync(string.Format("What is <@!{0}>'s Call of Duty username's game platform? Please respond with the corresponding number:\n", discordID) + platforms);
-            int selection = await PromptUserForNumber(5);
+            await Context.User.SendMessageAsync(string.Format("What is <@!{0}>'s Call of Duty username's game platform? Please respond with the corresponding number:\n", discordID) + platforms);
+            int selection = await PromptUserForNumber(service, 5);
 
             switch (selection)
             {
@@ -142,9 +142,9 @@ namespace cg_bot.Modules.CallOfDutyModules
             }
         }
 
-        public async Task<int> PromptUserForNumber(int maxSelection)
+        public async Task<int> PromptUserForNumber(CallOfDutyService service, int maxSelection)
         {
-            var userSelectResponse = await NextMessageAsync(true, true, new TimeSpan(0, 1, 0));
+            var userSelectResponse = await NextMessageAsync(true, false, new TimeSpan(0, 1, 0));
 
             string username = Context.User.Username;
 
@@ -159,19 +159,19 @@ namespace cg_bot.Modules.CallOfDutyModules
                     // if response is cancel, don't remove
                     if (requestedNumber.ToLower() == "cancel")
                     {
-                        await ReplyAsync("Request cancelled.");
+                        await Context.User.SendMessageAsync("Request cancelled.");
                         return -1;
                     }
                     // if same user starts another command while awaiting a response, end this one but don't display request cancelled
-                    else if (requestedNumber.StartsWith(Program.configurationSettingsModel.Prefix))
+                    else if (requestedNumber.StartsWith(await GetServerPrefix(service._db)))
                     {
                         return -1;
                     }
                     // if not cancel, request another response
                     else
                     {
-                        await ReplyAsync($"{username}, your response was invalid. Please answer with a number.");
-                        return await PromptUserForNumber(maxSelection);
+                        await Context.User.SendMessageAsync($"{username}, your response was invalid. Please answer with a number.");
+                        return await PromptUserForNumber(service, maxSelection);
                     }
                 }
                 // if response is a number
@@ -180,34 +180,46 @@ namespace cg_bot.Modules.CallOfDutyModules
                     // if number is valid option on list of sounds
                     if (validatedNumber >= 1 && validatedNumber <= maxSelection)
                     {
-                        await ReplyAsync($"{username} entered: {validatedNumber}");
+                        await Context.User.SendMessageAsync($"{username} entered: {validatedNumber}");
                         return validatedNumber;
                     }
                     // if not valid number, request another response
                     else
                     {
-                        await ReplyAsync($"{username}, your response was invalid. Please answer a number shown on the list.");
-                        return await PromptUserForNumber(maxSelection);
+                        await Context.User.SendMessageAsync($"{username}, your response was invalid. Please answer a number shown on the list.");
+                        return await PromptUserForNumber(service, maxSelection);
                     }
                 }
             }
             // if user doesn't respond in time
             else
             {
-                await ReplyAsync("You did not reply before the timeout.");
+                await Context.User.SendMessageAsync("You did not reply before the timeout.");
                 return -1;
             }
         }
 
-        public async Task<CallOfDutyAllAccountsModel> ListPartcipants<T>(CallOfDutyService<T> service)
+        public async Task<List<CallOfDutyPlayerDataEntity>> ListPartcipants(CallOfDutyService service, ulong serverId, string gameAbbrev, string modeAbbrev)
         {
-            CallOfDutyAllAccountsModel participatingAccountsData = service.ReadParticipatingAccounts();
-            string output = "__**Participants: " + service._dataModel.GameName + "**__\n";
+            List<ulong> serverIdList = new List<ulong>();
+            serverIdList.Add(serverId);
 
-            if (participatingAccountsData.Accounts.Count != 0)
+            List<CallOfDutyPlayerDataEntity> participatingAccountsData = await service.GetServersPlayerData(serverIdList, gameAbbrev, modeAbbrev);
+
+            string gameName = "";
+            if (gameAbbrev == "mw" && modeAbbrev == "mp")
+                gameName = "Modern Warfare";
+            else if (gameAbbrev == "mw" && modeAbbrev == "wz")
+                gameName = "Warzone";
+            else if (gameAbbrev == "cw" && modeAbbrev == "mp")
+                gameName = "Black Ops Cold War";
+
+            string output = "__**Participants: " + gameName + "**__\n";
+
+            if (participatingAccountsData.Count != 0)
             {
                 int accountCount = 1;
-                foreach (CallOfDutyAccountModel account in participatingAccountsData.Accounts)
+                foreach (CallOfDutyPlayerDataEntity account in participatingAccountsData)
                 {
                     ulong discordID = account.DiscordID;
                     string username = account.Username;
@@ -239,6 +251,14 @@ namespace cg_bot.Modules.CallOfDutyModules
                 await ReplyAsync("Zero participants.");
             }
             return participatingAccountsData;
+        }
+
+        public async Task<CallOfDutyPlayerDataEntity> GetCallOfDutyPlayerDataEntity(CallOfDutyService service, ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
+        {
+            return await service._db.CallOfDutyPlayerData
+                .AsQueryable()
+                .Where(player => player.ServerID == serverID && player.DiscordID == discordID && player.GameAbbrev == gameAbbrev && player.ModeAbbrev == modeAbbrev)
+                .SingleOrDefaultAsync();
         }
     }
 }

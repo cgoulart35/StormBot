@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Discord;
+using System.Linq;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
+using cg_bot.Database;
 
 namespace cg_bot.Services
 {
@@ -17,12 +18,13 @@ namespace cg_bot.Services
 
 		private readonly DiscordSocketClient _client;
 
-		public IMessageChannel _callOfDutyNotificationChannelID;
+		private CallOfDutyService _callOfDutyService;
 
 		public AnnouncementsService(IServiceProvider services)
 		{
 			_client = services.GetRequiredService<DiscordSocketClient>();
-			_callOfDutyNotificationChannelID = _client.GetChannel(Program.configurationSettingsModel.CallOfDutyNotificationChannelID) as IMessageChannel;
+			_callOfDutyService = services.GetRequiredService<CallOfDutyService>();
+			_db = services.GetRequiredService<CgBotContext>();
 
 			Name = "Announcements Service";
 			isServiceRunning = false;
@@ -61,7 +63,6 @@ namespace cg_bot.Services
 				DateTime currentTime = DateTime.Now;
 				if (!weeklySent && currentTime.DayOfWeek == DayOfWeek.Sunday && currentTime.Hour == 1 && currentTime.Minute == 0 && WeeklyCallOfDutyAnnouncement != null)
 				{
-					await _callOfDutyNotificationChannelID.SendMessageAsync("```fix\nHERE ARE THIS WEEK'S WINNERS!!!! CONGRATULATIONS!!!\n```");
 					await WeeklyCallOfDutyAnnouncement.Invoke(this, EventArgs.Empty);
 
 					weeklySent = true;
@@ -81,7 +82,6 @@ namespace cg_bot.Services
 				DateTime currentTime = DateTime.Now;
 				if (!dailySent && currentTime.Hour == 22 && currentTime.Minute == 0 && DailyCallOfDutyAnnouncement != null)
 				{
-					await _callOfDutyNotificationChannelID.SendMessageAsync("```fix\nHERE ARE THIS WEEK'S CURRENT RANKINGS!\n```");
 					await DailyCallOfDutyAnnouncement.Invoke(this, EventArgs.Empty);
 
 					dailySent = true;

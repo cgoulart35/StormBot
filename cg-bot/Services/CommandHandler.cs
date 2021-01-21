@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Reflection;
 using System.Threading.Tasks;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 using Discord.Commands;
 using Discord.WebSocket;
 using Discord;
+using cg_bot.Database;
+using cg_bot.Database.Entities;
 
 namespace cg_bot.Services
 {
@@ -12,12 +16,15 @@ namespace cg_bot.Services
     {
         private readonly CommandService _commandService;
         private readonly DiscordSocketClient _client;
+        private CgBotContext _db;
         private readonly IServiceProvider _services;
 
         public CommandHandler(IServiceProvider services)
         {
             _commandService = services.GetRequiredService<CommandService>();
             _client = services.GetRequiredService<DiscordSocketClient>();
+            _db = services.GetRequiredService<CgBotContext>();
+
             _services = services;
 
             // take action when we execute a command
@@ -43,11 +50,29 @@ namespace cg_bot.Services
                 // if another bot sent the message, then return
                 if (message.Author.IsBot) return;
 
-                int argPos = 0;
-                if (message.HasStringPrefix(Program.configurationSettingsModel.Prefix, ref argPos))
+                if (!context.IsPrivate)
                 {
-                    // execute command if one is found that matches
-                    await _commandService.ExecuteAsync(context, argPos, _services);
+                    int argPos = 0;
+                    string serverPrefix = await _db.Servers
+                        .AsQueryable()
+                        .Where(s => s.ServerID == context.Guild.Id)
+                        .Select(s => s.PrefixUsed)
+                        .SingleAsync();
+
+                    if (message.HasStringPrefix(serverPrefix, ref argPos))
+                    {
+                        // execute command if one is found that matches
+                        await _commandService.ExecuteAsync(context, argPos, _services);
+                    }
+                }
+                else
+                {
+                    int argPos = 0;
+                    if (message.HasStringPrefix(Program.configurationSettingsModel.PrivateMessagePrefix, ref argPos))
+                    {
+                        // execute command if one is found that matches
+                        await _commandService.ExecuteAsync(context, argPos, _services);
+                    }
                 }
             }
         }

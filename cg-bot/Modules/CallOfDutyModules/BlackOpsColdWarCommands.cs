@@ -6,21 +6,23 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using cg_bot.Services;
-using cg_bot.Models.CallOfDutyModels.Players;
-using cg_bot.Models.CallOfDutyModels.Players.Data;
+using cg_bot.Models.CallOfDutyModels;
+using cg_bot.Database;
 
 namespace cg_bot.Modules.CallOfDutyModules
 {
     public class BlackOpsColdWarCommands : BaseCallOfDutyCommands
     {
-        private CallOfDutyService<BlackOpsColdWarDataModel> _service;
+        private CallOfDutyService _service;
         private AnnouncementsService _announcementsService;
+        private CgBotContext _db;
 
         static bool handlersSet = false;
 
         public BlackOpsColdWarCommands(IServiceProvider services)
         {
-            _service = services.GetRequiredService<CallOfDutyService<BlackOpsColdWarDataModel>>();
+            _service = services.GetRequiredService<CallOfDutyService>();
+            _db = services.GetRequiredService<CgBotContext>();
             _announcementsService = services.GetRequiredService<AnnouncementsService>();
 
             if (!handlersSet)
@@ -35,20 +37,31 @@ namespace cg_bot.Modules.CallOfDutyModules
         public async Task WeeklyCompetitionUpdates(object sender, EventArgs args)
         {
             // if service is running, display updates
-            if (DisableIfServiceNotRunning(_service))
+            if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent))
             {
-                SocketGuild guild = _service._client.Guilds.First();
-
-                // pass true to keep track of lifetime total kills every week
-                CallOfDutyAllPlayersModel<BlackOpsColdWarDataModel> newData = _service.GetNewPlayerData(true);
-
-                List<string> output = await GetLast7DaysKills(newData, guild);
-
-                if (output[0] != "")
+                List<ulong> serverIds = await _service.GetAllValidatedServerIds("cw", "mp");
+                foreach (ulong serverId in serverIds)
                 {
-                    foreach (string chunk in output)
+                    var channel = await _service.GetServerCallOfDutyNotificationChannel(serverId);
+
+                    if (channel != null)
                     {
-                        await _service._callOfDutyNotificationChannelID.SendMessageAsync(chunk);
+                        await channel.SendMessageAsync("```fix\nHERE ARE THIS WEEK'S WINNERS!!!! CONGRATULATIONS!!!\n```");
+
+                        // pass true to keep track of lifetime total kills every week
+                        List<CallOfDutyPlayerModel> newData = await _service.GetNewPlayerData(true, serverId, "cw", "mp");
+
+                        SocketGuild guild = _service._client.GetGuild(serverId);
+
+                        List<string> output = await GetLast7DaysKills(newData, guild);
+
+                        if (output[0] != "")
+                        {
+                            foreach (string chunk in output)
+                            {
+                                await channel.SendMessageAsync(chunk);
+                            }
+                        }
                     }
                 }
             }
@@ -57,25 +70,36 @@ namespace cg_bot.Modules.CallOfDutyModules
         public async Task DailyCompetitionUpdates(object sender, EventArgs args)
         {
             // if service is running, display updates
-            if (DisableIfServiceNotRunning(_service))
+            if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent))
             {
-                SocketGuild guild = _service._client.Guilds.First();
-
-                CallOfDutyAllPlayersModel<BlackOpsColdWarDataModel> newData = _service.GetNewPlayerData();
-
-                List<string> output = GetWeeklyKills(newData, guild);
-
-                if (output[0] != "")
+                List<ulong> serverIds = await _service.GetAllValidatedServerIds("cw", "mp");
+                foreach (ulong serverId in serverIds)
                 {
-                    foreach (string chunk in output)
+                    var channel = await _service.GetServerCallOfDutyNotificationChannel(serverId);
+
+                    if (channel != null)
                     {
-                        await _service._callOfDutyNotificationChannelID.SendMessageAsync(chunk);
+                        await channel.SendMessageAsync("```fix\nHERE ARE THIS WEEK'S CURRENT RANKINGS!\n```");
+
+                        List<CallOfDutyPlayerModel> newData = await _service.GetNewPlayerData(false, serverId, "cw", "mp");
+
+                        SocketGuild guild = _service._client.GetGuild(serverId);
+
+                        List<string> output = await GetWeeklyKills(newData, guild);
+
+                        if (output[0] != "")
+                        {
+                            foreach (string chunk in output)
+                            {
+                                await channel.SendMessageAsync(chunk);
+                            }
+                        }
                     }
                 }
             }
         }
 
-        public async Task<List<string>> GetLast7DaysKills(CallOfDutyAllPlayersModel<BlackOpsColdWarDataModel> newData, SocketGuild guild = null)
+        public async Task<List<string>> GetLast7DaysKills(List<CallOfDutyPlayerModel> newData, SocketGuild guild = null)
         {
             if (guild == null)
                 guild = Context.Guild;
@@ -85,11 +109,11 @@ namespace cg_bot.Modules.CallOfDutyModules
             if (newData != null)
             {
                 output.Add("```md\nBLACK OPS COLD WAR KILLS IN LAST 7 DAYS\n=======================================```");
-                newData.Players = newData.Players.OrderByDescending(player => player.Data.Weekly.All.Properties != null ? player.Data.Weekly.All.Properties.Kills : 0).ToList();
+                newData = newData.OrderByDescending(player => player.Data.Weekly.All.Properties != null ? player.Data.Weekly.All.Properties.Kills : 0).ToList();
 
                 int playerCount = 1;
                 bool atleastOnePlayer = false;
-                foreach (CallOfDutyPlayerModel<BlackOpsColdWarDataModel> player in newData.Players)
+                foreach (CallOfDutyPlayerModel player in newData)
                 {
                     double kills = 0;
 
@@ -110,11 +134,17 @@ namespace cg_bot.Modules.CallOfDutyModules
 
                 if (atleastOnePlayer)
                 {
-                    await UnassignRoleFromAllMembers(Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID, guild);
+                    double topScore = newData[0].Data.Weekly.All.Properties.Kills;
+                    List<ulong> topPlayersDiscordIDs = newData.Where(player => player.Data.Weekly.All.Properties?.Kills == topScore).Select(player => player.DiscordID).ToList();
 
-                    double topScore = newData.Players[0].Data.Weekly.All.Properties.Kills;
-                    List<ulong> topPlayersDiscordIDs = newData.Players.Where(player => player.Data.Weekly.All.Properties?.Kills == topScore).Select(player => player.DiscordID).ToList();
-                    await GiveUsersRole(Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID, topPlayersDiscordIDs, guild);
+                    ulong roleID = await _service.GetServerBlackOpsColdWarKillsRoleID(guild.Id);
+                    string roleStr = "";
+                    if (roleID != 0)
+                    {
+                        await UnassignRoleFromAllMembers(roleID, guild);
+                        await GiveUsersRole(roleID, topPlayersDiscordIDs, guild);
+                        roleStr = $" You have been assigned the role <@&{roleID}>!";
+                    }
 
                     string winners = "";
                     foreach (ulong DiscordID in topPlayersDiscordIDs)
@@ -122,7 +152,7 @@ namespace cg_bot.Modules.CallOfDutyModules
                         winners += string.Format(@" <@!{0}>,", DiscordID);
                     }
 
-                    output = ValidateOutputLimit(output, "\n" + string.Format(@"Congratulations{0} you have the most kills out of all Black Ops Cold War participants in the last 7 days! You have been assigned the role <@&{1}>!", winners, Program.configurationSettingsModel.BlackOpsColdWarKillsRoleID));
+                    output = ValidateOutputLimit(output, "\n" + string.Format(@"Congratulations{0} you have the most kills out of all Black Ops Cold War participants in the last 7 days!{1}", winners, roleStr));
                 }
                 else
                     output = ValidateOutputLimit(output, "\n" + "No active players this week.");
@@ -136,13 +166,13 @@ namespace cg_bot.Modules.CallOfDutyModules
             }
         }
 
-        public List<string> GetWeeklyKills(CallOfDutyAllPlayersModel<BlackOpsColdWarDataModel> newData, SocketGuild guild = null)
+        public async Task<List<string>> GetWeeklyKills(List<CallOfDutyPlayerModel> newData, SocketGuild guild = null)
         {
             if (guild == null)
                 guild = Context.Guild;
 
-            CallOfDutyAllPlayersModel<BlackOpsColdWarDataModel> storedData = _service.storedPlayerDataModel;
-            List<CallOfDutyPlayerModel<BlackOpsColdWarDataModel>> outputPlayers = new List<CallOfDutyPlayerModel<BlackOpsColdWarDataModel>>();
+            List<CallOfDutyPlayerModel> storedData = await _service.GetServersPlayerDataAsPlayerModelList(guild.Id, "cw", "mp");
+            List<CallOfDutyPlayerModel> outputPlayers = new List<CallOfDutyPlayerModel>();
 
             List<string> output = new List<string>();
 
@@ -151,9 +181,9 @@ namespace cg_bot.Modules.CallOfDutyModules
                 output.Add("```md\nBLACK OPS COLD WAR WEEKLY KILLS\n===============================```");
 
                 // set weekly kill counts
-                foreach (CallOfDutyPlayerModel<BlackOpsColdWarDataModel> player in newData.Players)
+                foreach (CallOfDutyPlayerModel player in newData)
                 {
-                    CallOfDutyPlayerModel<BlackOpsColdWarDataModel> outputPlayer = player;
+                    CallOfDutyPlayerModel outputPlayer = player;
 
                     double kills = 0;
 
@@ -161,8 +191,8 @@ namespace cg_bot.Modules.CallOfDutyModules
                     if (player.Data.Lifetime.All.Properties != null)
                     {
                         // if player kill count saved last week, set kills this week
-                        if (storedData.Players.Find(storedPlayer => storedPlayer.DiscordID == player.DiscordID) != null)
-                            kills = player.Data.Lifetime.All.Properties.Kills - storedData.Players.Find(storedPlayer => storedPlayer.DiscordID == player.DiscordID).Data.Lifetime.All.Properties.Kills;
+                        if (storedData.Find(storedPlayer => storedPlayer.DiscordID == player.DiscordID) != null)
+                            kills = player.Data.Lifetime.All.Properties.Kills - storedData.Find(storedPlayer => storedPlayer.DiscordID == player.DiscordID).Data.Lifetime.All.Properties.Kills;
                         // if player kill count not saved last week, set kills = -1
                         else
                             kills = -1;
@@ -182,7 +212,7 @@ namespace cg_bot.Modules.CallOfDutyModules
                 int playerCount = 1;
                 bool atleastOnePlayer = false;
                 string nextWeekMessages = "";
-                foreach (CallOfDutyPlayerModel<BlackOpsColdWarDataModel> player in outputPlayers)
+                foreach (CallOfDutyPlayerModel player in outputPlayers)
                 {
                     if (player.Data.Lifetime.All.Properties.Kills == -1)
                         nextWeekMessages += string.Format(@"<@!{0}> will be included in daily updates starting next week.", player.DiscordID) + "\n";
@@ -225,150 +255,308 @@ namespace cg_bot.Modules.CallOfDutyModules
             }
         }
 
+        #region COMMAND FUNCTIONS
+        // admin role command
         [Command("bocw weekly kills", RunMode = RunMode.Async)]
         public async Task WeeklyKillsCommand()
         {
-            if (DisableIfServiceNotRunning(_service, "bocw weekly kills"))
+            if (!Context.IsPrivate)
             {
-                await Context.Channel.TriggerTypingAsync();
-
-                CallOfDutyAllPlayersModel<BlackOpsColdWarDataModel> newData = _service.GetNewPlayerData();
-
-                List<string> output = GetWeeklyKills(newData);
-                if (output[0] != "")
+                if (await GetServerAllowServerPermissionBlackOpsColdWarTracking(_db) && await GetServerToggleBlackOpsColdWarTracking(_db))
                 {
-                    foreach (string chunk in output)
+                    if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent, "bocw weekly kills"))
                     {
-                        await ReplyAsync(chunk);
+                        await Context.Channel.TriggerTypingAsync();
+
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(_service._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        {
+                            await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
+                        }
+                        else
+                        {
+                            List<CallOfDutyPlayerModel> newData = await _service.GetNewPlayerData(false, Context.Guild.Id, "cw", "mp");
+
+                            List<string> output = await GetWeeklyKills(newData);
+                            if (output[0] != "")
+                            {
+                                foreach (string chunk in output)
+                                {
+                                    await ReplyAsync(chunk);
+                                }
+                            }
+                        }
                     }
                 }
             }
+            else
+                await ReplyAsync("This command can only be executed in servers.");
         }
 
+        // admin role command
         [Command("bocw lifetime kills", RunMode = RunMode.Async)]
         public async Task LifetimeKillsCommand()
         {
-            if (DisableIfServiceNotRunning(_service, "bocw lifetime kills"))
+            if (!Context.IsPrivate)
             {
-                await Context.Channel.TriggerTypingAsync();
-
-                CallOfDutyAllPlayersModel<BlackOpsColdWarDataModel> newData = _service.GetNewPlayerData();
-
-                if (newData != null)
+                if (await GetServerAllowServerPermissionBlackOpsColdWarTracking(_db) && await GetServerToggleBlackOpsColdWarTracking(_db))
                 {
-                    List<string> output = new List<string>();
-                    output.Add("```md\nBLACK OPS COLD WAR LIFETIME KILLS\n=================================```");
-
-                    newData.Players = newData.Players.OrderByDescending(player => player.Data.Lifetime.All.Properties.Kills).ToList();
-
-                    int playerCount = 1;
-                    bool atleastOnePlayer = false;
-                    foreach (CallOfDutyPlayerModel<BlackOpsColdWarDataModel> player in newData.Players)
+                    if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent, "bocw lifetime kills"))
                     {
-                        double kills = 0;
+                        await Context.Channel.TriggerTypingAsync();
 
-                        // if user has not played
-                        if (player.Data.Lifetime.All.Properties == null || player.Data.Lifetime.All.Properties.Kills == 0)
-                            continue;
-                        // if user has played
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(_service._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        {
+                            await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
+                        }
                         else
                         {
-                            atleastOnePlayer = true;
-                            kills = player.Data.Lifetime.All.Properties.Kills;
-                        }
+                            List<CallOfDutyPlayerModel> newData = await _service.GetNewPlayerData(false, Context.Guild.Id, "cw", "mp");
 
-                        output = ValidateOutputLimit(output, string.Format(@"**{0}.)** <@!{1}> has {2} total game kills.", playerCount, player.DiscordID, kills) + "\n");
-
-                        playerCount++;
-                    }
-
-                    if (atleastOnePlayer)
-                    {
-                        output = ValidateOutputLimit(output, "\n" + string.Format(@"Congratulations <@!{0}>, you have the most kills in your lifetime out of all Black Ops Cold War participants!", newData.Players[0].DiscordID));
-
-                        if (output[0] != "")
-                        {
-                            foreach (string chunk in output)
+                            if (newData != null)
                             {
-                                await ReplyAsync(chunk);
+                                List<string> output = new List<string>();
+                                output.Add("```md\nBLACK OPS COLD WAR LIFETIME KILLS\n=================================```");
+
+                                newData = newData.OrderByDescending(player => player.Data.Lifetime.All.Properties.Kills).ToList();
+
+                                int playerCount = 1;
+                                bool atleastOnePlayer = false;
+                                foreach (CallOfDutyPlayerModel player in newData)
+                                {
+                                    double kills = 0;
+
+                                    // if user has not played
+                                    if (player.Data.Lifetime.All.Properties == null || player.Data.Lifetime.All.Properties.Kills == 0)
+                                        continue;
+                                    // if user has played
+                                    else
+                                    {
+                                        atleastOnePlayer = true;
+                                        kills = player.Data.Lifetime.All.Properties.Kills;
+                                    }
+
+                                    output = ValidateOutputLimit(output, string.Format(@"**{0}.)** <@!{1}> has {2} total game kills.", playerCount, player.DiscordID, kills) + "\n");
+
+                                    playerCount++;
+                                }
+
+                                if (atleastOnePlayer)
+                                {
+                                    output = ValidateOutputLimit(output, "\n" + string.Format(@"Congratulations <@!{0}>, you have the most kills in your lifetime out of all Black Ops Cold War participants!", newData[0].DiscordID));
+
+                                    if (output[0] != "")
+                                    {
+                                        foreach (string chunk in output)
+                                        {
+                                            await ReplyAsync(chunk);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    output = ValidateOutputLimit(output, "\n" + "No active players.");
+
+                                    if (output[0] != "")
+                                    {
+                                        foreach (string chunk in output)
+                                        {
+                                            await ReplyAsync(chunk);
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                await ReplyAsync("No data returned.");
                             }
                         }
                     }
-                    else
-                    {
-                        output = ValidateOutputLimit(output, "\n" + "No active players.");
-
-                        if (output[0] != "")
-                        {
-                            foreach (string chunk in output)
-                            {
-                                await ReplyAsync(chunk);
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    await ReplyAsync("No data returned.");
                 }
             }
+            else
+                await ReplyAsync("This command can only be executed in servers.");
         }
 
+        // admin role command
         [Command("bocw participants", RunMode = RunMode.Async)]
         public async Task ParticipantsCommand()
         {
-            if (DisableIfServiceNotRunning(_service, "bocw participants"))
+            if (!Context.IsPrivate)
             {
-                await Context.Channel.TriggerTypingAsync();
+                if (await GetServerAllowServerPermissionBlackOpsColdWarTracking(_db) && await GetServerToggleBlackOpsColdWarTracking(_db))
+                {
+                    if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent, "bocw participants"))
+                    {
+                        await Context.Channel.TriggerTypingAsync();
 
-                await ListPartcipants(_service);
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(_service._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        {
+                            await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
+                        }
+                        else
+                        {
+                            ulong serverID = Context.Guild.Id;
+                            string gameAbbrev = "cw";
+                            string modeAbbrev = "mp";
+
+                            await ListPartcipants(_service, serverID, gameAbbrev, modeAbbrev);
+                        }
+                    }
+                }
             }
+            else
+                await ReplyAsync("This command can only be executed in servers.");
         }
 
+        // admin role command
         [Command("bocw add participant", RunMode = RunMode.Async)]
         public async Task AddParticipantCommand(params string[] args)
         {
-            if (DisableIfServiceNotRunning(_service, "bocw add participant"))
+            if (!Context.IsPrivate)
             {
-                await Context.Channel.TriggerTypingAsync();
-
-                try
+                if (await GetServerAllowServerPermissionBlackOpsColdWarTracking(_db) && await GetServerToggleBlackOpsColdWarTracking(_db))
                 {
-                    string input = GetSingleArg(args);
+                    if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent, "bocw add participant"))
+                    {
+                        await Context.Channel.TriggerTypingAsync();
 
-                    ulong discordID = GetDiscordUserID(input);
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(_service._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        {
+                            await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
+                        }
+                        else
+                        {
+                            try
+                            {
+                                string input = GetSingleArg(args);
+                                ulong serverID = Context.Guild.Id;
+                                ulong discordID = GetDiscordID(input);
+                                string gameAbbrev = "cw";
+                                string modeAbbrev = "mp";
 
-                    if (await AddAParticipant(_service, discordID))
-                        await ReplyAsync(string.Format("<@!{0}> has been added to the Black Ops Cold War participant list.", discordID));
-                }
-                catch
-                {
-                    await ReplyAsync("Please provide a valid Discord user.");
+                                if (await AddAParticipant(_service, serverID, discordID, gameAbbrev, modeAbbrev))
+                                    await ReplyAsync(string.Format("<@!{0}> has been added to the Black Ops Cold War participant list.", discordID));
+                                else
+                                    await ReplyAsync(string.Format("<@!{0}> was not added.", discordID));
+                            }
+                            catch
+                            {
+                                await ReplyAsync("Please provide a valid Discord user.");
+                            }
+                        }
+                    }
                 }
             }
+            else
+                await ReplyAsync("This command can only be executed in servers.");
         }
 
+        // admin role command
         [Command("bocw rm participant", RunMode = RunMode.Async)]
         public async Task RemoveParticipantCommand(params string[] args)
         {
-            if (DisableIfServiceNotRunning(_service, "bocw rm participant"))
+            if (!Context.IsPrivate)
             {
-                await Context.Channel.TriggerTypingAsync();
-
-                try
+                if (await GetServerAllowServerPermissionBlackOpsColdWarTracking(_db) && await GetServerToggleBlackOpsColdWarTracking(_db))
                 {
-                    string input = GetSingleArg(args);
+                    if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent, "bocw rm participant"))
+                    {
+                        await Context.Channel.TriggerTypingAsync();
 
-                    ulong discordID = GetDiscordUserID(input);
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(_service._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        {
+                            await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
+                        }
+                        else
+                        {
+                            try
+                            {
+                                string input = GetSingleArg(args);
+                                ulong serverID = Context.Guild.Id;
+                                ulong discordID = GetDiscordID(input);
+                                string gameAbbrev = "cw";
+                                string modeAbbrev = "mp";
 
-                    if (await RemoveAParticipant(_service, discordID))
-                        await ReplyAsync(string.Format("<@!{0}> has been removed from the Black Ops Cold War participant list.", discordID));
-                }
-                catch
-                {
-                    await ReplyAsync("Please provide a valid Discord user.");
+                                if (await RemoveAParticipant(_service, serverID, discordID, gameAbbrev, modeAbbrev))
+                                    await ReplyAsync(string.Format("<@!{0}> has been removed from the Black Ops Cold War participant list.", discordID));
+                            }
+                            catch
+                            {
+                                await ReplyAsync("Please provide a valid Discord user.");
+                            }
+                        }
+                    }
                 }
             }
+            else
+                await ReplyAsync("This command can only be executed in servers.");
         }
+
+        [Command("bocw participate", RunMode = RunMode.Async)]
+        public async Task ParticipateCommand()
+        {
+            if (!Context.IsPrivate)
+            {
+                if (await GetServerAllowServerPermissionBlackOpsColdWarTracking(_db) && await GetServerToggleBlackOpsColdWarTracking(_db))
+                {
+                    if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent, "bocw participate"))
+                    {
+                        await Context.Channel.TriggerTypingAsync();
+
+                        try
+                        {
+                            ulong serverID = Context.Guild.Id;
+                            ulong discordID = Context.User.Id;
+                            string gameAbbrev = "cw";
+                            string modeAbbrev = "mp";
+
+                            if (await AddAParticipant(_service, serverID, discordID, gameAbbrev, modeAbbrev))
+                                await ReplyAsync(string.Format("<@!{0}> has been added to the Black Ops Cold War participant list.", discordID));
+                            else
+                                await ReplyAsync(string.Format("<@!{0}> was not added.", discordID));
+                        }
+                        catch
+                        {
+                            await ReplyAsync("Please provide a valid Discord user.");
+                        }
+                    }
+                }
+            }
+            else
+                await ReplyAsync("This command can only be executed in servers.");
+        }
+
+        [Command("bocw leave", RunMode = RunMode.Async)]
+        public async Task LeaveCommand()
+        {
+            if (!Context.IsPrivate)
+            {
+                if (await GetServerAllowServerPermissionBlackOpsColdWarTracking(_db) && await GetServerToggleBlackOpsColdWarTracking(_db))
+                {
+                    if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent, "bocw leave"))
+                    {
+                        await Context.Channel.TriggerTypingAsync();
+
+                        try
+                        {
+                            ulong serverID = Context.Guild.Id;
+                            ulong discordID = Context.User.Id;
+                            string gameAbbrev = "cw";
+                            string modeAbbrev = "mp";
+
+                            if (await RemoveAParticipant(_service, serverID, discordID, gameAbbrev, modeAbbrev))
+                                await ReplyAsync(string.Format("<@!{0}> has been removed from the Black Ops Cold War participant list.", discordID));
+                        }
+                        catch
+                        {
+                            await ReplyAsync("Please provide a valid Discord user.");
+                        }
+                    }
+                }
+            }
+            else
+                await ReplyAsync("This command can only be executed in servers.");
+        }
+        #endregion
     }
 }

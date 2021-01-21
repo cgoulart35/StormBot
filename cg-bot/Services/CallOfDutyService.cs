@@ -1,60 +1,56 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Net;
 using System.Threading.Tasks;
-using cg_bot.Models.CallOfDutyModels.Accounts;
-using cg_bot.Models.CallOfDutyModels.Players;
-using cg_bot.Models.CallOfDutyModels.Players.Data;
+using System.Linq;
 using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using RestSharp;
+using cg_bot.Models.CallOfDutyModels;
+using cg_bot.Database;
+using cg_bot.Database.Entities;
 
 namespace cg_bot.Services
 {
-	public class CallOfDutyService<T> : BaseService
+	public class CallOfDutyService : BaseService
     {
         public readonly DiscordSocketClient _client;
 
-        public IMessageChannel _callOfDutyNotificationChannelID;
+        public BaseService BlackOpsColdWarComponent { get; set; }
 
-        public ICallOfDutyDataModel _dataModel;
+        public BaseService ModernWarfareComponent { get; set; }
 
-        string pathGameName;
-
-        public static string cgBotCallOfDutyGameParticipatingAccountsDataPath;
-        public static string cgBotCallOfDutyGameSavedPlayerDataPath;
-
-        public CallOfDutyAllPlayersModel<T> storedPlayerDataModel;
-        public CallOfDutyAllPlayersModel<T> newPlayerDataModel;
+        public BaseService WarzoneComponent { get; set; }
 
         public CallOfDutyService(IServiceProvider services)
         {
             _client = services.GetRequiredService<DiscordSocketClient>();
-            _callOfDutyNotificationChannelID = _client.GetChannel(Program.configurationSettingsModel.CallOfDutyNotificationChannelID) as IMessageChannel;
+            _db = services.GetRequiredService<CgBotContext>();
 
-            _dataModel = Activator.CreateInstance<T>() as ICallOfDutyDataModel;
-
-            Name = _dataModel.GameName + " Service";
-
+            Name = "Call Of Duty Service";
             isServiceRunning = false;
 
-            _dataModel.ParticipatingAccountsFileLock = new object();
-            _dataModel.SavedPlayerDataFileLock = new object();
+            BlackOpsColdWarComponent = new BaseService();
+            BlackOpsColdWarComponent.Name = "Black Ops Cold War Service";
+            BlackOpsColdWarComponent.isServiceRunning = false;
 
-            pathGameName = _dataModel.GameName.Replace(" ", string.Empty);
+            ModernWarfareComponent = new BaseService();
+            ModernWarfareComponent.Name = "Modern Warfare Service";
+            ModernWarfareComponent.isServiceRunning = false;
 
-            cgBotCallOfDutyGameParticipatingAccountsDataPath = Path.Combine(Program.cgBotAppDataPath, string.Format(@"{0}ParticipatingAccounts.json", _dataModel.ParticipatingAccountsFileName));
-            cgBotCallOfDutyGameSavedPlayerDataPath = Path.Combine(Program.cgBotAppDataPath, string.Format(@"{0}SavedPlayerData.json", pathGameName));
+            WarzoneComponent = new BaseService();
+            WarzoneComponent.Name = "Warzone Service";
+            WarzoneComponent.isServiceRunning = false;
         }
 
         public override async Task StartService()
         {
             string logStamp = GetLogStamp();
 
-            if (!DoStart)
+            if (!DoStart || !(BlackOpsColdWarComponent.DoStart || ModernWarfareComponent.DoStart || WarzoneComponent.DoStart))
             {
                 Console.WriteLine(logStamp + "Disabled.".PadLeft(60 - logStamp.Length));
             }
@@ -68,16 +64,30 @@ namespace cg_bot.Services
 
                 isServiceRunning = true;
 
-                await _callOfDutyNotificationChannelID.SendMessageAsync("_**[    " + _dataModel.GameName.ToUpper() + " TRACKING ONLINE.    ]**_");
+                await BlackOpsColdWarComponent.StartService();
+                await ModernWarfareComponent.StartService();
+                await WarzoneComponent.StartService();
 
-                // get all previously stored data
-                try
+                List<ServersEntity> servers = await GetAllServerEntities();
+                foreach (ServersEntity server in servers)
                 {
-                    storedPlayerDataModel = ImportSavedPlayerData();
-                }
-                catch
-                {
-                    Console.WriteLine(logStamp + string.Format("Could not get previously stored data. The file {0}SavedPlayerData.json was corrupt or empty. The file will be overwritten when new data is retrieved.", pathGameName).PadLeft(197 + pathGameName.Length - logStamp.Length));
+                    string message = "";
+
+                    if (BlackOpsColdWarComponent.isServiceRunning && server.AllowServerPermissionBlackOpsColdWarTracking && server.ToggleBlackOpsColdWarTracking)
+                    {
+                        message += "_**[    BLACK OPS COLD WAR TRACKING ONLINE.    ]**_\n";
+                    }
+                    if (ModernWarfareComponent.isServiceRunning && server.AllowServerPermissionModernWarfareTracking && server.ToggleModernWarfareTracking)
+                    {
+                        message += "_**[    MODERN WARFARE TRACKING ONLINE.    ]**_\n";
+                    }
+                    if (WarzoneComponent.isServiceRunning && server.AllowServerPermissionWarzoneTracking && server.ToggleWarzoneTracking)
+                    {
+                        message += "_**[    WARZONE TRACKING ONLINE.    ]**_";
+                    }
+
+                    if (server.CallOfDutyNotificationChannelID != 0 && message != "")
+                        await ((IMessageChannel) _client.GetChannel(server.CallOfDutyNotificationChannelID)).SendMessageAsync(message);
                 }
             }
         }
@@ -92,51 +102,59 @@ namespace cg_bot.Services
 
                 isServiceRunning = false;
 
-                await _callOfDutyNotificationChannelID.SendMessageAsync("_**[    " + _dataModel.GameName.ToUpper() + " TRACKING DISCONNECTED.    ]**_");
+                List<ServersEntity> servers = await GetAllServerEntities();
+                foreach (ServersEntity server in servers)
+                {
+                    string message = "";
+
+                    if (BlackOpsColdWarComponent.isServiceRunning && server.AllowServerPermissionBlackOpsColdWarTracking && server.ToggleBlackOpsColdWarTracking)
+                    {
+                        message += "_**[    BLACK OPS COLD WAR TRACKING DISCONNECTED.    ]**_\n";
+                    }
+                    if (ModernWarfareComponent.isServiceRunning && server.AllowServerPermissionModernWarfareTracking && server.ToggleModernWarfareTracking)
+                    {
+                        message += "_**[    MODERN WARFARE TRACKING DISCONNECTED.    ]**_\n";
+                    }
+                    if (WarzoneComponent.isServiceRunning && server.AllowServerPermissionWarzoneTracking && server.ToggleWarzoneTracking)
+                    {
+                        message += "_**[    WARZONE TRACKING DISCONNECTED.    ]**_";
+                    }
+
+                    if (server.CallOfDutyNotificationChannelID != 0 && message != "")
+                        await ((IMessageChannel)_client.GetChannel(server.CallOfDutyNotificationChannelID)).SendMessageAsync(message);
+                }
+
+                await BlackOpsColdWarComponent.StopService();
+                await ModernWarfareComponent.StopService();
+                await WarzoneComponent.StopService();
             }
         }
 
-        private CallOfDutyAllPlayersModel<T> ImportSavedPlayerData()
+        public void AddParticipantToDatabase(CallOfDutyPlayerDataEntity playerData)
         {
-            lock (_dataModel.SavedPlayerDataFileLock)
-            {
-                CallOfDutyAllPlayersModel<T> playerData = JsonConvert.DeserializeObject<CallOfDutyAllPlayersModel<T>>(File.ReadAllText(cgBotCallOfDutyGameSavedPlayerDataPath));
-                return playerData;
-            }
+            _db.CallOfDutyPlayerData.Add(playerData);
+            _db.SaveChangesAsync();
         }
 
-        public void AddParticipantToFile(CallOfDutyAccountModel account)
+        public void RemoveParticipantFromDatabase(CallOfDutyPlayerDataEntity playerData)
         {
-            CallOfDutyAllAccountsModel participatingAccountsData = ReadParticipatingAccounts();
-            participatingAccountsData.Accounts.Add(account);
-            ExportParticipatingAccounts(participatingAccountsData);
+            _db.CallOfDutyPlayerData.Remove(playerData);
+            _db.SaveChangesAsync();
         }
 
-        public void RemoveParticipantFromFile(CallOfDutyAccountModel account)
+        public async Task<List<CallOfDutyPlayerModel>> GetNewPlayerData(bool storeToDatabase, ulong serverId, string gameAbbrev, string modeAbbrev)
         {
-            CallOfDutyAllAccountsModel participatingAccountsData = ReadParticipatingAccounts();
-            participatingAccountsData.Accounts.RemoveAll(accounts => accounts.DiscordID == account.DiscordID);
-            ExportParticipatingAccounts(participatingAccountsData);
-        }
+            List<ulong> serverIds = new List<ulong>();
+            serverIds.Add(serverId);
 
-        private void ExportParticipatingAccounts(CallOfDutyAllAccountsModel participatingAccountsData)
-        {
-            lock (_dataModel.ParticipatingAccountsFileLock)
-            {
-                File.WriteAllText(cgBotCallOfDutyGameParticipatingAccountsDataPath, JsonConvert.SerializeObject(participatingAccountsData));
-            }
-        }
-
-        public CallOfDutyAllPlayersModel<T> GetNewPlayerData(bool overwriteStoredData = false)
-        {
-            // get list of participating players
-            CallOfDutyAllAccountsModel participatingAccountsData = ReadParticipatingAccounts();
+            // get all data of all players in the specified servers for the specified games
+            List<CallOfDutyPlayerDataEntity> allStoredPlayersData = await GetServersPlayerData(serverIds, gameAbbrev, modeAbbrev);
 
             // if no player data is returned, return null
-            if (participatingAccountsData.Accounts.Count == 0)
+            if (allStoredPlayersData.Count == 0)
             {
                 string logStamp = GetLogStamp();
-                Console.WriteLine(logStamp + "Cannot retrieve player data for zero participants. Please add participants.".PadLeft(126 - logStamp.Length));
+                Console.WriteLine(logStamp + "Cannot retrieve player data for zero players.".PadLeft(126 - logStamp.Length));
                 return null;
             }
 
@@ -149,50 +167,10 @@ namespace cg_bot.Services
             // login to the API with credentials and XSRF-TOKEN to generate cookie tokens needed to retrieve player data
             LoginAPI(ref cookieJar, XSRFTOKEN);
 
-            // retrieve updated data via Call of Duty: Modern Warefare API for all participating players with cookie tokens obtained from login
-            newPlayerDataModel = GetAllPlayersDataAPI(cookieJar, participatingAccountsData);
+            // retrieve updated data via Call of Duty API for all participating players with cookie tokens obtained from login
+            List<CallOfDutyPlayerModel> newPlayerData = GetAllPlayersDataAPI(cookieJar, allStoredPlayersData, storeToDatabase);
 
-            if (overwriteStoredData)
-            {
-                // keep track of the last retrieved data by setting the new data ro the stored data (only if new data has already been retrieved)
-                if (newPlayerDataModel != null)
-                    storedPlayerDataModel = newPlayerDataModel;
-
-                // store the data in the json file
-                ExportNewPlayerData();
-            }
-
-            return newPlayerDataModel;
-        }
-
-        public CallOfDutyAllAccountsModel ReadParticipatingAccounts()
-        {
-            lock (_dataModel.ParticipatingAccountsFileLock)
-            {
-                try
-                {
-                    CallOfDutyAllAccountsModel accountData = JsonConvert.DeserializeObject<CallOfDutyAllAccountsModel>(File.ReadAllText(cgBotCallOfDutyGameParticipatingAccountsDataPath));
-                    
-                    // if file empty
-                    if (accountData == null)
-                        throw new Exception();
-
-                    foreach (CallOfDutyAccountModel account in accountData.Accounts)
-                    {
-                        if (account.DiscordID == 0 || account.Username == null || account.Username == "" || account.Platform == null || account.Platform == "")
-                            throw new Exception();
-                    }
-
-                    return accountData;
-                }
-                catch
-                {
-                    // if error parsing participating accounts or if required data is null, return no accounts
-                    CallOfDutyAllAccountsModel noAccountData = new CallOfDutyAllAccountsModel();
-                    noAccountData.Accounts = new List<CallOfDutyAccountModel>();
-                    return noAccountData;
-                }
-            }
+            return newPlayerData;
         }
 
         private void InitializeAPI(ref CookieContainer cookieJar, ref string XSRFTOKEN)
@@ -221,57 +199,221 @@ namespace cg_bot.Services
             client.Execute(request);
         }
 
-        private CallOfDutyAllPlayersModel<T> GetAllPlayersDataAPI(CookieContainer cookieJar, CallOfDutyAllAccountsModel participatingAccountsData)
+        private List<CallOfDutyPlayerModel> GetAllPlayersDataAPI(CookieContainer cookieJar, List<CallOfDutyPlayerDataEntity> allStoredPlayersData, bool storeToDatabase)
         {
             // empty list of player data
-            List<CallOfDutyPlayerModel<T>> allPlayerData = new List<CallOfDutyPlayerModel<T>>();
+            List<CallOfDutyPlayerModel> allNewPlayersData = new List<CallOfDutyPlayerModel>();
 
-            // create ModernWarfarePlayerDataModel for each participating player with GetAPlayersData() & add each model to the allPlayerData list
-            foreach (CallOfDutyAccountModel account in participatingAccountsData.Accounts)
+            // create CallOfDutyPlayerModel for each participating player from database with GetAPlayersData() & add each model to the allNewPlayerData list
+            foreach (CallOfDutyPlayerDataEntity storedPlayerData in allStoredPlayersData)
             {
-                CallOfDutyPlayerModel<T> playerData = GetAPlayersDataAPI(cookieJar, account);
+                CallOfDutyPlayerModel newPlayerData = GetAPlayersDataAPI(cookieJar, storedPlayerData);
 
-                if (playerData.Status == null || playerData.Status != "success")
+                if (newPlayerData.Status == null || newPlayerData.Status != "success")
                 {
                     string logStamp = GetLogStamp();
-                    Console.WriteLine(logStamp + $"Error getting data for the Call of Duty account: ".PadLeft(100 - logStamp.Length) + account.Username);
+                    Console.WriteLine(logStamp + $"Error getting data for the Call of Duty account: ".PadLeft(100 - logStamp.Length) + storedPlayerData.Username);
                     return null;
                 }
 
-                playerData.DiscordID = account.DiscordID;
-                playerData.Date = DateTime.Now;
-                allPlayerData.Add(playerData);
+                if (storeToDatabase)
+                {
+                    if (storedPlayerData.GameAbbrev == "mw" && storedPlayerData.ModeAbbrev == "mp")
+                    {
+                        storedPlayerData.TotalKills = newPlayerData.Data.Lifetime.All.Properties != null ? newPlayerData.Data.Lifetime.All.Properties.Kills : 0;
+                        storedPlayerData.WeeklyKills = newPlayerData.Data.Weekly.All.Properties != null ? newPlayerData.Data.Weekly.All.Properties.Kills : 0;
+                        storedPlayerData.Date = DateTime.Now;
+                    }
+                    else if (storedPlayerData.GameAbbrev == "mw" && storedPlayerData.ModeAbbrev == "wz")
+                    {
+                        storedPlayerData.TotalWins = newPlayerData.Data.Lifetime.Mode.BattleRoyal.Properties != null ? newPlayerData.Data.Lifetime.Mode.BattleRoyal.Properties.Wins : 0;
+                        storedPlayerData.WeeklyKills = newPlayerData.Data.Weekly.All.Properties != null ? newPlayerData.Data.Weekly.All.Properties.Kills : 0;
+                        storedPlayerData.Date = DateTime.Now;
+                    }
+                    else if (storedPlayerData.GameAbbrev == "cw" && storedPlayerData.ModeAbbrev == "mp")
+                    {
+                        storedPlayerData.TotalKills = newPlayerData.Data.Lifetime.All.Properties != null ? newPlayerData.Data.Lifetime.All.Properties.Kills : 0;
+                        storedPlayerData.WeeklyKills = newPlayerData.Data.Weekly.All.Properties != null ? newPlayerData.Data.Weekly.All.Properties.Kills : 0;
+                        storedPlayerData.Date = DateTime.Now;
+                    }
+
+                    _db.SaveChangesAsync();
+                }
+
+                newPlayerData.DiscordID = storedPlayerData.DiscordID;
+                allNewPlayersData.Add(newPlayerData);
             }
 
             // create and return allPlayerDataModel with list
-            return new CallOfDutyAllPlayersModel<T>(allPlayerData);
+            return allNewPlayersData;
         }
 
-        private CallOfDutyPlayerModel<T> GetAPlayersDataAPI(CookieContainer cookieJar, CallOfDutyAccountModel account)
+        private CallOfDutyPlayerModel GetAPlayersDataAPI(CookieContainer cookieJar, CallOfDutyPlayerDataEntity storedPlayerData)
         {
-            string platform = account.Platform;
-            string username = account.Username;
+            string gameAbbrev = storedPlayerData.GameAbbrev;
+            string modeAbbrev = storedPlayerData.ModeAbbrev;
+            string platform = storedPlayerData.Platform;
+            string username = storedPlayerData.Username;
             string tag = "";
 
-            if (account.Tag != "")
-                tag = "%23" + account.Tag;
+            if (storedPlayerData.Tag != "")
+                tag = "%23" + storedPlayerData.Tag;
 
-            RestClient client = new RestClient(string.Format(@"https://my.callofduty.com/api/papi-client/stats/cod/v1/title/{0}/platform/{1}/gamer/{2}{3}/profile/type/{4}", _dataModel.GameAbbrevAPI, platform, username, tag, _dataModel.ModeAbbrevAPI));
+            RestClient client = new RestClient(string.Format(@"https://my.callofduty.com/api/papi-client/stats/cod/v1/title/{0}/platform/{1}/gamer/{2}{3}/profile/type/{4}", gameAbbrev, platform, username, tag, modeAbbrev));
             client.CookieContainer = cookieJar;
             client.Timeout = -1;
             RestRequest request = new RestRequest(Method.GET);
             IRestResponse response = client.Execute(request);
 
-            // convert API json response into player data object
-            return JsonConvert.DeserializeObject<CallOfDutyPlayerModel<T>>(response.Content);
+            // convert API json response data into player data object
+            return JsonConvert.DeserializeObject<CallOfDutyPlayerModel>(response.Content);
         }
 
-        private void ExportNewPlayerData()
+        public async Task<List<CallOfDutyPlayerModel>> GetServersPlayerDataAsPlayerModelList(ulong serverId, string gameAbbrev, string modeAbbrev)
         {
-            lock (_dataModel.SavedPlayerDataFileLock)
+            List<ulong> serverIdList = new List<ulong>();
+            serverIdList.Add(serverId);
+
+            List<CallOfDutyPlayerDataEntity> entityData = await GetServersPlayerData(serverIdList, gameAbbrev, modeAbbrev);
+
+            List<CallOfDutyPlayerModel> modelData = new List<CallOfDutyPlayerModel>();
+
+            foreach (CallOfDutyPlayerDataEntity entity in entityData)
             {
-				File.WriteAllText(cgBotCallOfDutyGameSavedPlayerDataPath, JsonConvert.SerializeObject(newPlayerDataModel));
+                CallOfDutyPlayerModel model = new CallOfDutyPlayerModel();
+                if (gameAbbrev == "mw" && modeAbbrev == "mp")
+                {
+                    model.Data.Lifetime.All.Properties.Kills = entity.TotalKills;
+                    model.Data.Weekly.All.Properties.Kills = entity.WeeklyKills;
+                }
+                else if (gameAbbrev == "mw" && modeAbbrev == "wz")
+                {
+                    model.Data.Lifetime.Mode.BattleRoyal.Properties.Wins = entity.TotalWins;
+                    model.Data.Weekly.All.Properties.Kills = entity.WeeklyKills;
+                }
+                else if (gameAbbrev == "cw" && modeAbbrev == "mp")
+                {
+                    model.Data.Lifetime.All.Properties.Kills = entity.TotalKills;
+                    model.Data.Weekly.All.Properties.Kills = entity.WeeklyKills;
+                }
+
+                model.DiscordID = entity.DiscordID;
+
+                modelData.Add(model);
             }
+
+            return modelData;
+        }
+
+        public async Task<List<CallOfDutyPlayerDataEntity>> GetServersPlayerData(List<ulong> serverIds, string gameAbbrev, string modeAbbrev)
+        {
+            if (gameAbbrev == null || modeAbbrev == null)
+            {
+                return await _db.CallOfDutyPlayerData
+                    .AsQueryable()
+                    .Where(player => serverIds.Contains(player.ServerID))
+                    .AsAsyncEnumerable()
+                    .ToListAsync();
+            }
+            else
+            {
+                return await _db.CallOfDutyPlayerData
+                    .AsQueryable()
+                    .Where(player => serverIds.Contains(player.ServerID) && player.GameAbbrev == gameAbbrev && player.ModeAbbrev == modeAbbrev)
+                    .AsAsyncEnumerable()
+                    .ToListAsync();
+            }
+        }
+
+        public async Task<List<ServersEntity>> GetAllServerEntities()
+        {
+            return await _db.Servers
+                .AsQueryable()
+                .AsAsyncEnumerable()
+                .ToListAsync();
+        }
+
+        public async Task<List<ulong>> GetAllValidatedServerIds(string gameAbbrev, string modeAbbrev)
+        {
+            if (gameAbbrev == "mw" && modeAbbrev == "mp")
+            {
+                return await _db.Servers
+                    .AsQueryable()
+                    .Where(s => s.AllowServerPermissionModernWarfareTracking && s.ToggleModernWarfareTracking)
+                    .Select(s => s.ServerID)
+                    .AsAsyncEnumerable()
+                    .ToListAsync();
+            }
+            else if (gameAbbrev == "mw" && modeAbbrev == "wz")
+            {
+                return await _db.Servers
+                    .AsQueryable()
+                    .Where(s => s.AllowServerPermissionWarzoneTracking && s.ToggleWarzoneTracking)
+                    .Select(s => s.ServerID)
+                    .AsAsyncEnumerable()
+                    .ToListAsync();
+            }
+            else if (gameAbbrev == "cw" && modeAbbrev == "mp")
+            {
+                return await _db.Servers
+                    .AsQueryable()
+                    .Where(s => s.AllowServerPermissionBlackOpsColdWarTracking && s.ToggleBlackOpsColdWarTracking)
+                    .Select(s => s.ServerID)
+                    .AsAsyncEnumerable()
+                    .ToListAsync();
+            }
+            else
+                return null;
+        }
+
+        public async Task<IMessageChannel> GetServerCallOfDutyNotificationChannel(ulong serverId)
+        {
+            var channelId = await _db.Servers
+                .AsQueryable()
+                .Where(s => s.ServerID == serverId)
+                .Select(s => s.CallOfDutyNotificationChannelID)
+                .SingleOrDefaultAsync();
+
+            if (channelId != 0)
+                return _client.GetChannel(channelId) as IMessageChannel;
+            else
+                return null;
+        }
+
+        public async Task<ulong> GetServerModernWarfareKillsRoleID(ulong serverId)
+        {
+            return await _db.Servers
+                .AsQueryable()
+                .Where(s => s.ServerID == serverId)
+                .Select(s => s.ModernWarfareKillsRoleID)
+                .SingleOrDefaultAsync();
+        }
+
+        public async Task<ulong> GetServerWarzoneWinsRoleID(ulong serverId)
+        {
+            return await _db.Servers
+                .AsQueryable()
+                .Where(s => s.ServerID == serverId)
+                .Select(s => s.WarzoneWinsRoleID)
+                .SingleOrDefaultAsync();
+        }
+
+        public async Task<ulong> GetServerWarzoneKillsRoleID(ulong serverId)
+        {
+            return await _db.Servers
+                .AsQueryable()
+                .Where(s => s.ServerID == serverId)
+                .Select(s => s.WarzoneKillsRoleID)
+                .SingleOrDefaultAsync();
+        }
+
+        public async Task<ulong> GetServerBlackOpsColdWarKillsRoleID(ulong serverId)
+        {
+            return await _db.Servers
+                .AsQueryable()
+                .Where(s => s.ServerID == serverId)
+                .Select(s => s.BlackOpsColdWarKillsRoleID)
+                .SingleOrDefaultAsync();
         }
     }
 }

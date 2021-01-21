@@ -1,9 +1,13 @@
 ﻿using Discord;
 using Discord.WebSocket;
-using Microsoft.Extensions.DependencyInjection;
 using SoundpadConnector;
 using System;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+using cg_bot.Database;
 
 namespace cg_bot.Services
 {
@@ -13,8 +17,6 @@ namespace cg_bot.Services
 
         public Soundpad _soundpad;
 
-        public IMessageChannel _soundboardNotificationChannel;
-
         private bool displayedConnectingMessage;
 
         public bool isSoundpadRunning { get; set; }
@@ -22,7 +24,7 @@ namespace cg_bot.Services
         public SoundpadService(IServiceProvider services)
         {
             _client = services.GetRequiredService<DiscordSocketClient>();
-            _soundboardNotificationChannel = _client.GetChannel(Program.configurationSettingsModel.SoundboardNotificationChannelID) as IMessageChannel;
+            _db = services.GetRequiredService<CgBotContext>();
 
             Name = "Soundpad Service";
             isServiceRunning = false;
@@ -51,6 +53,9 @@ namespace cg_bot.Services
                 _soundpad = new Soundpad();
                 _soundpad.AutoReconnect = true;
                 _soundpad.StatusChanged += SoundpadOnStatusChangedAsync;
+
+                await Task.Delay(5000);
+
                 await _soundpad.ConnectAsync();
             }
         }
@@ -69,7 +74,11 @@ namespace cg_bot.Services
                 {
                     string message = "SOUNDBOARD DISCONNECTED.";
                     Console.WriteLine(logStamp + message.PadLeft(75 - logStamp.Length));
-                    await _soundboardNotificationChannel.SendMessageAsync("_**[    " + message + "    ]**_");
+
+                    var channels = await GetAllServerSoundpadChannels();
+                    
+                    if (channels.Count() != 0)
+                        channels.ToList().ForEach(channel => channel.SendMessageAsync("_**[    " + message + "    ]**_"));
                 }
             }
         }
@@ -86,16 +95,26 @@ namespace cg_bot.Services
             {
                 displayedConnectingMessage = false;
                 isSoundpadRunning = true;
+
                 string message = "SOUNDBOARD CONNECTED.";
                 Console.WriteLine(logStamp + message.PadLeft(72 - logStamp.Length));
-                await _soundboardNotificationChannel.SendMessageAsync("_**[    " + message + "    ]**_");
+
+                var channels = await GetAllServerSoundpadChannels();
+
+                if (channels.Count() != 0)
+                    channels.ToList().ForEach(channel => channel.SendMessageAsync("_**[    " + message + "    ]**_"));
             }
             else if (_soundpad.ConnectionStatus == ConnectionStatus.Disconnected && isSoundpadRunning)
             {
                 displayedConnectingMessage = false;
+
                 string message = "SOUNDBOARD DISCONNECTED.";
                 Console.WriteLine(logStamp + message.PadLeft(75 - logStamp.Length));
-                await _soundboardNotificationChannel.SendMessageAsync("_**[    " + message + "    ]**_");
+
+                var channels = await GetAllServerSoundpadChannels();
+
+                if (channels.Count() != 0)
+                    channels.ToList().ForEach(channel => channel.SendMessageAsync("_**[    " + message + "    ]**_"));
             }
             else if (_soundpad.ConnectionStatus == ConnectionStatus.Connecting && isSoundpadRunning)
             {
@@ -103,10 +122,23 @@ namespace cg_bot.Services
                 {
                     displayedConnectingMessage = true;
                     isSoundpadRunning = false;
+
                     string message = "Listening for the soundboard application...";
                     Console.WriteLine(logStamp + message.PadLeft(94 - logStamp.Length));
                 }
             }
+        }
+
+        private async Task<IEnumerable<IMessageChannel>> GetAllServerSoundpadChannels()
+        {
+            var channelIds = await _db.Servers
+                .AsQueryable()
+                .Where(s => s.SoundboardNotificationChannelID != 0 && s.AllowServerPermissionSoundpadCommands && s.ToggleSoundpadCommands)
+                .Select(s => s.SoundboardNotificationChannelID)
+                .AsAsyncEnumerable()
+                .ToListAsync();
+
+            return channelIds.Select(channelId => _client.GetChannel(channelId) as IMessageChannel);
         }
     }
 }
