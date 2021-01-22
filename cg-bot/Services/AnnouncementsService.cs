@@ -4,6 +4,9 @@ using System.Linq;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using cg_bot.Database;
+using cg_bot.Database.Entities;
+using System.Collections.Generic;
+using Discord;
 
 namespace cg_bot.Services
 {
@@ -63,6 +66,19 @@ namespace cg_bot.Services
 				DateTime currentTime = DateTime.Now;
 				if (!weeklySent && currentTime.DayOfWeek == DayOfWeek.Sunday && currentTime.Hour == 1 && currentTime.Minute == 0 && WeeklyCallOfDutyAnnouncement != null)
 				{
+					List<ServersEntity> servers = await _callOfDutyService.GetAllServerEntities();
+					foreach (ServersEntity server in servers)
+					{
+						bool coldWarBool = _callOfDutyService.BlackOpsColdWarComponent.isServiceRunning && server.AllowServerPermissionBlackOpsColdWarTracking && server.ToggleBlackOpsColdWarTracking;
+						bool modernWarfareBool = _callOfDutyService.ModernWarfareComponent.isServiceRunning && server.AllowServerPermissionModernWarfareTracking && server.ToggleModernWarfareTracking;
+						bool warzoneBool = _callOfDutyService.WarzoneComponent.isServiceRunning && server.AllowServerPermissionWarzoneTracking && server.ToggleWarzoneTracking;
+
+						if ((coldWarBool || modernWarfareBool || warzoneBool) && server.CallOfDutyNotificationChannelID != 0)
+						{
+							await ((IMessageChannel)_client.GetChannel(server.CallOfDutyNotificationChannelID)).SendMessageAsync("```fix\nHERE ARE THIS WEEK'S WINNERS!!!! CONGRATULATIONS!!!\n```");
+						}
+					}
+
 					await WeeklyCallOfDutyAnnouncement.Invoke(this, EventArgs.Empty);
 
 					weeklySent = true;
@@ -82,6 +98,19 @@ namespace cg_bot.Services
 				DateTime currentTime = DateTime.Now;
 				if (!dailySent && currentTime.Hour == 22 && currentTime.Minute == 0 && DailyCallOfDutyAnnouncement != null)
 				{
+					List<ServersEntity> servers = await _callOfDutyService.GetAllServerEntities();
+					foreach (ServersEntity server in servers)
+					{
+						bool coldWarBool = _callOfDutyService.BlackOpsColdWarComponent.isServiceRunning && server.AllowServerPermissionBlackOpsColdWarTracking && server.ToggleBlackOpsColdWarTracking;
+						bool modernWarfareBool = _callOfDutyService.ModernWarfareComponent.isServiceRunning && server.AllowServerPermissionModernWarfareTracking && server.ToggleModernWarfareTracking;
+						bool warzoneBool = _callOfDutyService.WarzoneComponent.isServiceRunning && server.AllowServerPermissionWarzoneTracking && server.ToggleWarzoneTracking;
+
+						if ((coldWarBool || modernWarfareBool || warzoneBool) && server.CallOfDutyNotificationChannelID != 0)
+						{
+							await ((IMessageChannel)_client.GetChannel(server.CallOfDutyNotificationChannelID)).SendMessageAsync("```fix\nHERE ARE THIS WEEK'S CURRENT RANKINGS!\n```");
+						}
+					}
+
 					await DailyCallOfDutyAnnouncement.Invoke(this, EventArgs.Empty);
 
 					dailySent = true;

@@ -46,8 +46,6 @@ namespace cg_bot.Modules.CallOfDutyModules
 
                     if (channel != null)
                     {
-                        await channel.SendMessageAsync("```fix\nHERE ARE THIS WEEK'S WINNERS!!!! CONGRATULATIONS!!!\n```");
-
                         // pass true to keep track of lifetime total kills every week
                         List<CallOfDutyPlayerModel> newData = await _service.GetNewPlayerData(true, serverId, "mw", "wz");
 
@@ -81,8 +79,6 @@ namespace cg_bot.Modules.CallOfDutyModules
 
                     if (channel != null)
                     {
-                        await channel.SendMessageAsync("```fix\nHERE ARE THIS WEEK'S CURRENT RANKINGS!\n```");
-
                         List<CallOfDutyPlayerModel> newData = await _service.GetNewPlayerData(false, serverId, "mw", "wz");
 
                         SocketGuild guild = _service._client.GetGuild(serverId);
