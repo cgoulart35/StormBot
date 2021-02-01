@@ -139,8 +139,8 @@ namespace cg_bot.Modules.CallOfDutyModules
                     string roleStr = "";
                     if (roleID != 0)
                     {
-                        await GiveUsersRole(roleID, topPlayersDiscordIDs, guild);
                         await UnassignRoleFromAllMembers(roleID, guild);
+                        await GiveUsersRole(roleID, topPlayersDiscordIDs, guild);
                         roleStr = $" You have been assigned the role <@&{roleID}>!";
                     }
 
