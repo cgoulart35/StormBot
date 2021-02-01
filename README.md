@@ -85,7 +85,7 @@ The bot will then ask you to enter the account name, tag, and platform.
 
 - **'.mw wz lifetime kills'** to display the lifetime total game kills (Modern Warfare + Warzone) of all participating Modern Warfare players from highest to lowest if you are a StormBot administrator.
 
-- **'.mw wz weekly kills'** to display the total game kills (Modern Warfare + Warzone) so far this week of all participating players from highest to lowest if you are a StormBot administrator.
+- **'.mw wz weekly kills'** to display the total game kills (Modern Warfare + Warzone) so far this week of all participating Modern Warfare players from highest to lowest if you are a StormBot administrator.
 The bot will only assign the @__ role for Modern Warfare kills to the player in first place at the end of the week with the most multiplayer kills (not Warzone).
 
 ### Help: Warzone Commands
@@ -102,8 +102,10 @@ The bot will then ask you to enter the account name, tag, and platform.
 
 - **'.wz rm participant [user]'** to remove an account from the list of Call of Duty accounts participating in the Warzone services if you are a StormBot administrator.
 
-- **'.wz wins'** to display the total Warzone wins of all participating players from highest to lowest if you are a StormBot administrator.
-The bot will only assign the @__ role for Warzone wins to the player in first place at the end of the week.
+- **'.wz lifetime wins'** to display the lifetime total Warzone wins of all participating players from highest to lowest if you are a StormBot administrator.
+
+- **'.wz weekly wins'** to display the total Warzone wins so far this week of all participating players from highest to lowest if you are a StormBot administrator.
+The bot will only assign the @__ role for Warzone wins to the player in first place at the end of the week with the most Warzone wins.
 The bot will only assign the @__ role for Warzone kills to the player in first place at the end of the week with the most Warzone kills (not multiplayer).
 
 ### Help: Black Ops Cold War Commands
@@ -120,7 +122,7 @@ The bot will then ask you to enter the account name, tag, and platform.
 
 - **'.bocw rm participant [user]'** to remove an account from the list of Call of Duty accounts participating in the Black Ops Cold War services if you are a StormBot administrator.
 
-- **'.bocw lifetime kills'** to display the lifetime total game kills of all participating players from highest to lowest if you are a StormBot administrator.
+- **'.bocw lifetime kills'** to display the lifetime total game kills of all participating Black Ops Cold War players from highest to lowest if you are a StormBot administrator.
 
-- **'.bocw weekly kills'** to display the total game kills so far this week of all participating players from highest to lowest if you are a StormBot administrator.
+- **'.bocw weekly kills'** to display the total game kills so far this week of all participating Black Ops Cold War players from highest to lowest if you are a StormBot administrator.
 The bot will only assign the @__ role to the player in first place at the end of the week.

@@ -820,8 +820,8 @@ The bot will then ask you to enter the account name, tag, and platform.
 '**{0}bocw add participant [user]**' to add an account to the list of Call of Duty accounts participating in the Black Ops Cold War services __if you are a StormBot administrator__.
 The bot will then ask you to enter the account name, tag, and platform.
 '**{0}bocw rm participant [user]**' to remove an account from the list of Call of Duty accounts participating in the Black Ops Cold War services __if you are a StormBot administrator__.
-'**{0}bocw lifetime kills**' to display the lifetime total game kills of all participating players from highest to lowest __if you are a StormBot administrator__.
-'**{0}bocw weekly kills**' to display the total game kills so far this week of all participating players from highest to lowest __if you are a StormBot administrator__.
+'**{0}bocw lifetime kills**' to display the lifetime total game kills of all participating Black Ops Cold War players from highest to lowest __if you are a StormBot administrator__.
+'**{0}bocw weekly kills**' to display the total game kills so far this week of all participating Black Ops Cold War players from highest to lowest __if you are a StormBot administrator__.
 The bot will only assign the{1} role for Black Ops Cold War kills to the player in first place at the end of the week.", await GetServerPrefix(_db), roleStr);
                 }
                 else
@@ -856,7 +856,7 @@ The bot will then ask you to enter the account name, tag, and platform.
 The bot will then ask you to enter the account name, tag, and platform.
 '**{0}mw rm participant [user]**' to remove an account from the list of Call of Duty accounts participating in the Modern Warfare services __if you are a StormBot administrator__.
 '**{0}mw wz lifetime kills**' to display the lifetime total game kills (Modern Warfare + Warzone) of all participating Modern Warfare players from highest to lowest __if you are a StormBot administrator__.
-'**{0}mw wz weekly kills**' to display the total game kills (Modern Warfare + Warzone) so far this week of all participating players from highest to lowest __if you are a StormBot administrator__.
+'**{0}mw wz weekly kills**' to display the total game kills (Modern Warfare + Warzone) so far this week of all participating Modern Warfare players from highest to lowest __if you are a StormBot administrator__.
 The bot will only assign the{1} role for Modern Warfare kills to the player in first place at the end of the week with the most multiplayer kills (not Warzone).", await GetServerPrefix(_db), roleStr);
                 }
                 else
@@ -896,8 +896,9 @@ The bot will then ask you to enter the account name, tag, and platform.
 '**{0}wz add participant [user]**' to add an account to the list of Call of Duty accounts participating in the Warzone services __if you are a StormBot administrator__.
 The bot will then ask you to enter the account name, tag, and platform.
 '**{0}wz rm participant [user]**' to remove an account from the list of Call of Duty accounts participating in the Warzone services __if you are a StormBot administrator__.
-'**{0}wz wins**' to display the total Warzone wins of all participating players from highest to lowest __if you are a StormBot administrator__.
-The bot will only assign the{1} role for Warzone wins to the player in first place at the end of the week.
+'**{0}wz lifetime wins**' to display the lifetime total Warzone wins of all participating players from highest to lowest __if you are a StormBot administrator__.
+'**{0}wz weekly wins**' to display the total Warzone wins so far this week of all participating players from highest to lowest __if you are a StormBot administrator__.
+The bot will only assign the{1} role for Warzone wins to the player in first place at the end of the week with the most Warzone wins.
 The bot will only assign the{2} role for Warzone kills to the player in first place at the end of the week with the most Warzone kills (not multiplayer).", await GetServerPrefix(_db), winsRoleStr, killsRoleStr);
                 }
                 else

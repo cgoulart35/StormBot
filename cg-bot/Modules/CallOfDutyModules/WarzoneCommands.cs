@@ -53,7 +53,7 @@ namespace cg_bot.Modules.CallOfDutyModules
 
                         List<string> output = new List<string>();
                         output.AddRange(await GetLast7DaysKills(newData, guild));
-                        output.AddRange(await GetWarzoneWins(newData, guild, true));
+                        output.AddRange(await GetWeeklyWins(newData, guild, true));
 
                         if (output[0] != "")
                         {
@@ -83,7 +83,7 @@ namespace cg_bot.Modules.CallOfDutyModules
 
                         SocketGuild guild = _service._client.GetGuild(serverId);
 
-                        List<string> output = await GetWarzoneWins(newData, guild);
+                        List<string> output = await GetWeeklyWins(newData, guild);
 
                         if (output[0] != "")
                         {
@@ -164,50 +164,79 @@ namespace cg_bot.Modules.CallOfDutyModules
             }
         }
 
-        public async Task<List<string>> GetWarzoneWins(List<CallOfDutyPlayerModel> newData, SocketGuild guild = null, bool updateRoles = false)
+        public async Task<List<string>> GetWeeklyWins(List<CallOfDutyPlayerModel> newData, SocketGuild guild = null, bool updateRoles = false)
         {
             if (guild == null)
                 guild = Context.Guild;
 
+            List<CallOfDutyPlayerModel> storedData = await _service.GetServersPlayerDataAsPlayerModelList(guild.Id, "mw", "wz");
+            List<CallOfDutyPlayerModel> outputPlayers = new List<CallOfDutyPlayerModel>();
+
             List<string> output = new List<string>();
 
-            if (newData != null)
+            if (newData != null && storedData != null)
             {
-                output.Add("```md\nWARZONE WINS\n============```");
-                newData = newData.OrderByDescending(player => player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins).ToList();
+                output.Add("```md\nWARZONE WEEKLY WINS\n===================```");
 
-                int playerCount = 1;
-                bool atleastOnePlayer = false;
+                // set weekly win counts
                 foreach (CallOfDutyPlayerModel player in newData)
                 {
+                    CallOfDutyPlayerModel outputPlayer = player;
+
                     double wins = 0;
 
-                    // if user has not played
-                    if (player.Data.Lifetime.Mode == null || player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins == 0)
-                        continue;
-                    // if user has played
+                    // if user has played at all
+                    if (player.Data.Lifetime.Mode.BattleRoyal.Properties != null)
+                    {
+                        // if player win count saved last week, set wins this week
+                        if (storedData.Find(storedPlayer => storedPlayer.DiscordID == player.DiscordID) != null)
+                            wins = player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins - storedData.Find(storedPlayer => storedPlayer.DiscordID == player.DiscordID).Data.Lifetime.Mode.BattleRoyal.Properties.Wins;
+                        // if player win count not saved last week, set wins = -1
+                        else
+                            wins = -1;
+                    }
+
+                    if (wins != 0)
+                    {
+                        outputPlayer.Data.Lifetime.Mode.BattleRoyal.Properties.Wins = wins;
+                        outputPlayers.Add(outputPlayer);
+                    }
+                }
+
+                // sort weekly win count
+                outputPlayers = outputPlayers.OrderByDescending(player => player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins).ToList();
+
+                // print weekly wins
+                int playerCount = 1;
+                bool atleastOnePlayer = false;
+                string nextWeekMessages = "";
+                foreach (CallOfDutyPlayerModel player in outputPlayers)
+                {
+                    if (player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins == -1)
+                        nextWeekMessages += string.Format(@"<@!{0}> will be included in updates starting next week.", player.DiscordID) + "\n";
                     else
                     {
                         atleastOnePlayer = true;
-                        wins = player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins;
+                        output = ValidateOutputLimit(output, string.Format(@"**{0}.)** <@!{1}> has {2} wins this week.", playerCount, player.DiscordID, player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins) + "\n");
+                        playerCount++;
                     }
-
-                    output = ValidateOutputLimit(output, string.Format(@"**{0}.)** <@!{1}> has {2} total Warzone wins.", playerCount, player.DiscordID, wins) + "\n");
-                    playerCount++;
                 }
+
+                if (nextWeekMessages != "")
+                    output = ValidateOutputLimit(output, "\n" + nextWeekMessages);
 
                 if (atleastOnePlayer)
                 {
-                    double topScore = newData[0].Data.Lifetime.Mode.BattleRoyal.Properties.Wins;
-                    List<ulong> topPlayersDiscordIDs = newData.Where(player => player.Data.Lifetime.Mode.BattleRoyal.Properties?.Wins == topScore).Select(player => player.DiscordID).ToList();
+                    double topScore = outputPlayers[0].Data.Lifetime.Mode.BattleRoyal.Properties.Wins;
+                    List<ulong> topPlayersDiscordIDs = outputPlayers.Where(player => player.Data.Lifetime.Mode.BattleRoyal.Properties?.Wins == topScore).Select(player => player.DiscordID).ToList();
 
-                    string winners = "Congratulations ";
+                    string winners = updateRoles ? "Congratulations " : "";
                     foreach (ulong DiscordID in topPlayersDiscordIDs)
                     {
                         winners += string.Format(@"<@!{0}>, ", DiscordID);
                     }
 
-                    output = ValidateOutputLimit(output, "\n" + $"{winners}you have the most Warzone wins out of all Warzone participants!");
+                    output = ValidateOutputLimit(output, "\n" + string.Format(@"{0}you have the most Warzone wins out of all Warzone participants!", winners));
 
                     // update the roles only every week
                     ulong roleID = await _service.GetServerWarzoneWinsRoleID(guild.Id);
@@ -233,8 +262,8 @@ namespace cg_bot.Modules.CallOfDutyModules
 
         #region COMMAND FUNCTIONS
         // admin role command
-        [Command("wz wins", RunMode = RunMode.Async)]
-        public async Task WinsCommand()
+        [Command("wz weekly wins", RunMode = RunMode.Async)]
+        public async Task WeeklyWinsCommand()
         {
             if (!Context.IsPrivate)
             {
@@ -252,13 +281,106 @@ namespace cg_bot.Modules.CallOfDutyModules
                         {
                             List<CallOfDutyPlayerModel> newData = await _service.GetNewPlayerData(false, Context.Guild.Id, "mw", "wz");
 
-                            List<string> output = await GetWarzoneWins(newData);
+                            List<string> output = await GetWeeklyWins(newData);
                             if (output[0] != "")
                             {
                                 foreach (string chunk in output)
                                 {
                                     await ReplyAsync(chunk);
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+            else
+                await ReplyAsync("This command can only be executed in servers.");
+        }
+
+        // admin role command
+        [Command("wz lifetime wins", RunMode = RunMode.Async)]
+        public async Task LifetimeWinsCommand()
+        {
+            if (!Context.IsPrivate)
+            {
+                if (await GetServerAllowServerPermissionWarzoneTracking(_db) && await GetServerToggleWarzoneTracking(_db))
+                {
+                    if (DisableIfServiceNotRunning(_service.WarzoneComponent, "wz wins"))
+                    {
+                        await Context.Channel.TriggerTypingAsync();
+
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(_service._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        {
+                            await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
+                        }
+                        else
+                        {
+                            List<CallOfDutyPlayerModel> newData = await _service.GetNewPlayerData(false, Context.Guild.Id, "mw", "wz");
+
+                            if (newData != null)
+                            {
+                                List<string> output = new List<string>();
+                                output.Add("```md\nWARZONE LIFETIME WINS\n=====================```");
+                                newData = newData.OrderByDescending(player => player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins).ToList();
+
+                                int playerCount = 1;
+                                bool atleastOnePlayer = false;
+                                foreach (CallOfDutyPlayerModel player in newData)
+                                {
+                                    double wins = 0;
+
+                                    // if user has not played
+                                    if (player.Data.Lifetime.Mode == null || player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins == 0)
+                                        continue;
+                                    // if user has played
+                                    else
+                                    {
+                                        atleastOnePlayer = true;
+                                        wins = player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins;
+                                    }
+
+                                    output = ValidateOutputLimit(output, string.Format(@"**{0}.)** <@!{1}> has {2} total Warzone wins.", playerCount, player.DiscordID, wins) + "\n");
+                                    
+                                    playerCount++;
+                                }
+
+                                if (atleastOnePlayer)
+                                {
+                                    double topScore = newData[0].Data.Lifetime.Mode.BattleRoyal.Properties.Wins;
+                                    List<ulong> topPlayersDiscordIDs = newData.Where(player => player.Data.Lifetime.Mode.BattleRoyal.Properties?.Wins == topScore).Select(player => player.DiscordID).ToList();
+
+                                    string winners = "Congratulations ";
+                                    foreach (ulong DiscordID in topPlayersDiscordIDs)
+                                    {
+                                        winners += string.Format(@"<@!{0}>, ", DiscordID);
+                                    }
+
+                                    output = ValidateOutputLimit(output, "\n" + $"{winners}you have the most Warzone wins out of all Warzone participants!");
+
+                                    if (output[0] != "")
+                                    {
+                                        foreach (string chunk in output)
+                                        {
+                                            await ReplyAsync(chunk);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    output = ValidateOutputLimit(output, "\n" + "No active players.");
+
+                                    if (output[0] != "")
+                                    {
+                                        foreach (string chunk in output)
+                                        {
+                                            await ReplyAsync(chunk);
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                await ReplyAsync("No data returned.");
                             }
                         }
                     }
