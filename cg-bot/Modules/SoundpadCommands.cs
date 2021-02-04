@@ -644,28 +644,43 @@ namespace cg_bot.Modules
 
             string source = _categoryFoldersLocation + categoryName + @"\";
 
-            // downlaod video and convert to MP3
-            SaveMP3(source, video, soundName);
+            // download video and convert to MP3
+            bool isSaved = await SaveMP3(source, video, soundName);
 
-            // add downloaded sound to soundpad
-            Tuple<List<int>, bool> loadedSounds = await LoadSounds(false, null, false);
-            List<int> soundIndexes = loadedSounds.Item1;
-            int newSoundIndex = soundIndexes[soundIndexes.Count - 1] + 1;
-            await _soundpad.AddSound(source + $"{soundName}.mp3", newSoundIndex, categoryIndex + 1);
+            if (isSaved)
+            {
+                // add downloaded sound to soundpad
+                Tuple<List<int>, bool> loadedSounds = await LoadSounds(false, null, false);
+                List<int> soundIndexes = loadedSounds.Item1;
+                int newSoundIndex = soundIndexes[soundIndexes.Count - 1] + 1;
+                await _soundpad.AddSound(source + $"{soundName}.mp3", newSoundIndex, categoryIndex + 1);
 
-            // wait for sound to be added before printing category
-            await Task.Delay(2000);
+                // wait for sound to be added before printing category
+                await Task.Delay(2000);
 
-            // print out category that the sound was added to
-            await LoadSounds(true, categoryName, false);
-            await ReplyAsync("Sound added: " + soundName);
+                // print out category that the sound was added to
+                await LoadSounds(true, categoryName, false);
+                await ReplyAsync("Sound added: " + soundName);
+            }
         }
 
-        private void SaveMP3(string source, YouTubeVideo video, string soundName)
+        private async Task<bool> SaveMP3(string source, YouTubeVideo video, string soundName)
         {
             string fileName = source + soundName + ".mp4";
             File.WriteAllBytes(fileName, video.GetBytes());
-            File.Move(fileName, Path.ChangeExtension(fileName, ".mp3"));
+
+            try
+            {
+                File.Move(fileName, Path.ChangeExtension(fileName, ".mp3"));
+            }
+            catch (IOException)
+            {
+                await ReplyAsync($"A sound with the name '{soundName}' already exists in this category.");
+                File.Delete(Path.Combine(source, fileName));
+                return false;
+            }
+
+            return true;
 
             /* DEPRECATED
              * 
