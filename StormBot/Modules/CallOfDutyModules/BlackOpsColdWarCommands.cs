@@ -186,10 +186,17 @@ namespace StormBot.Modules.CallOfDutyModules
                     // if user has played at all
                     if (player.Data.Lifetime.All.Properties != null)
                     {
-                        // if player kill count saved last week, set kills this week
+                        // if player kill count saved
                         if (storedData.Find(storedPlayer => storedPlayer.DiscordID == player.DiscordID) != null)
-                            kills = player.Data.Lifetime.All.Properties.Kills - storedData.Find(storedPlayer => storedPlayer.DiscordID == player.DiscordID).Data.Lifetime.All.Properties.Kills;
-                        // if player kill count not saved last week, set kills = -1
+                        {
+                            // if player kill count missed last data fetch, set kills = -1 (postpone daily posting until after next data fetch)
+                            if (await MissedLastDataFetch(_service, guild.Id, player.DiscordID, "cw", "mp"))
+                                kills = -1;
+                            // if player kill count has last data fetch, set kills this week
+                            else
+                                kills = player.Data.Lifetime.All.Properties.Kills - storedData.Find(storedPlayer => storedPlayer.DiscordID == player.DiscordID).Data.Lifetime.All.Properties.Kills;
+                        }
+                        // if player kill count not saved, set kills = -1 (postpone daily posting until after next data fetch)
                         else
                             kills = -1;
                     }
@@ -211,7 +218,7 @@ namespace StormBot.Modules.CallOfDutyModules
                 foreach (CallOfDutyPlayerModel player in outputPlayers)
                 {
                     if (player.Data.Lifetime.All.Properties.Kills == -1)
-                        nextWeekMessages += string.Format(@"<@!{0}> will be included in daily updates starting next week.", player.DiscordID) + "\n";
+                        nextWeekMessages += string.Format(@"<@!{0}> will be included in updates starting next week once the user's data is updated.", player.DiscordID) + "\n";
                     else
                     {
                         atleastOnePlayer = true;

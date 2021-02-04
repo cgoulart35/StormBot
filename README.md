@@ -23,10 +23,13 @@ Future development is planned to add support for web API requests for remote Sou
 - **'.config prefix [prefix]'** to set the server's bot command prefix if you are a StormBot administrator.
 
 - **'.config toggle bocw'** to enable/disable Black Ops Cold War commands and stat tracking on the server if you are a StormBot administrator.
+Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking for Black Ops Cold War participants will resume after the next weekly data fetch (Sundays, 1:00 AM EST).
 
 - **'.config toggle mw'** to enable/disable Modern Warfare commands and stat tracking on the server if you are a StormBot administrator.
+Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking for Modern Warfare participants will resume after the next weekly data fetch (Sundays, 1:00 AM EST).
 
 - **'.config toggle wz'** to enable/disable Warzone commands and stat tracking on the server if you are a StormBot administrator.
+Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking for Warzone participants will resume after the next weekly data fetch (Sundays, 1:00 AM EST).
 
 - **'.config toggle sb'** to enable/disable Soundpad commands on the server if you are a StormBot administrator.
 

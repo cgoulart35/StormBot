@@ -717,8 +717,11 @@ namespace StormBot.Modules
 '**{0}config all**' to display all current set configurations __if you are a StormBot administrator__.
 '**{0}config prefix [prefix]**' to set the server's bot command prefix __if you are a StormBot administrator__.
 '**{0}config toggle bocw**' to enable/disable Black Ops Cold War commands and stat tracking on the server __if you are a StormBot administrator__.
+Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking for Black Ops Cold War participants will resume after the next weekly data fetch (Sundays, 1:00 AM EST).
 '**{0}config toggle mw**' to enable/disable Modern Warfare commands and stat tracking on the server __if you are a StormBot administrator__.
+Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking for Modern Warfare participants will resume after the next weekly data fetch (Sundays, 1:00 AM EST).
 '**{0}config toggle wz**' to enable/disable Warzone commands and stat tracking on the server __if you are a StormBot administrator__.
+Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking for Warzone participants will resume after the next weekly data fetch (Sundays, 1:00 AM EST).
 '**{0}config toggle sb**' to enable/disable Soundpad commands on the server __if you are a StormBot administrator__.
 '**{0}config channel cod [channel]**' to set the server's channel for Call of Duty notifications __if you are a StormBot administrator__.
 '**{0}config channel sb [channel]**' to set the server's channel for Soundboard notifications __if you are a StormBot administrator__.

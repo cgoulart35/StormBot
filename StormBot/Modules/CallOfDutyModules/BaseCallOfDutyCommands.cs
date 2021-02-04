@@ -260,5 +260,22 @@ namespace StormBot.Modules.CallOfDutyModules
                 .Where(player => player.ServerID == serverID && player.DiscordID == discordID && player.GameAbbrev == gameAbbrev && player.ModeAbbrev == modeAbbrev)
                 .SingleOrDefaultAsync();
         }
+
+        public async Task<bool> MissedLastDataFetch(CallOfDutyService service, ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
+        {
+            CallOfDutyPlayerDataEntity data = await GetCallOfDutyPlayerDataEntity(service, serverID, discordID, gameAbbrev, modeAbbrev);
+
+            DateTime lastDataFetchDay = DateTime.Now;
+
+            // if today is Sunday, the last data fetch was this morning
+            // if today is not Sunday, the last data fetch was the last Sunday
+            while (lastDataFetchDay.DayOfWeek != DayOfWeek.Sunday)
+                lastDataFetchDay = lastDataFetchDay.AddDays(-1);
+
+            if (data.Date.Date == lastDataFetchDay.Date)
+                return false;
+            else
+                return true;
+        }
     }
 }
