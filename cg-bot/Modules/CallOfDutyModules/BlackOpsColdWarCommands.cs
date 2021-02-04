@@ -338,7 +338,16 @@ namespace cg_bot.Modules.CallOfDutyModules
 
                                 if (atleastOnePlayer)
                                 {
-                                    output = ValidateOutputLimit(output, "\n" + string.Format(@"Congratulations <@!{0}>, you have the most kills in your lifetime out of all Black Ops Cold War participants!", newData[0].DiscordID));
+                                    double topScore = newData[0].Data.Lifetime.All.Properties.Kills;
+                                    List<ulong> topPlayersDiscordIDs = newData.Where(player => player.Data.Lifetime.All.Properties?.Kills == topScore).Select(player => player.DiscordID).ToList();
+
+                                    string winners = "Congratulations ";
+                                    foreach (ulong DiscordID in topPlayersDiscordIDs)
+                                    {
+                                        winners += string.Format(@"<@!{0}>, ", DiscordID);
+                                    }
+
+                                    output = ValidateOutputLimit(output, "\n" + $"{winners}you have the most kills in your lifetime out of all Black Ops Cold War participants!");
 
                                     if (output[0] != "")
                                     {
