@@ -46,6 +46,9 @@ namespace StormBot.Modules.CallOfDutyModules
 
                     if (channel != null)
                     {
+                        // since GetWeeklyWins does not get the last 7 day count from API, but instead calculates the difference like daily updates, database player data needs to be retrieved in memory to be used for calculation before overwritten with GetNewPlayerData function
+                        List<CallOfDutyPlayerModel> oldData = await _service.GetServersPlayerDataAsPlayerModelList(serverId, "mw", "wz");
+
                         // pass true to keep track of lifetime total kills every week
                         List<CallOfDutyPlayerModel> newData = await _service.GetNewPlayerData(true, serverId, "mw", "wz");
 
@@ -53,7 +56,7 @@ namespace StormBot.Modules.CallOfDutyModules
 
                         List<string> output = new List<string>();
                         output.AddRange(await GetLast7DaysKills(newData, guild));
-                        output.AddRange(await GetWeeklyWins(newData, guild, true));
+                        output.AddRange(await GetWeeklyWins(newData, guild, true, oldData));
 
                         if (output[0] != "")
                         {
@@ -164,12 +167,15 @@ namespace StormBot.Modules.CallOfDutyModules
             }
         }
 
-        public async Task<List<string>> GetWeeklyWins(List<CallOfDutyPlayerModel> newData, SocketGuild guild = null, bool updateRoles = false)
+        public async Task<List<string>> GetWeeklyWins(List<CallOfDutyPlayerModel> newData, SocketGuild guild = null, bool updateRoles = false, List<CallOfDutyPlayerModel> storedData = null)
         {
             if (guild == null)
                 guild = Context.Guild;
 
-            List<CallOfDutyPlayerModel> storedData = await _service.GetServersPlayerDataAsPlayerModelList(guild.Id, "mw", "wz");
+            // only get current data in database if old data is not provided for comparison
+            if (!updateRoles || storedData == null)
+                storedData = await _service.GetServersPlayerDataAsPlayerModelList(guild.Id, "mw", "wz");
+            
             List<CallOfDutyPlayerModel> outputPlayers = new List<CallOfDutyPlayerModel>();
 
             List<string> output = new List<string>();
