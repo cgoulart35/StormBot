@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using Discord.Commands;
 using SoundpadConnector;
 using System;
 using System.Threading.Tasks;
@@ -139,6 +140,44 @@ namespace StormBot.Services
                 .ToListAsync();
 
             return channelIds.Select(channelId => _client.GetChannel(channelId) as IMessageChannel);
+        }
+
+        public async Task<bool> GetServerToggleSoundpadCommands(SocketCommandContext context)
+        {
+            if (!context.IsPrivate)
+            {
+                bool flag = await _db.Servers
+                .AsQueryable()
+                .Where(s => s.ServerID == context.Guild.Id)
+                .Select(s => s.ToggleSoundpadCommands)
+                .SingleAsync();
+
+                if (!flag)
+                    Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
+
+                return flag;
+            }
+            else
+                return true;
+        }
+
+        public async Task<bool> GetServerAllowServerPermissionSoundpadCommands(SocketCommandContext context)
+        {
+            if (!context.IsPrivate)
+            {
+                bool flag = await _db.Servers
+                .AsQueryable()
+                .Where(s => s.ServerID == context.Guild.Id)
+                .Select(s => s.AllowServerPermissionSoundpadCommands)
+                .SingleAsync();
+
+                if (!flag)
+                    Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
+
+                return flag;
+            }
+            else
+                return true;
         }
     }
 }

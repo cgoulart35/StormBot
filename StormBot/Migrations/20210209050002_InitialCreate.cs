@@ -44,8 +44,11 @@ namespace StormBot.Migrations
                     ToggleWarzoneTracking = table.Column<bool>(type: "INTEGER", nullable: false),
                     AllowServerPermissionSoundpadCommands = table.Column<bool>(type: "INTEGER", nullable: false),
                     ToggleSoundpadCommands = table.Column<bool>(type: "INTEGER", nullable: false),
+                    AllowServerPermissionStorms = table.Column<bool>(type: "INTEGER", nullable: false),
+                    ToggleStorms = table.Column<bool>(type: "INTEGER", nullable: false),
                     CallOfDutyNotificationChannelID = table.Column<ulong>(type: "INTEGER", nullable: false),
                     SoundboardNotificationChannelID = table.Column<ulong>(type: "INTEGER", nullable: false),
+                    StormsNotificationChannelID = table.Column<ulong>(type: "INTEGER", nullable: false),
                     AdminRoleID = table.Column<ulong>(type: "INTEGER", nullable: false),
                     WarzoneWinsRoleID = table.Column<ulong>(type: "INTEGER", nullable: false),
                     WarzoneKillsRoleID = table.Column<ulong>(type: "INTEGER", nullable: false),
@@ -56,6 +59,19 @@ namespace StormBot.Migrations
                 {
                     table.PrimaryKey("PK_ServersEntity", x => x.ServerID);
                 });
+
+            migrationBuilder.CreateTable(
+                name: "StormPlayerDataEntity",
+                columns: table => new
+                {
+                    ServerID = table.Column<ulong>(type: "INTEGER", nullable: false),
+                    DiscordID = table.Column<ulong>(type: "INTEGER", nullable: false),
+                    Wallet = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_StormPlayerDataEntity", x => new { x.ServerID, x.DiscordID });
+                });
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
@@ -65,6 +81,9 @@ namespace StormBot.Migrations
 
             migrationBuilder.DropTable(
                 name: "ServersEntity");
+
+            migrationBuilder.DropTable(
+                name: "StormPlayerDataEntity");
         }
     }
 }

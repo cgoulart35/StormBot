@@ -10,6 +10,8 @@ namespace StormBot.Database
 
         public virtual DbSet<CallOfDutyPlayerDataEntity> CallOfDutyPlayerData { get; set; }
 
+        public virtual DbSet<StormPlayerDataEntity> StormPlayerData { get; set; }
+
         public StormBotContext()
         {
             Database.EnsureCreated();
@@ -27,6 +29,9 @@ namespace StormBot.Database
         {
             modelBuilder.Entity<CallOfDutyPlayerDataEntity>()
                 .HasKey(p => new { p.ServerID, p.DiscordID, p.GameAbbrev, p.ModeAbbrev });
+
+            modelBuilder.Entity<StormPlayerDataEntity>()
+                .HasKey(p => new { p.ServerID, p.DiscordID });
         }
     }
 }

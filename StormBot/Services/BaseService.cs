@@ -1,6 +1,10 @@
-﻿using StormBot.Database;
-using System;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using StormBot.Database;
+using StormBot.Database.Entities;
 
 namespace StormBot.Services
 {
@@ -49,6 +53,23 @@ namespace StormBot.Services
 		public string GetLogStamp()
 		{
 			return DateTime.Now.ToString("HH:mm:ss ") + Name;
+		}
+
+		public async Task<List<ServersEntity>> GetAllServerEntities()
+		{
+			return await _db.Servers
+				.AsQueryable()
+				.AsAsyncEnumerable()
+				.ToListAsync();
+		}
+
+		public async Task<string> GetServerPrefix(ulong serverId)
+		{
+			return await _db.Servers
+				.AsQueryable()
+				.Where(s => s.ServerID == serverId)
+				.Select(s => s.PrefixUsed)
+				.SingleAsync();
 		}
 	}
 }

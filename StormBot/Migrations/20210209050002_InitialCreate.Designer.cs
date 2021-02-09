@@ -9,7 +9,7 @@ using StormBot.Database;
 namespace StormBot.Migrations
 {
     [DbContext(typeof(StormBotContext))]
-    [Migration("20210204015410_InitialCreate")]
+    [Migration("20210209050002_InitialCreate")]
     partial class InitialCreate
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -76,6 +76,9 @@ namespace StormBot.Migrations
                     b.Property<bool>("AllowServerPermissionSoundpadCommands")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("AllowServerPermissionStorms")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("AllowServerPermissionWarzoneTracking")
                         .HasColumnType("INTEGER");
 
@@ -97,6 +100,9 @@ namespace StormBot.Migrations
                     b.Property<ulong>("SoundboardNotificationChannelID")
                         .HasColumnType("INTEGER");
 
+                    b.Property<ulong>("StormsNotificationChannelID")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("ToggleBlackOpsColdWarTracking")
                         .HasColumnType("INTEGER");
 
@@ -104,6 +110,9 @@ namespace StormBot.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("ToggleSoundpadCommands")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("ToggleStorms")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("ToggleWarzoneTracking")
@@ -118,6 +127,22 @@ namespace StormBot.Migrations
                     b.HasKey("ServerID");
 
                     b.ToTable("ServersEntity");
+                });
+
+            modelBuilder.Entity("StormBot.Database.Entities.StormPlayerDataEntity", b =>
+                {
+                    b.Property<ulong>("ServerID")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<ulong>("DiscordID")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Wallet")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("ServerID", "DiscordID");
+
+                    b.ToTable("StormPlayerDataEntity");
                 });
 #pragma warning restore 612, 618
         }

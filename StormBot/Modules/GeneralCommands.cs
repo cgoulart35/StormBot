@@ -15,12 +15,14 @@ namespace StormBot.Modules
 {
 	public class GeneralCommands : BaseCommand
     {
+        private StormsService _stormsService;
         private SoundpadService _soundpadService;
         private CallOfDutyService _callOfDutyService;
         private StormBotContext _db;
 
         public GeneralCommands(IServiceProvider services)
         {
+            _stormsService = services.GetRequiredService<StormsService>();
             _soundpadService = services.GetRequiredService<SoundpadService>();
             _callOfDutyService = services.GetRequiredService<CallOfDutyService>();
             _db = services.GetRequiredService<StormBotContext>();
@@ -53,13 +55,15 @@ namespace StormBot.Modules
 **Modern Warfare Tracking Feature:** {2}
 **Warzone Tracking Feature:** {3}
 **Soundboard Feature:** {4}
-**Call of Duty notification channel:** <#{5}>
-**Soundboard notification channel:** <#{6}>
-**Admin role:** <@&{7}>
-**Black Ops Cold War kills role:** <@&{8}>
-**Modern Warfare kills role:** <@&{9}>
-**Warzone wins role:** <@&{10}>
-**Warzone kills role:** <@&{11}>", serverData.PrefixUsed, serverData.ToggleBlackOpsColdWarTracking ? "On" : "Off", serverData.ToggleModernWarfareTracking ? "On" : "Off", serverData.ToggleWarzoneTracking ? "On" : "Off", serverData.ToggleSoundpadCommands ? "On" : "Off", serverData.CallOfDutyNotificationChannelID, serverData.SoundboardNotificationChannelID, serverData.AdminRoleID, serverData.BlackOpsColdWarKillsRoleID, serverData.ModernWarfareKillsRoleID, serverData.WarzoneWinsRoleID, serverData.WarzoneKillsRoleID);
+**Storms Feature:** {5}
+**Call of Duty notification channel:** <#{6}>
+**Soundboard notification channel:** <#{7}>
+**Storms notification channel:** <#{8}>
+**Admin role:** <@&{9}>
+**Black Ops Cold War kills role:** <@&{10}>
+**Modern Warfare kills role:** <@&{11}>
+**Warzone wins role:** <@&{12}>
+**Warzone kills role:** <@&{13}>", serverData.PrefixUsed, serverData.ToggleBlackOpsColdWarTracking ? "On" : "Off", serverData.ToggleModernWarfareTracking ? "On" : "Off", serverData.ToggleWarzoneTracking ? "On" : "Off", serverData.ToggleSoundpadCommands ? "On" : "Off", serverData.ToggleStorms ? "On" : "Off", serverData.CallOfDutyNotificationChannelID, serverData.SoundboardNotificationChannelID, serverData.StormsNotificationChannelID, serverData.AdminRoleID, serverData.BlackOpsColdWarKillsRoleID, serverData.ModernWarfareKillsRoleID, serverData.WarzoneWinsRoleID, serverData.WarzoneKillsRoleID);
 
                     await ReplyAsync(message);
                 }
@@ -116,7 +120,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionBlackOpsColdWarTracking(_db))
+                if (await _callOfDutyService.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
@@ -152,7 +156,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionModernWarfareTracking(_db))
+                if (await _callOfDutyService.GetServerAllowServerPermissionModernWarfareTracking(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
@@ -188,7 +192,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionWarzoneTracking(_db))
+                if (await _callOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
@@ -224,7 +228,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionSoundpadCommands(_db))
+                if (await _soundpadService.GetServerAllowServerPermissionSoundpadCommands(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
@@ -255,12 +259,48 @@ namespace StormBot.Modules
         }
 
         // admin role command
+        [Command("config toggle storms", RunMode = RunMode.Async)]
+        public async Task ConfigToggleStormsCommand()
+        {
+            if (!Context.IsPrivate)
+            {
+                if (await _stormsService.GetServerAllowServerPermissionStorms(Context))
+                {
+                    await Context.Channel.TriggerTypingAsync();
+
+                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(_db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                    {
+                        await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
+                    }
+                    else
+                    {
+                        ServersEntity serverData = await _db.Servers
+                            .AsQueryable()
+                            .Where(s => s.ServerID == Context.Guild.Id)
+                            .SingleAsync();
+
+                        bool flag = serverData.ToggleStorms;
+                        serverData.ToggleStorms = !flag;
+                        await _db.SaveChangesAsync();
+
+                        if (!flag)
+                            await ReplyAsync("Storms were enabled.");
+                        else
+                            await ReplyAsync("Storms were disabled.");
+                    }
+                }
+            }
+            else
+                await ReplyAsync("This command can only be executed in servers.");
+        }
+
+        // admin role command
         [Command("config channel cod", RunMode = RunMode.Async)]
         public async Task ConfigChannelCodCommand(params string[] args)
         {
             if (!Context.IsPrivate)
             {
-                if ((await GetServerAllowServerPermissionBlackOpsColdWarTracking(_db) && await GetServerToggleBlackOpsColdWarTracking(_db)) || (await GetServerAllowServerPermissionModernWarfareTracking(_db) && await GetServerToggleModernWarfareTracking(_db)) || (await GetServerAllowServerPermissionWarzoneTracking(_db) && await GetServerToggleWarzoneTracking(_db)))
+                if ((await _callOfDutyService.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && await _callOfDutyService.GetServerToggleBlackOpsColdWarTracking(Context)) || (await _callOfDutyService.GetServerAllowServerPermissionModernWarfareTracking(Context) && await _callOfDutyService.GetServerToggleModernWarfareTracking(Context)) || (await _callOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context) && await _callOfDutyService.GetServerToggleWarzoneTracking(Context)))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
@@ -307,7 +347,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionSoundpadCommands(_db) && await GetServerToggleSoundpadCommands(_db))
+                if (await _soundpadService.GetServerAllowServerPermissionSoundpadCommands(Context) && await _soundpadService.GetServerToggleSoundpadCommands(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
@@ -349,12 +389,12 @@ namespace StormBot.Modules
         }
 
         // admin role command
-        [Command("config role admin", RunMode = RunMode.Async)]
-        public async Task ConfigRoleAdminCommand(params string[] args)
+        [Command("config channel storms", RunMode = RunMode.Async)]
+        public async Task ConfigChannelStormsCommand(params string[] args)
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionSoundpadCommands(_db) && await GetServerToggleSoundpadCommands(_db))
+                if (await _stormsService.GetServerAllowServerPermissionStorms(Context) && await _stormsService.GetServerToggleStorms(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
@@ -367,27 +407,71 @@ namespace StormBot.Modules
                         try
                         {
                             string input = GetSingleArg(args);
-                            ulong discordRoleID = GetDiscordID(input, false, false);
+                            ulong discordChannelID = GetDiscordID(input, false);
 
                             ServersEntity serverData = await _db.Servers
                                 .AsQueryable()
                                 .Where(s => s.ServerID == Context.Guild.Id)
                                 .SingleAsync();
 
-                            if (serverData.AdminRoleID != discordRoleID)
+                            if (serverData.StormsNotificationChannelID != discordChannelID)
                             {
-                                serverData.AdminRoleID = discordRoleID;
+                                serverData.StormsNotificationChannelID = discordChannelID;
                                 await _db.SaveChangesAsync();
 
-                                await ReplyAsync($"The admin role has been set to: <@&{discordRoleID}>");
+                                await ReplyAsync($"The Storm notification channel has been set to: <#{discordChannelID}>");
                             }
                             else
-                                await ReplyAsync("The server is already using this role as the admin role.");
+                                await ReplyAsync("The server is already using this channel for Storm notifications.");
                         }
                         catch
                         {
-                            await ReplyAsync("Please provide a valid Discord role.");
+                            await ReplyAsync("Please provide a valid Discord channel.");
                         }
+                    }
+                }
+            }
+            else
+                await ReplyAsync("This command can only be executed in servers.");
+        }
+
+        // admin role command
+        [Command("config role admin", RunMode = RunMode.Async)]
+        public async Task ConfigRoleAdminCommand(params string[] args)
+        {
+            if (!Context.IsPrivate)
+            {
+                await Context.Channel.TriggerTypingAsync();
+
+                if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(_db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                {
+                    await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
+                }
+                else
+                {
+                    try
+                    {
+                        string input = GetSingleArg(args);
+                        ulong discordRoleID = GetDiscordID(input, false, false);
+
+                        ServersEntity serverData = await _db.Servers
+                            .AsQueryable()
+                            .Where(s => s.ServerID == Context.Guild.Id)
+                            .SingleAsync();
+
+                        if (serverData.AdminRoleID != discordRoleID)
+                        {
+                            serverData.AdminRoleID = discordRoleID;
+                            await _db.SaveChangesAsync();
+
+                            await ReplyAsync($"The admin role has been set to: <@&{discordRoleID}>");
+                        }
+                        else
+                            await ReplyAsync("The server is already using this role as the admin role.");
+                    }
+                    catch
+                    {
+                        await ReplyAsync("Please provide a valid Discord role.");
                     }
                 }
             }
@@ -401,7 +485,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionSoundpadCommands(_db) && await GetServerToggleSoundpadCommands(_db))
+                if (await _callOfDutyService.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && await _callOfDutyService.GetServerToggleBlackOpsColdWarTracking(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
@@ -448,7 +532,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionSoundpadCommands(_db) && await GetServerToggleSoundpadCommands(_db))
+                if (await _callOfDutyService.GetServerAllowServerPermissionModernWarfareTracking(Context) && await _callOfDutyService.GetServerToggleModernWarfareTracking(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
@@ -495,7 +579,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionSoundpadCommands(_db) && await GetServerToggleSoundpadCommands(_db))
+                if (await _callOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context) && await _callOfDutyService.GetServerToggleWarzoneTracking(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
@@ -542,7 +626,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionSoundpadCommands(_db) && await GetServerToggleSoundpadCommands(_db))
+                if (await _callOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context) && await _callOfDutyService.GetServerToggleWarzoneTracking(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
@@ -600,7 +684,9 @@ namespace StormBot.Modules
                     await Context.Channel.TriggerTypingAsync();
 
                 output = ValidateOutputLimit(output, await HelpHelpCommands());
-                output = ValidateOutputLimit(output, await HelpConfigCommands());
+                output = ValidateOutputLimit(output, await HelpConfigCommands(false));
+                output = ValidateOutputLimit(output, await HelpConfigCommands(true));
+                output = ValidateOutputLimit(output, await HelpStormCommands(notAdmin));
                 output = ValidateOutputLimit(output, await HelpSoundboardCommands(notAdmin));
                 output = ValidateOutputLimit(output, await HelpBlackOpsColdWarCommands(notAdmin));
                 output = ValidateOutputLimit(output, await HelpModernWarfareCommands(notAdmin));
@@ -616,7 +702,12 @@ namespace StormBot.Modules
             {
                 if (!notAdmin)
                     await Context.Channel.TriggerTypingAsync();
-                output = ValidateOutputLimit(output, await HelpConfigCommands());
+                output = ValidateOutputLimit(output, await HelpConfigCommands(false));
+                output = ValidateOutputLimit(output, await HelpConfigCommands(true));
+            }
+            else if (subject.ToLower() == "storm" || subject.ToLower() == "storms")
+            {
+                output = ValidateOutputLimit(output, await HelpStormCommands(notAdmin));
             }
             else if (subject.ToLower() == "sb" || subject.ToLower() == "sp" || subject.ToLower() == "soundboard" || subject.ToLower() == "soundpad")
             {
@@ -665,28 +756,35 @@ namespace StormBot.Modules
 
             string output = "__**Subjects:**__\nHelp\nConfig\n";
 
-            if (await GetServerAllowServerPermissionSoundpadCommands(_db) && await GetServerToggleSoundpadCommands(_db))
+            if (await _stormsService.GetServerAllowServerPermissionStorms(Context) && await _stormsService.GetServerToggleStorms(Context))
+            {
+                if (DisableIfServiceNotRunning(_stormsService, "subjects (storms subject)"))
+                {
+                    output += "Storms\n";
+                }
+            }
+            if (await _soundpadService.GetServerAllowServerPermissionSoundpadCommands(Context) && await _soundpadService.GetServerToggleSoundpadCommands(Context))
             {
                 if (DisableIfServiceNotRunning(_soundpadService, "subjects (soundpad subject)"))
                 {
                     output += "Soundpad\n";
                 }
             }
-            if (await GetServerAllowServerPermissionBlackOpsColdWarTracking(_db) && await GetServerToggleBlackOpsColdWarTracking(_db))
+            if (await _callOfDutyService.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && await _callOfDutyService.GetServerToggleBlackOpsColdWarTracking(Context))
             {
                 if (DisableIfServiceNotRunning(_callOfDutyService.BlackOpsColdWarComponent, "subjects (Black Ops Cold War subject)"))
                 {
                     output += "Black Ops Cold War\n";
                 }
             }
-            if (await GetServerAllowServerPermissionModernWarfareTracking(_db) && await GetServerToggleModernWarfareTracking(_db))
+            if (await _callOfDutyService.GetServerAllowServerPermissionModernWarfareTracking(Context) && await _callOfDutyService.GetServerToggleModernWarfareTracking(Context))
             {
                 if (DisableIfServiceNotRunning(_callOfDutyService.ModernWarfareComponent, "subjects (Modern Warfare subject)"))
                 {
                     output += "Modern Warfare\n";
                 }
             }
-            if (await GetServerAllowServerPermissionWarzoneTracking(_db) && await GetServerToggleWarzoneTracking(_db))
+            if (await _callOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context) && await _callOfDutyService.GetServerToggleWarzoneTracking(Context))
             {
                 if (DisableIfServiceNotRunning(_callOfDutyService.WarzoneComponent, "subjects (Warzone subject)"))
                 {
@@ -710,9 +808,11 @@ namespace StormBot.Modules
 '**{0}subjects**' to display the existing command subjects.", await GetServerPrefix(_db));
         }
 
-        private async Task<string> HelpConfigCommands()
+        private async Task<string> HelpConfigCommands(bool partTwo)
         {
-            return string.Format("\n\n" + @"__**Help: Config Commands**__
+            if (!partTwo)
+            {
+                return string.Format("\n\n" + @"__**Help: Config Commands**__
 
 '**{0}config all**' to display all current set configurations __if you are a StormBot administrator__.
 '**{0}config prefix [prefix]**' to set the server's bot command prefix __if you are a StormBot administrator__.
@@ -723,18 +823,48 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
 '**{0}config toggle wz**' to enable/disable Warzone commands and stat tracking on the server __if you are a StormBot administrator__.
 Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking for Warzone participants will resume after the next weekly data fetch (Sundays, 1:00 AM EST).
 '**{0}config toggle sb**' to enable/disable Soundpad commands on the server __if you are a StormBot administrator__.
-'**{0}config channel cod [channel]**' to set the server's channel for Call of Duty notifications __if you are a StormBot administrator__.
+'**{0}config toggle storms**' to enable/disable Storms and reactive commands on the server __if you are a StormBot administrator__.", await GetServerPrefix(_db));
+            }
+            else
+            {
+                return string.Format("\n\n" + @"'**{0}config channel cod [channel]**' to set the server's channel for Call of Duty notifications __if you are a StormBot administrator__.
 '**{0}config channel sb [channel]**' to set the server's channel for Soundboard notifications __if you are a StormBot administrator__.
+'**{0}config channel storms [channel]**' to set the server's channel for Storm notifications __if you are a StormBot administrator__.
 '**{0}config role admin [role]**' to set the server's admin role for special commands and configuration __if you are a StormBot administrator__.
 '**{0}config role bocw kills [role]**' to set the server's role for the most weekly Black Ops Cold War kills __if you are a StormBot administrator__.
 '**{0}config role mw kills [role]**' to set the server's role for the most weekly Modern Warfare kills __if you are a StormBot administrator__.
 '**{0}config role wz wins [role]**' to set the server's role for the most Warzone wins __if you are a StormBot administrator__.
 '**{0}config role wz kills [role]**' to set the server's role for the most weekly Warzone kills __if you are a StormBot administrator__.", await GetServerPrefix(_db));
+            }
+        }
+
+        private async Task<string> HelpStormCommands(bool notAdmin)
+        {
+            if (await _stormsService.GetServerAllowServerPermissionStorms(Context) && await _stormsService.GetServerToggleStorms(Context))
+            {
+                if (DisableIfServiceNotRunning(_stormsService, "help storms"))
+                {
+                    if (!notAdmin)
+                        await Context.Channel.TriggerTypingAsync();
+
+                    return string.Format("\n\n" + @"__**Help: Storm Commands**__
+
+'**{0}umbrella**' to start the incoming Storm and earn {1} points.
+'**{0}guess [number]**' to make a guess with a winning reward of {2} points.
+'**{0}bet [points] [number]**' to make a guess. If you win, you earn the amount of points bet within your wallet. If you lose, you lose those points.
+'**{0}wallet**' to show how many points you have in your wallet.
+'**{0}wallets**' to show how many points everyone has.", await GetServerPrefix(_db), _stormsService.levelOneReward, _stormsService.levelTwoReward);
+                }
+                else
+                    return null;
+            }
+            else
+                return null;
         }
 
         private async Task<string> HelpSoundboardCommands(bool notAdmin)
         {
-            if (await GetServerAllowServerPermissionSoundpadCommands(_db) && await GetServerToggleSoundpadCommands(_db))
+            if (await _soundpadService.GetServerAllowServerPermissionSoundpadCommands(Context) && await _soundpadService.GetServerToggleSoundpadCommands(Context))
             {
                 if (DisableIfServiceNotRunning(_soundpadService, "help soundpad"))
                 {
@@ -766,7 +896,7 @@ The bot will then ask you to play a sound by entering the corresponding number.
 
         private async Task<string> HelpBlackOpsColdWarCommands(bool notAdmin)
         {
-            if (await GetServerAllowServerPermissionBlackOpsColdWarTracking(_db) && await GetServerToggleBlackOpsColdWarTracking(_db))
+            if (await _callOfDutyService.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && await _callOfDutyService.GetServerToggleBlackOpsColdWarTracking(Context))
             {
                 if (DisableIfServiceNotRunning(_callOfDutyService.BlackOpsColdWarComponent, "help black ops cold war"))
                 {
@@ -801,7 +931,7 @@ The bot will only assign the{1} role for Black Ops Cold War kills to the player 
 
         private async Task<string> HelpModernWarfareCommands(bool notAdmin)
         {
-            if (await GetServerAllowServerPermissionModernWarfareTracking(_db) && await GetServerToggleModernWarfareTracking(_db))
+            if (await _callOfDutyService.GetServerAllowServerPermissionModernWarfareTracking(Context) && await _callOfDutyService.GetServerToggleModernWarfareTracking(Context))
             {
                 if (DisableIfServiceNotRunning(_callOfDutyService.ModernWarfareComponent, "help modern warfare"))
                 {
@@ -836,7 +966,7 @@ The bot will only assign the{1} role for Modern Warfare kills to the player in f
 
         private async Task<string> HelpWarzoneCommands(bool notAdmin)
         {
-            if (await GetServerAllowServerPermissionWarzoneTracking(_db) && await GetServerToggleWarzoneTracking(_db))
+            if (await _callOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context) && await _callOfDutyService.GetServerToggleWarzoneTracking(Context))
             {
                 if (DisableIfServiceNotRunning(_callOfDutyService.WarzoneComponent, "help warzone"))
                 {

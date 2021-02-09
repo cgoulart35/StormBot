@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Linq;
 using Discord;
 using Discord.WebSocket;
-using Microsoft.EntityFrameworkCore;
 using StormBot.Services;
 using StormBot.Database.Entities;
 
@@ -66,7 +64,7 @@ namespace StormBot.Modules.CallOfDutyModules
 
         public async Task<bool> RemoveAParticipant(CallOfDutyService service, ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
         {
-            CallOfDutyPlayerDataEntity removeAccount = await GetCallOfDutyPlayerDataEntity(service, serverID, discordID, gameAbbrev, modeAbbrev);
+            CallOfDutyPlayerDataEntity removeAccount = await service.GetCallOfDutyPlayerDataEntity(serverID, discordID, gameAbbrev, modeAbbrev);
 
             if (removeAccount != null)
             {
@@ -251,31 +249,6 @@ namespace StormBot.Modules.CallOfDutyModules
                 await ReplyAsync("Zero participants.");
             }
             return participatingAccountsData;
-        }
-
-        public async Task<CallOfDutyPlayerDataEntity> GetCallOfDutyPlayerDataEntity(CallOfDutyService service, ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
-        {
-            return await service._db.CallOfDutyPlayerData
-                .AsQueryable()
-                .Where(player => player.ServerID == serverID && player.DiscordID == discordID && player.GameAbbrev == gameAbbrev && player.ModeAbbrev == modeAbbrev)
-                .SingleOrDefaultAsync();
-        }
-
-        public async Task<bool> MissedLastDataFetch(CallOfDutyService service, ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
-        {
-            CallOfDutyPlayerDataEntity data = await GetCallOfDutyPlayerDataEntity(service, serverID, discordID, gameAbbrev, modeAbbrev);
-
-            DateTime lastDataFetchDay = DateTime.Now;
-
-            // if today is Sunday, the last data fetch was this morning
-            // if today is not Sunday, the last data fetch was the last Sunday
-            while (lastDataFetchDay.DayOfWeek != DayOfWeek.Sunday)
-                lastDataFetchDay = lastDataFetchDay.AddDays(-1);
-
-            if (data.Date.Date == lastDataFetchDay.Date)
-                return false;
-            else
-                return true;
         }
     }
 }

@@ -25,6 +25,7 @@ namespace StormBot
         private CommandHandler _commandHandler;
         private BaseService _baseService;
         private SoundpadService _soundpadService;
+        private StormsService _stormsService;
         private CallOfDutyService _callOfDutyService;
         private AnnouncementsService _announcementsService;
         private IServiceProvider _services;
@@ -73,6 +74,9 @@ namespace StormBot
 
             if (!configurationSettingsModel.RemoteBootMode)
             {
+                // ask the user if they want to start the storms service
+                PromptUserForStartup(_stormsService);
+
                 // ask the user if they want to start the soundpad service
                 PromptUserForStartup(_soundpadService);
 
@@ -90,6 +94,7 @@ namespace StormBot
             // start all services except soundpad service if in remote boot mode
             else
             {
+                _stormsService.DoStart = true;
                 _soundpadService.DoStart = false;
                 _callOfDutyService.DoStart = true;
                 _callOfDutyService.ModernWarfareComponent.DoStart = true;
@@ -101,12 +106,13 @@ namespace StormBot
             Console.WriteLine("");
 
             // only services that were selected will be started
+            await _stormsService.StartService();
             _soundpadService.StartService();
             await _callOfDutyService.StartService();
 
-            // start the announcements service if a call f duty service is running
+            // start the announcements service if a call of duty service or the storms service is running
             _announcementsService.DoStart = false;
-            if (_callOfDutyService.isServiceRunning)
+            if (_callOfDutyService.isServiceRunning || _stormsService.isServiceRunning)
             {
                 _announcementsService.DoStart = true;
             }
@@ -231,8 +237,11 @@ namespace StormBot
                 ToggleWarzoneTracking = false,
                 AllowServerPermissionSoundpadCommands = true,
                 ToggleSoundpadCommands = false,
+                AllowServerPermissionStorms = true,
+                ToggleStorms = false,
                 CallOfDutyNotificationChannelID = 0,
                 SoundboardNotificationChannelID = 0,
+                StormsNotificationChannelID = 0,
                 AdminRoleID = 0,
                 WarzoneWinsRoleID = 0,
                 WarzoneKillsRoleID = 0,
@@ -273,6 +282,7 @@ namespace StormBot
                 .AddSingleton<CommandHandler>()
                 .AddSingleton<BaseService>()
                 .AddSingleton<SoundpadService>()
+                .AddSingleton<StormsService>()
                 .AddSingleton<CallOfDutyService>()
                 .AddSingleton<AnnouncementsService>()
                 .BuildServiceProvider();
@@ -283,6 +293,7 @@ namespace StormBot
             _commandHandler = _services.GetRequiredService<CommandHandler>();
             _baseService = _services.GetRequiredService<BaseService>();
             _soundpadService = _services.GetRequiredService<SoundpadService>();
+            _stormsService = _services.GetRequiredService<StormsService>();
             _callOfDutyService = _services.GetRequiredService<CallOfDutyService>();
             _announcementsService = _services.GetRequiredService<AnnouncementsService>();
         }
@@ -313,6 +324,7 @@ namespace StormBot
             Console.WriteLine("");
 
             _soundpadService.StopService();
+            _stormsService.StopService();
             _callOfDutyService.StopService();
             _announcementsService.StopService();
 

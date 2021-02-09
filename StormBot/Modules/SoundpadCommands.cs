@@ -4,7 +4,6 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Linq;
-using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,7 +41,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionSoundpadCommands(_db) && await GetServerToggleSoundpadCommands(_db))
+                if (await _service.GetServerAllowServerPermissionSoundpadCommands(Context) && await _service.GetServerToggleSoundpadCommands(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "add"))
                     {
@@ -105,7 +104,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionSoundpadCommands(_db) && await GetServerToggleSoundpadCommands(_db))
+                if (await _service.GetServerAllowServerPermissionSoundpadCommands(Context) && await _service.GetServerToggleSoundpadCommands(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "approve"))
                     {
@@ -145,7 +144,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionSoundpadCommands(_db) && await GetServerToggleSoundpadCommands(_db))
+                if (await _service.GetServerAllowServerPermissionSoundpadCommands(Context) && await _service.GetServerToggleSoundpadCommands(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "categories"))
                     {
@@ -170,7 +169,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionSoundpadCommands(_db) && await GetServerToggleSoundpadCommands(_db))
+                if (await _service.GetServerAllowServerPermissionSoundpadCommands(Context) && await _service.GetServerToggleSoundpadCommands(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "delete"))
                     {
@@ -212,7 +211,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionSoundpadCommands(_db) && await GetServerToggleSoundpadCommands(_db))
+                if (await _service.GetServerAllowServerPermissionSoundpadCommands(Context) && await _service.GetServerToggleSoundpadCommands(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "deny"))
                     {
@@ -252,7 +251,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionSoundpadCommands(_db) && await GetServerToggleSoundpadCommands(_db))
+                if (await _service.GetServerAllowServerPermissionSoundpadCommands(Context) && await _service.GetServerToggleSoundpadCommands(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "pause"))
                     {
@@ -274,7 +273,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionSoundpadCommands(_db) && await GetServerToggleSoundpadCommands(_db))
+                if (await _service.GetServerAllowServerPermissionSoundpadCommands(Context) && await _service.GetServerToggleSoundpadCommands(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "play"))
                     {
@@ -308,7 +307,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionSoundpadCommands(_db) && await GetServerToggleSoundpadCommands(_db))
+                if (await _service.GetServerAllowServerPermissionSoundpadCommands(Context) && await _service.GetServerToggleSoundpadCommands(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "sounds"))
                     {
@@ -341,7 +340,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionSoundpadCommands(_db) && await GetServerToggleSoundpadCommands(_db))
+                if (await _service.GetServerAllowServerPermissionSoundpadCommands(Context) && await _service.GetServerToggleSoundpadCommands(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "stop"))
                     {

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using System.Linq;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using StormBot.Database;
@@ -12,20 +11,25 @@ namespace StormBot.Services
 {
 	class AnnouncementsService : BaseService
 	{
-		public delegate Task OnAnnouncementHandler(object sender, EventArgs args);
-		public event OnAnnouncementHandler WeeklyCallOfDutyAnnouncement;
-		public event OnAnnouncementHandler DailyCallOfDutyAnnouncement;
+		public delegate Task OnCodAnnouncementHandler(object sender, EventArgs args);
+		public event OnCodAnnouncementHandler WeeklyCallOfDutyAnnouncement;
+		public event OnCodAnnouncementHandler DailyCallOfDutyAnnouncement;
+
+		public delegate Task OnStormAnnouncementHandler(object sender, ulong serverId, ulong channelId);
+		public event OnStormAnnouncementHandler RandomStormAnnouncement;
 
 		private bool weeklySent;
 		private bool dailySent;
 
 		private readonly DiscordSocketClient _client;
 
+		private StormsService _stormsService;
 		private CallOfDutyService _callOfDutyService;
 
 		public AnnouncementsService(IServiceProvider services)
 		{
 			_client = services.GetRequiredService<DiscordSocketClient>();
+			_stormsService = services.GetRequiredService<StormsService>();
 			_callOfDutyService = services.GetRequiredService<CallOfDutyService>();
 			_db = services.GetRequiredService<StormBotContext>();
 
@@ -53,15 +57,46 @@ namespace StormBot.Services
 				weeklySent = false;
 				dailySent = false;
 
-				StartCallOfDutyWeeklyAnnouncements();
-				StartCallOfDutyDailyAnnouncements();
+				if (_stormsService.isServiceRunning)
+				{
+					List<ServersEntity> servers = await _stormsService.GetAllServerEntities();
+					foreach (ServersEntity server in servers)
+					{
+						bool stormBotBool = server.AllowServerPermissionStorms && server.ToggleStorms;
+
+						if (stormBotBool && server.StormsNotificationChannelID != 0)
+						{
+							StartStormAnnouncements(server.ServerID, server.StormsNotificationChannelID);
+						}
+					}
+				}
+
+				if (_callOfDutyService.isServiceRunning)
+				{
+					StartCallOfDutyWeeklyAnnouncements();
+					StartCallOfDutyDailyAnnouncements();
+				}
+			}
+		}
+
+		public async Task StartStormAnnouncements(ulong serverId, ulong channelId)
+		{
+			Random random = new Random();
+
+			while (isServiceRunning && _stormsService.isServiceRunning)
+			{
+				// time between event invokes is between 1 hour and 4 hours (between 24 and 6 times a day)
+				int randomTimeWait = random.Next(3600, 14401) * 1000;
+				await Task.Delay(randomTimeWait);
+
+				await RandomStormAnnouncement.Invoke(this, serverId, channelId);
 			}
 		}
 
 		public async Task StartCallOfDutyWeeklyAnnouncements()
 		{
 			// send out weekly winners announcement at 1:00 AM (EST) on Sunday mornings
-			while (isServiceRunning)
+			while (isServiceRunning && _callOfDutyService.isServiceRunning)
 			{
 				DateTime currentTime = DateTime.Now;
 				if (!weeklySent && currentTime.DayOfWeek == DayOfWeek.Sunday && currentTime.Hour == 1 && currentTime.Minute == 0 && WeeklyCallOfDutyAnnouncement != null)
@@ -93,7 +128,7 @@ namespace StormBot.Services
 		public async Task StartCallOfDutyDailyAnnouncements()
 		{
 			// send out daily updates on current weekly kill counts at 10 PM (EST) everyday
-			while (isServiceRunning)
+			while (isServiceRunning && _callOfDutyService.isServiceRunning)
 			{
 				DateTime currentTime = DateTime.Now;
 				if (!dailySent && currentTime.Hour == 22 && currentTime.Minute == 0 && DailyCallOfDutyAnnouncement != null)

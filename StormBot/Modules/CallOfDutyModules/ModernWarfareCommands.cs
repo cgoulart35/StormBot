@@ -15,14 +15,12 @@ namespace StormBot.Modules.CallOfDutyModules
     {
         private CallOfDutyService _service;
         private AnnouncementsService _announcementsService;
-        private StormBotContext _db;
 
         static bool handlersSet = false;
 
         public ModernWarfareCommands(IServiceProvider services)
         {
             _service = services.GetRequiredService<CallOfDutyService>();
-            _db = services.GetRequiredService<StormBotContext>();
             _announcementsService = services.GetRequiredService<AnnouncementsService>();
 
             if (!handlersSet)
@@ -190,7 +188,7 @@ namespace StormBot.Modules.CallOfDutyModules
                         if (storedData.Find(storedPlayer => storedPlayer.DiscordID == player.DiscordID) != null)
                         {
                             // if player kill count missed last data fetch, set kills = -1 (postpone daily posting until after next data fetch)
-                            if (await MissedLastDataFetch(_service, guild.Id, player.DiscordID, "mw", "mp"))
+                            if (await _service.MissedLastDataFetch(guild.Id, player.DiscordID, "mw", "mp"))
                                 kills = -1;
                             // if player kill count has last data fetch, set kills this week
                             else
@@ -265,7 +263,7 @@ namespace StormBot.Modules.CallOfDutyModules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionModernWarfareTracking(_db) && await GetServerToggleModernWarfareTracking(_db))
+                if (await _service.GetServerAllowServerPermissionModernWarfareTracking(Context) && await _service.GetServerToggleModernWarfareTracking(Context))
                 {
                     if (DisableIfServiceNotRunning(_service.ModernWarfareComponent, "mw wz weekly kills"))
                     {
@@ -301,7 +299,7 @@ namespace StormBot.Modules.CallOfDutyModules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionModernWarfareTracking(_db) && await GetServerToggleModernWarfareTracking(_db))
+                if (await _service.GetServerAllowServerPermissionModernWarfareTracking(Context) && await _service.GetServerToggleModernWarfareTracking(Context))
                 {
                     if (DisableIfServiceNotRunning(_service.ModernWarfareComponent, "mw wz lifetime kills"))
                     {
@@ -395,7 +393,7 @@ namespace StormBot.Modules.CallOfDutyModules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionModernWarfareTracking(_db) && await GetServerToggleModernWarfareTracking(_db))
+                if (await _service.GetServerAllowServerPermissionModernWarfareTracking(Context) && await _service.GetServerToggleModernWarfareTracking(Context))
                 {
                     if (DisableIfServiceNotRunning(_service.ModernWarfareComponent, "mw participants"))
                     {
@@ -426,7 +424,7 @@ namespace StormBot.Modules.CallOfDutyModules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionModernWarfareTracking(_db) && await GetServerToggleModernWarfareTracking(_db))
+                if (await _service.GetServerAllowServerPermissionModernWarfareTracking(Context) && await _service.GetServerToggleModernWarfareTracking(Context))
                 {
                     if (DisableIfServiceNotRunning(_service.ModernWarfareComponent, "mw add participant"))
                     {
@@ -469,7 +467,7 @@ namespace StormBot.Modules.CallOfDutyModules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionModernWarfareTracking(_db) && await GetServerToggleModernWarfareTracking(_db))
+                if (await _service.GetServerAllowServerPermissionModernWarfareTracking(Context) && await _service.GetServerToggleModernWarfareTracking(Context))
                 {
                     if (DisableIfServiceNotRunning(_service.ModernWarfareComponent, "mw rm participant"))
                     {
@@ -509,7 +507,7 @@ namespace StormBot.Modules.CallOfDutyModules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionModernWarfareTracking(_db) && await GetServerToggleModernWarfareTracking(_db))
+                if (await _service.GetServerAllowServerPermissionModernWarfareTracking(Context) && await _service.GetServerToggleModernWarfareTracking(Context))
                 {
                     if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent, "mw participate"))
                     {
@@ -543,7 +541,7 @@ namespace StormBot.Modules.CallOfDutyModules
         {
             if (!Context.IsPrivate)
             {
-                if (await GetServerAllowServerPermissionModernWarfareTracking(_db) && await GetServerToggleModernWarfareTracking(_db))
+                if (await _service.GetServerAllowServerPermissionModernWarfareTracking(Context) && await _service.GetServerToggleModernWarfareTracking(Context))
                 {
                     if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent, "mw leave"))
                     {

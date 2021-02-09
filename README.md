@@ -33,9 +33,13 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
 
 - **'.config toggle sb'** to enable/disable Soundpad commands on the server if you are a StormBot administrator.
 
+- **'.config toggle storms'** to enable/disable Storms and reactive commands on the server if you are a StormBot administrator.
+
 - **'.config channel cod [channel]'** to set the server's channel for Call of Duty notifications if you are a StormBot administrator.
 
 - **'.config channel sb [channel]'** to set the server's channel for Soundboard notifications if you are a StormBot administrator.
+
+- **'.config channel storms [channel]'** to set the server's channel for Storm notifications if you are a StormBot administrator.
 
 - **'.config role admin [role]'** to set the server's admin role for special commands and configuration if you are a StormBot administrator.
 
@@ -46,6 +50,18 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
 - **'.config role wz wins [role]'** to set the server's role for the most Warzone wins if you are a StormBot administrator.
 
 - **'.config role wz kills [role]'** to set the server's role for the most weekly Warzone kills if you are a StormBot administrator.
+
+### Help: Storm Commands
+
+- **'.umbrella'** to start the incoming Storm and earn x points.
+
+- **'.guess [number]'** to make a guess with a winning reward of y points.
+
+- **'.bet [points] [number]'** to make a guess. If you win, you earn the amount of points bet within your wallet. If you lose, you lose those points.
+
+- **'.wallet'** to show how many points you have in your wallet.
+
+- **'.wallets'** to show how many points everyone has.
 
 ### Help: Soundboard Commands
 

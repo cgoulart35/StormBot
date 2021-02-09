@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using Discord;
 using Discord.WebSocket;
+using Discord.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -109,15 +110,15 @@ namespace StormBot.Services
 
                     if (BlackOpsColdWarComponent.isServiceRunning && server.AllowServerPermissionBlackOpsColdWarTracking && server.ToggleBlackOpsColdWarTracking)
                     {
-                        message += "_**[    BLACK OPS COLD WAR TRACKING DISCONNECTED.    ]**_\n";
+                        message += "_**[    BLACK OPS COLD WAR TRACKING OFFLINE.    ]**_\n";
                     }
                     if (ModernWarfareComponent.isServiceRunning && server.AllowServerPermissionModernWarfareTracking && server.ToggleModernWarfareTracking)
                     {
-                        message += "_**[    MODERN WARFARE TRACKING DISCONNECTED.    ]**_\n";
+                        message += "_**[    MODERN WARFARE TRACKING OFFLINE.    ]**_\n";
                     }
                     if (WarzoneComponent.isServiceRunning && server.AllowServerPermissionWarzoneTracking && server.ToggleWarzoneTracking)
                     {
-                        message += "_**[    WARZONE TRACKING DISCONNECTED.    ]**_";
+                        message += "_**[    WARZONE TRACKING OFFLINE.    ]**_";
                     }
 
                     if (server.CallOfDutyNotificationChannelID != 0 && message != "")
@@ -168,9 +169,7 @@ namespace StormBot.Services
             LoginAPI(ref cookieJar, XSRFTOKEN);
 
             // retrieve updated data via Call of Duty API for all participating players with cookie tokens obtained from login
-            List<CallOfDutyPlayerModel> newPlayerData = GetAllPlayersDataAPI(cookieJar, allStoredPlayersData, storeToDatabase);
-
-            return newPlayerData;
+            return GetAllPlayersDataAPI(cookieJar, allStoredPlayersData, storeToDatabase);
         }
 
         private void InitializeAPI(ref CookieContainer cookieJar, ref string XSRFTOKEN)
@@ -325,12 +324,12 @@ namespace StormBot.Services
             }
         }
 
-        public async Task<List<ServersEntity>> GetAllServerEntities()
+        public async Task<CallOfDutyPlayerDataEntity> GetCallOfDutyPlayerDataEntity(ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
         {
-            return await _db.Servers
+            return await _db.CallOfDutyPlayerData
                 .AsQueryable()
-                .AsAsyncEnumerable()
-                .ToListAsync();
+                .Where(player => player.ServerID == serverID && player.DiscordID == discordID && player.GameAbbrev == gameAbbrev && player.ModeAbbrev == modeAbbrev)
+                .SingleOrDefaultAsync();
         }
 
         public async Task<List<ulong>> GetAllValidatedServerIds(string gameAbbrev, string modeAbbrev)
@@ -414,6 +413,137 @@ namespace StormBot.Services
                 .Where(s => s.ServerID == serverId)
                 .Select(s => s.BlackOpsColdWarKillsRoleID)
                 .SingleOrDefaultAsync();
+        }
+
+        public async Task<bool> GetServerToggleBlackOpsColdWarTracking(SocketCommandContext context)
+        {
+            if (!context.IsPrivate)
+            {
+                bool flag = await _db.Servers
+                    .AsQueryable()
+                    .Where(s => s.ServerID == context.Guild.Id)
+                    .Select(s => s.ToggleBlackOpsColdWarTracking)
+                    .SingleAsync();
+
+                if (!flag)
+                    Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
+
+                return flag;
+            }
+            else
+                return true;
+        }
+
+        public async Task<bool> GetServerToggleModernWarfareTracking(SocketCommandContext context)
+        {
+            if (!context.IsPrivate)
+            {
+                bool flag = await _db.Servers
+                .AsQueryable()
+                .Where(s => s.ServerID == context.Guild.Id)
+                .Select(s => s.ToggleModernWarfareTracking)
+                .SingleAsync();
+
+                if (!flag)
+                    Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
+
+                return flag;
+            }
+            else
+                return true;
+        }
+
+        public async Task<bool> GetServerToggleWarzoneTracking(SocketCommandContext context)
+        {
+            if (!context.IsPrivate)
+            {
+                bool flag = await _db.Servers
+                .AsQueryable()
+                .Where(s => s.ServerID == context.Guild.Id)
+                .Select(s => s.ToggleModernWarfareTracking)
+                .SingleAsync();
+
+                if (!flag)
+                    Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
+
+                return flag;
+            }
+            else
+                return true;
+        }
+
+        public async Task<bool> GetServerAllowServerPermissionBlackOpsColdWarTracking(SocketCommandContext context)
+        {
+            if (!context.IsPrivate)
+            {
+                bool flag = await _db.Servers
+                .AsQueryable()
+                .Where(s => s.ServerID == context.Guild.Id)
+                .Select(s => s.AllowServerPermissionBlackOpsColdWarTracking)
+                .SingleAsync();
+
+                if (!flag)
+                    Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
+
+                return flag;
+            }
+            else
+                return true;
+        }
+
+        public async Task<bool> GetServerAllowServerPermissionModernWarfareTracking(SocketCommandContext context)
+        {
+            if (!context.IsPrivate)
+            {
+                bool flag = await _db.Servers
+                .AsQueryable()
+                .Where(s => s.ServerID == context.Guild.Id)
+                .Select(s => s.AllowServerPermissionModernWarfareTracking)
+                .SingleAsync();
+
+                if (!flag)
+                    Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
+
+                return flag;
+            }
+            else
+                return true;
+        }
+
+        public async Task<bool> GetServerAllowServerPermissionWarzoneTracking(SocketCommandContext context)
+        {
+            if (!context.IsPrivate)
+            {
+                bool flag = await _db.Servers
+                .AsQueryable()
+                .Where(s => s.ServerID == context.Guild.Id)
+                .Select(s => s.AllowServerPermissionWarzoneTracking)
+                .SingleAsync();
+
+                if (!flag)
+                    Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
+
+                return flag;
+            }
+            else
+                return true;
+        }
+
+        public async Task<bool> MissedLastDataFetch(ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
+        {
+            CallOfDutyPlayerDataEntity data = await GetCallOfDutyPlayerDataEntity(serverID, discordID, gameAbbrev, modeAbbrev);
+
+            DateTime lastDataFetchDay = DateTime.Now;
+
+            // if today is Sunday, the last data fetch was this morning
+            // if today is not Sunday, the last data fetch was the last Sunday
+            while (lastDataFetchDay.DayOfWeek != DayOfWeek.Sunday)
+                lastDataFetchDay = lastDataFetchDay.AddDays(-1);
+
+            if (data.Date.Date == lastDataFetchDay.Date)
+                return false;
+            else
+                return true;
         }
     }
 }

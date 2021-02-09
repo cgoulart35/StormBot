@@ -8,7 +8,6 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Discord;
 using StormBot.Database;
-using StormBot.Database.Entities;
 
 namespace StormBot.Services
 {

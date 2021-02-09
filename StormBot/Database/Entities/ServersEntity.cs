@@ -25,12 +25,17 @@ namespace StormBot.Database.Entities
 
 		public bool AllowServerPermissionSoundpadCommands { get; set; } // dev use only (access in database)
 		public bool ToggleSoundpadCommands { get; set; }
+
+		public bool AllowServerPermissionStorms { get; set; } // dev use only (access in database)
+		public bool ToggleStorms { get; set; }
 		#endregion
 
 		#region CHANNELS
 		public ulong CallOfDutyNotificationChannelID { get; set; }
 
 		public ulong SoundboardNotificationChannelID { get; set; }
+
+		public ulong StormsNotificationChannelID { get; set; }
 		#endregion
 
 		#region ROLES
