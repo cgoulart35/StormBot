@@ -904,7 +904,7 @@ The bot will then ask you to play a sound by entering the corresponding number.
                         await Context.Channel.TriggerTypingAsync();
 
                     string roleStr = "";
-                    if (!Context.IsPrivate)
+                    if (!Context.IsPrivate && !notAdmin)
                     {
                         roleStr += " <@&" + (await _callOfDutyService.GetServerBlackOpsColdWarKillsRoleID(Context.Guild.Id)).ToString() + ">";
                     }
@@ -939,7 +939,7 @@ The bot will only assign the{1} role for Black Ops Cold War kills to the player 
                         await Context.Channel.TriggerTypingAsync();
 
                     string roleStr = "";
-                    if (!Context.IsPrivate)
+                    if (!Context.IsPrivate && !notAdmin)
                     {
                         roleStr += " <@&" + (await _callOfDutyService.GetServerModernWarfareKillsRoleID(Context.Guild.Id)).ToString() + ">";
                     }
@@ -974,13 +974,13 @@ The bot will only assign the{1} role for Modern Warfare kills to the player in f
                         await Context.Channel.TriggerTypingAsync();
 
                     string winsRoleStr = "";
-                    if (!Context.IsPrivate)
+                    if (!Context.IsPrivate && !notAdmin)
                     {
                         winsRoleStr += " <@&" + (await _callOfDutyService.GetServerWarzoneWinsRoleID(Context.Guild.Id)).ToString() + ">";
                     }
 
                     string killsRoleStr = "";
-                    if (!Context.IsPrivate)
+                    if (!Context.IsPrivate && !notAdmin)
                     {
                         killsRoleStr += " <@&" + (await _callOfDutyService.GetServerWarzoneKillsRoleID(Context.Guild.Id)).ToString() + ">";
                     }
