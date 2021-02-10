@@ -161,7 +161,7 @@ namespace StormBot.Modules
                         ulong serverId = Context.Guild.Id;
                         ulong discordId = Context.User.Id;
 
-                        StormPlayerDataEntity playerData = await _service.GetStormPlayerDataEntity(serverId, discordId);
+                        StormPlayerDataEntity playerData = await _service.AddPlayerToDbTableIfNotExist(serverId, discordId);
 
                         _service.purgeCollection.Add(await ReplyAsync($"<@!{discordId}>, you have {playerData.Wallet} points in your wallet."));
                     }
