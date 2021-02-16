@@ -13,6 +13,7 @@ using SoundpadConnector.XML;
 using VideoLibrary;
 using StormBot.Services;
 using StormBot.Database;
+using StormBot.Models.SoundpadApiModels;
 
 namespace StormBot.Modules
 {
@@ -60,26 +61,32 @@ namespace StormBot.Modules
 
                                 // display all category options to user
                                 Tuple<List<int>, bool> loadedSounds = await LoadSounds(true, null, true);
-                                List<int> categoryIndexes = loadedSounds.Item1;
 
-                                var user = Context.User as SocketGuildUser;
-
-                                // ask user what category to add to
-                                int categoryIndex = await AskUserForCategory(categoryIndexes, user.Id);
-
-                                // get instance of the YouTube video
-                                YouTubeVideo video = await GetYouTubeVideo(videoURL);
-
-                                // unless cancelled, continue adding the sound
-                                if (categoryIndex != -1)
+                                if (loadedSounds != null)
                                 {
-                                    // unless video doesn't exist, get admin approval 
-                                    if (video != null)
+                                    List<int> categoryIndexes = loadedSounds.Item1;
+
+                                    var user = Context.User as SocketGuildUser;
+
+                                    // ask user what category to add to
+                                    int categoryIndex = await AskUserForCategory(categoryIndexes, user.Id);
+
+                                    // get instance of the YouTube video if not in remote boot mode
+                                    YouTubeVideo video = null;
+                                    if (!Program.configurationSettingsModel.RemoteBootMode)
+                                        video = await GetYouTubeVideo(videoURL);
+
+                                    // unless cancelled, continue adding the sound
+                                    if (categoryIndex != -1)
                                     {
-                                        // add sound if admin or if an admin approves
-                                        if (user.GuildPermissions.Administrator || await AskAdministratorForApproval(user))
+                                        // if video exists or in remote boot mode, get admin approval 
+                                        if (video != null || Program.configurationSettingsModel.RemoteBootMode)
                                         {
-                                            await AddNewSound(categoryIndex, video, soundName);
+                                            // add sound if admin or if an admin approves
+                                            if (user.GuildPermissions.Administrator || await AskAdministratorForApproval(user))
+                                            {
+                                                await AddNewSound(categoryIndex, video, soundName, videoURL);
+                                            }
                                         }
                                     }
                                 }
@@ -188,9 +195,12 @@ namespace StormBot.Modules
                                     string soundNumber = GetSingleArg(args);
 
                                     Tuple<List<int>, bool> loadedSounds = await LoadSounds(false);
-                                    List<int> soundIndexes = loadedSounds.Item1;
 
-                                    await PlayOrDeleteSoundNumber(soundIndexes, soundNumber, false, true);
+                                    if (loadedSounds != null)
+                                    {
+                                        List<int> soundIndexes = loadedSounds.Item1;
+                                        await PlayOrDeleteSoundNumber(soundIndexes, soundNumber, false, true);
+                                    }
                                 }
                                 else
                                     await ReplyAsync("Please enter all required arguments: [sound number]");
@@ -257,7 +267,19 @@ namespace StormBot.Modules
                     {
                         if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
                         {
-                            await _soundpad.TogglePause();
+                            if (Program.configurationSettingsModel.RemoteBootMode)
+                            {
+                                bool isPaused = _service.PauseSoundAPI();
+
+                                if (!isPaused)
+                                {
+                                    await ReplyAsync($"Sound not paused.");
+                                }
+                            }
+                            else
+                            {
+                                await _soundpad.TogglePause();
+                            }
                         }
                         else
                             await ReplyAsync("The soundboard is not currently connected.");
@@ -286,9 +308,12 @@ namespace StormBot.Modules
                                 string soundNumber = GetSingleArg(args);
 
                                 Tuple<List<int>, bool> loadedSounds = await LoadSounds(false);
-                                List<int> soundIndexes = loadedSounds.Item1;
 
-                                await PlayOrDeleteSoundNumber(soundIndexes, soundNumber);
+                                if (loadedSounds != null)
+                                {
+                                    List<int> soundIndexes = loadedSounds.Item1;
+                                    await PlayOrDeleteSoundNumber(soundIndexes, soundNumber);
+                                }
                             }
                             else
                                 await ReplyAsync("Please enter all required arguments: [sound number]");
@@ -318,13 +343,17 @@ namespace StormBot.Modules
                             string categoryName = GetSingleArg(args);
 
                             Tuple<List<int>, bool> loadedSounds = await LoadSounds(true, categoryName);
-                            List<int> soundIndexes = loadedSounds.Item1;
-                            bool categoryExists = loadedSounds.Item2;
 
-                            if (categoryName != null && !categoryExists)
-                                await ReplyAsync("The category name '" + categoryName + "' does not exist.");
-                            else
-                                await PlayOrDeleteUserSelectedSound(soundIndexes);
+                            if (loadedSounds != null)
+                            {
+                                List<int> soundIndexes = loadedSounds.Item1;
+                                bool categoryExists = loadedSounds.Item2;
+
+                                if (categoryName != null && !categoryExists)
+                                    await ReplyAsync("The category name '" + categoryName + "' does not exist.");
+                                else
+                                    await PlayOrDeleteUserSelectedSound(soundIndexes);
+                            }
                         }
                         else
                             await ReplyAsync("The soundboard is not currently connected.");
@@ -346,7 +375,19 @@ namespace StormBot.Modules
                     {
                         if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
                         {
-                            await _soundpad.StopSound();
+                            if (Program.configurationSettingsModel.RemoteBootMode)
+                            {
+                                bool isStopped = _service.StopSoundAPI();
+
+                                if (!isStopped)
+                                {
+                                    await ReplyAsync($"Sound not stopped.");
+                                }
+                            }
+                            else
+                            {
+                                await _soundpad.StopSound();
+                            }
                         }
                         else
                             await ReplyAsync("The soundboard is not currently connected.");
@@ -361,7 +402,21 @@ namespace StormBot.Modules
         #region COMMAND HELPER FUNCTIONS     
         private async Task<Tuple<List<int>, bool>> LoadSounds(bool displayOutput, string categoryName = null, bool categoriesMode = false)
         {
-            CategoryListResponse categoryListResponse = await _soundpad.GetCategories(true);
+            CategoryListResponse categoryListResponse;
+            if (Program.configurationSettingsModel.RemoteBootMode)
+            {
+                categoryListResponse = _service.GetCategoriesAPI();
+                if (categoryListResponse == null)
+                {
+                    await ReplyAsync($"Could not get categories.");
+                    return null;
+                }
+            }
+            else
+            {
+                categoryListResponse = await _soundpad.GetCategories(true);
+            }
+
             List<Category> categoryList = categoryListResponse.Value.Categories;
 
             // keep track of whether of not it is a valid name; only important when category name provided
@@ -481,7 +536,21 @@ namespace StormBot.Modules
                         string soundName = "";
 
                         // get the sound's name to delete
-                        CategoryListResponse categoryListResponse = await _soundpad.GetCategories(true);
+                        CategoryListResponse categoryListResponse;
+                        if (Program.configurationSettingsModel.RemoteBootMode)
+                        {
+                            categoryListResponse = _service.GetCategoriesAPI();
+                            if (categoryListResponse == null)
+                            {
+                                await ReplyAsync($"Could not get categories.");
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            categoryListResponse = await _soundpad.GetCategories(true);
+                        }
+
                         List<Category> categoryList = categoryListResponse.Value.Categories;
                         foreach (Category category in categoryList)
                         {
@@ -497,18 +566,58 @@ namespace StormBot.Modules
                         }
 
                         // select desired sound
-                        await _soundpad.SelectIndex(soundIndex);
+                        if (Program.configurationSettingsModel.RemoteBootMode)
+                        {
+                            bool isSelected = _service.SelectIndexAPI(soundIndex);
+
+                            if (!isSelected)
+                            {
+                                await ReplyAsync($"Sound not deleted.");
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            await _soundpad.SelectIndex(soundIndex);
+                        }
 
                         // wait for sound to be selected before removing selected sound
                         await Task.Delay(2000);
 
                         // delete selected sound 
-                        await _soundpad.RemoveSelectedEntries(true);
+                        if (Program.configurationSettingsModel.RemoteBootMode)
+                        {
+                            bool isRemoved = _service.RemoveSelectedEntriesAPI();
+
+                            if (!isRemoved)
+                            {
+                                await ReplyAsync($"Sound not deleted.");
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            await _soundpad.RemoveSelectedEntries(true);
+                        }
 
                         await ReplyAsync("Sound deleted: " + soundName);
                     }
                     else
-                        await _soundpad.PlaySound(soundIndex);
+                    {
+                        if (Program.configurationSettingsModel.RemoteBootMode)
+                        {
+                            bool isPlayed = _service.PlaySoundAPI(soundIndex);
+
+                            if (!isPlayed)
+                            {
+                                await ReplyAsync($"Sound not played.");
+                            }
+                        }
+                        else
+                        {
+                            await _soundpad.PlaySound(soundIndex);
+                        }
+                    }
                 }
                 // if not valid number, request another response
                 else
@@ -636,30 +745,75 @@ namespace StormBot.Modules
             }
         }
 
-        private async Task AddNewSound(int categoryIndex, YouTubeVideo video, string soundName)
+        private async Task AddNewSound(int categoryIndex, YouTubeVideo video, string soundName, string videoURL)
         {
-            CategoryResponse categoryResponse = await _soundpad.GetCategory(categoryIndex + 1);
+            CategoryResponse categoryResponse;
+            if (Program.configurationSettingsModel.RemoteBootMode)
+            {
+                categoryResponse = _service.GetCategoryAPI(categoryIndex + 1);
+
+                if (categoryResponse == null)
+                {
+                    await ReplyAsync($"Sound not added: Could not get requested category.");
+                    return;
+                }
+            }
+            else
+            {
+                categoryResponse = await _soundpad.GetCategory(categoryIndex + 1);
+            }
+
             string categoryName = categoryResponse.Value.Name;
 
             string source = _categoryFoldersLocation + categoryName + @"\";
 
             // download video and convert to MP3
-            bool isSaved = await SaveMP3(source, video, soundName);
+            bool isSaved;
+            if (Program.configurationSettingsModel.RemoteBootMode)
+            {
+                ApiValidationResponse response = _service.SaveMP3API(source, videoURL, soundName);
+                isSaved = response.Successful;
+
+                if (!isSaved)
+                    await ReplyAsync(response.Information);
+            }
+            else
+            {
+                isSaved = await SaveMP3(source, video, soundName);
+            }
 
             if (isSaved)
             {
                 // add downloaded sound to soundpad
                 Tuple<List<int>, bool> loadedSounds = await LoadSounds(false, null, false);
-                List<int> soundIndexes = loadedSounds.Item1;
-                int newSoundIndex = soundIndexes[soundIndexes.Count - 1] + 1;
-                await _soundpad.AddSound(source + $"{soundName}.mp3", newSoundIndex, categoryIndex + 1);
 
-                // wait for sound to be added before printing category
-                await Task.Delay(2000);
+                if (loadedSounds != null)
+                {
+                    List<int> soundIndexes = loadedSounds.Item1;
+                    int newSoundIndex = soundIndexes[soundIndexes.Count - 1] + 1;
 
-                // print out category that the sound was added to
-                await LoadSounds(true, categoryName, false);
-                await ReplyAsync("Sound added: " + soundName);
+                    if (Program.configurationSettingsModel.RemoteBootMode)
+                    {
+                        bool isAdded = _service.AddSoundAPI(source + $"{soundName}.mp3", newSoundIndex, categoryIndex + 1);
+
+                        if (!isAdded)
+                        {
+                            await ReplyAsync($"Sound not added.");
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        await _soundpad.AddSound(source + $"{soundName}.mp3", newSoundIndex, categoryIndex + 1);
+                    }
+
+                    // wait for sound to be added before printing category
+                    await Task.Delay(2000);
+
+                    // print out category that the sound was added to
+                    await LoadSounds(true, categoryName, false);
+                    await ReplyAsync("Sound added: " + soundName);
+                }
             }
         }
 

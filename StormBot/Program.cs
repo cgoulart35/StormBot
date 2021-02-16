@@ -95,7 +95,7 @@ namespace StormBot
             else
             {
                 _stormsService.DoStart = true;
-                _soundpadService.DoStart = false;
+                _soundpadService.DoStart = true;
                 _callOfDutyService.DoStart = true;
                 _callOfDutyService.ModernWarfareComponent.DoStart = true;
                 _callOfDutyService.WarzoneComponent.DoStart = true;
@@ -152,6 +152,12 @@ namespace StormBot
                 {
                     configurationSettingsModel = new ConfigurationSettingsModel();
                     configurationSettingsModel = JsonConvert.DeserializeObject<ConfigurationSettingsModel>(File.ReadAllText(StormBotConfigSettingsPath));
+
+                    if (configurationSettingsModel.StormBotSoundpadApiHostname == null && configurationSettingsModel.RemoteBootMode)
+                    {
+                        createNewFile = false;
+                        throw new Exception("Please fill out the StormBotSoundpadApiHostname.");
+                    }
 
                     if (configurationSettingsModel.DiscordToken == null || configurationSettingsModel.DiscordToken == "")
                     {

@@ -260,6 +260,7 @@ Use '**{0}wallets**' to show how many points everyone has!", await GetServerPref
 			}
 		}
 
+		#region QUERIES
 		public async Task<StormPlayerDataEntity> AddPlayerToDbTableIfNotExist(ulong serverID, ulong discordID)
 		{
 			StormPlayerDataEntity playerData = await GetStormPlayerDataEntity(serverID, discordID);
@@ -336,5 +337,6 @@ Use '**{0}wallets**' to show how many points everyone has!", await GetServerPref
 			else
 				return true;
 		}
+		#endregion
 	}
 }

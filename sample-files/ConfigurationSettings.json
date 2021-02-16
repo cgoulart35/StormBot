@@ -1,5 +1,6 @@
 {
 	"RemoteBootMode": false,
+	"StormBotSoundpadApiHostname": "insert hostname here/Soundpad/",
 	"DiscordToken": "insert your token here",
 	"PrivateMessagePrefix": ".",
 	"ActivisionEmail": "insert your Activision email here",

@@ -97,7 +97,8 @@ namespace StormBot.Modules
             }
         }
 
-        public async Task<string> GetServerPrefix(StormBotContext _db)
+		#region QUERIES
+		public async Task<string> GetServerPrefix(StormBotContext _db)
         {
             if (!Context.IsPrivate)
             {
@@ -121,5 +122,6 @@ namespace StormBot.Modules
                 .Select(s => s.AdminRoleID)
                 .SingleAsync();
         }
-    }
+		#endregion
+	}
 }

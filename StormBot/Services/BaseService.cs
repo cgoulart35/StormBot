@@ -55,6 +55,7 @@ namespace StormBot.Services
 			return DateTime.Now.ToString("HH:mm:ss ") + Name;
 		}
 
+		#region QUERIES
 		public async Task<List<ServersEntity>> GetAllServerEntities()
 		{
 			return await _db.Servers
@@ -71,5 +72,6 @@ namespace StormBot.Services
 				.Select(s => s.PrefixUsed)
 				.SingleAsync();
 		}
+		#endregion
 	}
 }

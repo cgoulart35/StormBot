@@ -7,6 +7,9 @@ namespace StormBot.Entities
 		[JsonProperty("RemoteBootMode")]
 		public bool RemoteBootMode { get; set; }
 
+		[JsonProperty("StormBotSoundpadApiHostname")]
+		public string StormBotSoundpadApiHostname { get; set; }
+
 		[JsonProperty("DiscordToken")]
 		public string DiscordToken { get; set; }
 

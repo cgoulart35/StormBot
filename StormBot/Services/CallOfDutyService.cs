@@ -131,19 +131,8 @@ namespace StormBot.Services
             }
         }
 
-        public void AddParticipantToDatabase(CallOfDutyPlayerDataEntity playerData)
-        {
-            _db.CallOfDutyPlayerData.Add(playerData);
-            _db.SaveChangesAsync();
-        }
-
-        public void RemoveParticipantFromDatabase(CallOfDutyPlayerDataEntity playerData)
-        {
-            _db.CallOfDutyPlayerData.Remove(playerData);
-            _db.SaveChangesAsync();
-        }
-
-        public async Task<List<CallOfDutyPlayerModel>> GetNewPlayerData(bool storeToDatabase, ulong serverId, string gameAbbrev, string modeAbbrev)
+		#region API
+		public async Task<List<CallOfDutyPlayerModel>> GetNewPlayerData(bool storeToDatabase, ulong serverId, string gameAbbrev, string modeAbbrev)
         {
             List<ulong> serverIds = new List<ulong>();
             serverIds.Add(serverId);
@@ -267,7 +256,9 @@ namespace StormBot.Services
             // convert API json response data into player data object
             return JsonConvert.DeserializeObject<CallOfDutyPlayerModel>(response.Content);
         }
+        #endregion
 
+        #region QUERIES
         public async Task<List<CallOfDutyPlayerModel>> GetServersPlayerDataAsPlayerModelList(ulong serverId, string gameAbbrev, string modeAbbrev)
         {
             List<ulong> serverIdList = new List<ulong>();
@@ -302,6 +293,35 @@ namespace StormBot.Services
             }
 
             return modelData;
+        }
+
+        public async Task<bool> MissedLastDataFetch(ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
+        {
+            CallOfDutyPlayerDataEntity data = await GetCallOfDutyPlayerDataEntity(serverID, discordID, gameAbbrev, modeAbbrev);
+
+            DateTime lastDataFetchDay = DateTime.Now;
+
+            // if today is Sunday, the last data fetch was this morning
+            // if today is not Sunday, the last data fetch was the last Sunday
+            while (lastDataFetchDay.DayOfWeek != DayOfWeek.Sunday)
+                lastDataFetchDay = lastDataFetchDay.AddDays(-1);
+
+            if (data.Date.Date == lastDataFetchDay.Date)
+                return false;
+            else
+                return true;
+        }
+
+        public void AddParticipantToDatabase(CallOfDutyPlayerDataEntity playerData)
+        {
+            _db.CallOfDutyPlayerData.Add(playerData);
+            _db.SaveChangesAsync();
+        }
+
+        public void RemoveParticipantFromDatabase(CallOfDutyPlayerDataEntity playerData)
+        {
+            _db.CallOfDutyPlayerData.Remove(playerData);
+            _db.SaveChangesAsync();
         }
 
         public async Task<List<CallOfDutyPlayerDataEntity>> GetServersPlayerData(List<ulong> serverIds, string gameAbbrev, string modeAbbrev)
@@ -528,22 +548,6 @@ namespace StormBot.Services
             else
                 return true;
         }
-
-        public async Task<bool> MissedLastDataFetch(ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
-        {
-            CallOfDutyPlayerDataEntity data = await GetCallOfDutyPlayerDataEntity(serverID, discordID, gameAbbrev, modeAbbrev);
-
-            DateTime lastDataFetchDay = DateTime.Now;
-
-            // if today is Sunday, the last data fetch was this morning
-            // if today is not Sunday, the last data fetch was the last Sunday
-            while (lastDataFetchDay.DayOfWeek != DayOfWeek.Sunday)
-                lastDataFetchDay = lastDataFetchDay.AddDays(-1);
-
-            if (data.Date.Date == lastDataFetchDay.Date)
-                return false;
-            else
-                return true;
-        }
-    }
+		#endregion
+	}
 }
