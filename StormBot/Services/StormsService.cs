@@ -206,13 +206,14 @@ Use '**{0}wallets**' to show how many points everyone has!", await GetServerPref
 						if (guess == OngoingStormsWinningNumber[channelId])
 						{
 							// give user points for level 2 (default levelTwoReward, or points bet)
+							int reward = levelTwoReward;
 							if (bet != null && bet.Value > levelTwoReward)
-								levelTwoReward = bet.Value;
+								reward = bet.Value;
 
-							playerData.Wallet += levelTwoReward;
+							playerData.Wallet += reward;
 							await _db.SaveChangesAsync();
 
-							purgeCollection.Add(await((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you guessed correctly and earned {levelTwoReward} points!"));
+							purgeCollection.Add(await((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you guessed correctly and earned {reward} points!"));
 
 							// end storm at level 3
 							OngoingStormsLevel[channelId] = 3;

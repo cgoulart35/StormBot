@@ -2,9 +2,12 @@
 
 StormBot is a Discord server bot that has functionality for competitive Storm mini-games, remote and automated Soundpad control (the soundboard program available on Steam), and Call of Duty statistic tracking (Black Ops Cold War, Modern Warfare, and Warzone).
 
-The latest version 2.2 enables the Soundpad service on Remote Boot Mode. The StormBot Soundpad API (https://github.com/cgoulart35/StormBotSoundpadApi) can be hosted on the same machine where Soundpad is installed. This application will communicate with StormBot via web reqeusts for remote use of the soundboard (use case; when hosting the bot 24/7 on a Raspberry Pi).
-Version 2.1 added Storms, a new competitive random announcement reaction minigame.
+The latest version 2.2 enables the Soundpad service on Remote Boot Mode. The StormBot Soundpad API (https://github.com/cgoulart35/StormBotSoundpadApi) can be hosted on the same machine where Soundpad is installed. This application will communicate with StormBot via web requests for remote use of the soundboard (use case; when hosting the bot 24/7 on a Raspberry Pi).
+
+Version 2.1 added Storms, a new competitive random announcement reaction mini-game.
+
 Version 2.0 added multi-server support, and Entity Framework Core.
+
 StormBot is a .NET 5.0 application (latest .NET Core).
 
 ## Commands!

@@ -66,7 +66,7 @@ namespace StormBot.Services
 
 						if (stormBotBool && server.StormsNotificationChannelID != 0)
 						{
-							StartStormAnnouncements(server.ServerID, server.StormsNotificationChannelID);
+							StartStormAnnouncements(server);
 						}
 					}
 				}
@@ -79,7 +79,7 @@ namespace StormBot.Services
 			}
 		}
 
-		public async Task StartStormAnnouncements(ulong serverId, ulong channelId)
+		public async Task StartStormAnnouncements(ServersEntity server)
 		{
 			Random random = new Random();
 
@@ -89,7 +89,8 @@ namespace StormBot.Services
 				int randomTimeWait = random.Next(3600, 14401) * 1000;
 				await Task.Delay(randomTimeWait);
 
-				await RandomStormAnnouncement.Invoke(this, serverId, channelId);
+				if (server.AllowServerPermissionStorms && server.ToggleStorms)
+					await RandomStormAnnouncement.Invoke(this, server.ServerID, server.StormsNotificationChannelID);
 			}
 		}
 
