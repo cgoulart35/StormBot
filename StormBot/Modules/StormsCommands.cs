@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Discord.Commands;
+using Discord.WebSocket;
 using StormBot.Services;
 using StormBot.Database.Entities;
 
@@ -197,7 +198,19 @@ namespace StormBot.Modules
                             if (player.Wallet > 0)
                             {
                                 atleastOnePlayer = true;
-                                output = ValidateOutputLimit(output, string.Format(@"**{0}.)** <@!{1}> has {2} points in their wallet.", playerCount, player.DiscordID, player.Wallet) + "\n");
+
+                                string userStr = "";
+                                if (player.DiscordID != Context.User.Id)
+                                {
+                                    SocketGuildUser user = Context.Guild.GetUser(player.DiscordID);
+                                    userStr = user.Username;
+                                }
+                                else
+                                {
+                                    userStr = $"<@!{player.DiscordID}>";
+                                }
+
+                                output = ValidateOutputLimit(output, string.Format(@"**{0}.)** {1} has {2} points in their wallet.", playerCount, userStr, player.Wallet) + "\n");
                                 playerCount++;
                             }
                         }
