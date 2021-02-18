@@ -15,7 +15,7 @@ namespace StormBot.Services
 		public event OnCodAnnouncementHandler WeeklyCallOfDutyAnnouncement;
 		public event OnCodAnnouncementHandler DailyCallOfDutyAnnouncement;
 
-		public delegate Task OnStormAnnouncementHandler(object sender, ulong serverId, ulong channelId);
+		public delegate Task OnStormAnnouncementHandler(object sender, ulong serverId, string serverName, ulong channelId);
 		public event OnStormAnnouncementHandler RandomStormAnnouncement;
 
 		private bool weeklySent;
@@ -87,10 +87,20 @@ namespace StormBot.Services
 			{
 				// time between event invokes is between 1 hour and 4 hours (between 24 and 6 times a day)
 				int randomTimeWait = random.Next(3600, 14401) * 1000;
+
+				// time in milliseconds converted to hours minutes seconds
+				int totalSeconds = randomTimeWait / 1000;
+				int hours = totalSeconds / 3600;
+				int minutes = (totalSeconds % 3600) / 60;
+				int seconds = totalSeconds % 60;
+
+				if (server.AllowServerPermissionStorms && server.ToggleStorms)
+					Console.WriteLine($"\nThe next Storm in {server.ServerName} is in {hours} hours {minutes} minutes and {seconds} seconds.");
+
 				await Task.Delay(randomTimeWait);
 
 				if (server.AllowServerPermissionStorms && server.ToggleStorms)
-					await RandomStormAnnouncement.Invoke(this, server.ServerID, server.StormsNotificationChannelID);
+					await RandomStormAnnouncement.Invoke(this, server.ServerID, server.ServerName, server.StormsNotificationChannelID);
 			}
 		}
 

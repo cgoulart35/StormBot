@@ -10,6 +10,6 @@ namespace StormBot.Database.Entities
 
 		public ulong DiscordID { get; set; }
 
-		public int Wallet { get; set; }
+		public double Wallet { get; set; }
 	}
 }

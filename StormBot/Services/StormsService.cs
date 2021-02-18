@@ -18,6 +18,7 @@ namespace StormBot.Services
 
 		private Dictionary<ulong, int> OngoingStormsLevel;
 		private Dictionary<ulong, int> OngoingStormsWinningNumber;
+		private Dictionary<ulong, Dictionary<ulong, int>> OngoingStormsUserGuessCount;
 
 		private Random random;
 
@@ -27,8 +28,8 @@ namespace StormBot.Services
 		public Emoji white_sun_rain_cloud;
 		public Emoji sun_with_face;
 
-		public int levelOneReward = 1;
-		public int levelTwoReward = 2;
+		public double levelOneReward = 1;
+		public double levelTwoReward = 2;
 
 		public List<IUserMessage> purgeCollection;
 
@@ -42,6 +43,7 @@ namespace StormBot.Services
 
 			OngoingStormsLevel = new Dictionary<ulong, int>();
 			OngoingStormsWinningNumber = new Dictionary<ulong, int>();
+			OngoingStormsUserGuessCount = new Dictionary<ulong, Dictionary<ulong, int>>();
 
 			random = new Random();
 
@@ -117,12 +119,18 @@ namespace StormBot.Services
 			}
 		}
 
-		public async Task HandleIncomingStorm(object sender, ulong serverId, ulong channelId)
+		public async Task HandleIncomingStorm(object sender, ulong serverId, string serverName, ulong channelId)
 		{
+			string logStamp = GetLogStamp();
+
 			int randomNumber = random.Next(1, 201);
+			Console.WriteLine($"The winning number for the ongoing Storm in {serverName} is {randomNumber}.");
 
 			OngoingStormsLevel.Add(channelId, 1);
 			OngoingStormsWinningNumber.Add(channelId, randomNumber);
+
+			Dictionary<ulong, int> UserGuessCountsInServer = new Dictionary<ulong, int>();
+			OngoingStormsUserGuessCount.Add(channelId, UserGuessCountsInServer);
 
 			purgeCollection.Add(await((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(cloud_rain.ToString() + thunder_cloud_rain.ToString() + umbrella2.ToString() + " __**STORM INCOMING**__ " + umbrella2.ToString() + thunder_cloud_rain.ToString() + cloud_rain.ToString() + string.Format(@"
 
@@ -135,6 +143,7 @@ First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute 
 		{
 			OngoingStormsLevel.Remove(channelId);
 			OngoingStormsWinningNumber.Remove(channelId);
+			OngoingStormsUserGuessCount.Remove(channelId);
 
 			purgeCollection.Add(await((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(sun_with_face.ToString() + sun_with_face.ToString() + sun_with_face.ToString() + " __**STORM OVER**__ " + sun_with_face.ToString() + sun_with_face.ToString() + sun_with_face.ToString()));
 
@@ -172,7 +181,7 @@ First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute 
 				await EndStorm(channelId);
 		}
 
-		public async Task TryToUpdateOngoingStorm(ulong serverId, ulong discordId, ulong channelId, int inputLevel, int? guess = null, int? bet = null)
+		public async Task TryToUpdateOngoingStorm(ulong serverId, ulong discordId, ulong channelId, int inputLevel, int? guess = null, double? bet = null)
 		{
 			int actualLevel;
 
@@ -190,7 +199,7 @@ First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute 
 						playerData.Wallet += levelOneReward;
 						await _db.SaveChangesAsync();
 
-						purgeCollection.Add(await((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you put up your umbrella first and earned {levelOneReward} points!" + string.Format(@"
+						purgeCollection.Add(await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you put up your umbrella first and earned {levelOneReward} points!" + string.Format(@"
 
 __**First to guess the winning number correctly between 1 and 200 earns points!**__
 Use '**{0}guess [number]**' to make a guess with a winning reward of {1} points!
@@ -203,17 +212,49 @@ Use '**{0}wallets**' to show how many points everyone has!", await GetServerPref
 					}
 					else if (actualLevel == 2)
 					{
+						// if user has guessed, get count; otherwise, set count to 0
+						int guessCount;
+						if (!OngoingStormsUserGuessCount[channelId].TryGetValue(discordId, out guessCount))
+							 guessCount = 0;
+
+						// store user's guess count as 1 if it's their first guess
+						if (guessCount == 0)
+						{
+							guessCount = 1;
+							OngoingStormsUserGuessCount[channelId].Add(discordId, guessCount);
+						}
+						// if it's not the users first guess, increment the count
+						else
+						{
+							OngoingStormsUserGuessCount[channelId][discordId] += 1;
+							guessCount = OngoingStormsUserGuessCount[channelId][discordId];
+						}
+
+						double multiplier = 1;
+						if (guessCount == 1)
+							multiplier = 10;
+						else if (guessCount == 2)
+							multiplier = 5;
+						else if (guessCount == 3)
+							multiplier = 2.5;
+						else if (guessCount == 4)
+							multiplier = 1.25;
+
 						if (guess == OngoingStormsWinningNumber[channelId])
 						{
 							// give user points for level 2 (default levelTwoReward, or points bet)
-							int reward = levelTwoReward;
+							double reward = levelTwoReward;
 							if (bet != null && bet.Value > levelTwoReward)
 								reward = bet.Value;
 
-							playerData.Wallet += reward;
+							playerData.Wallet += reward * multiplier;
 							await _db.SaveChangesAsync();
 
-							purgeCollection.Add(await((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you guessed correctly and earned {reward} points!"));
+							string multiplierStr = "";
+							if (multiplier > 1)
+								multiplierStr = $" ( **{guessCount} GUESSES:** {reward} points x{multiplier} multiplier )";
+
+							purgeCollection.Add(await((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you guessed correctly and earned {reward * multiplier} points!" + multiplierStr));
 
 							// end storm at level 3
 							OngoingStormsLevel[channelId] = 3;
@@ -228,7 +269,7 @@ Use '**{0}wallets**' to show how many points everyone has!", await GetServerPref
 								message += $" and lost {bet.Value} points.\n";
 
 								// take points from user if they bet
-								int newWallet = playerData.Wallet - bet.Value;
+								double newWallet = playerData.Wallet - bet.Value;
 								if (newWallet < 0)
 									playerData.Wallet = 0;
 								else

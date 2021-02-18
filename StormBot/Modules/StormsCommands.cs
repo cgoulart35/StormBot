@@ -117,7 +117,7 @@ namespace StormBot.Modules
                             string guessStr = args[1];
 
                             // if args are numbers
-                            if (int.TryParse(guessStr, out int guess) && int.TryParse(betStr, out int bet))
+                            if (int.TryParse(guessStr, out int guess) && double.TryParse(betStr, out double bet))
                             {
                                 // if guess number is valid
                                 if (guess >= 1 && guess <= 200)

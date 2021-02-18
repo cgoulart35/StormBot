@@ -66,7 +66,7 @@ namespace StormBot.Migrations
                 {
                     ServerID = table.Column<ulong>(type: "INTEGER", nullable: false),
                     DiscordID = table.Column<ulong>(type: "INTEGER", nullable: false),
-                    Wallet = table.Column<int>(type: "INTEGER", nullable: false)
+                    Wallet = table.Column<double>(type: "REAL", nullable: false)
                 },
                 constraints: table =>
                 {

@@ -14,7 +14,7 @@ namespace StormBot.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "5.0.2");
+                .HasAnnotation("ProductVersion", "5.0.3");
 
             modelBuilder.Entity("StormBot.Database.Entities.CallOfDutyPlayerDataEntity", b =>
                 {
@@ -135,8 +135,8 @@ namespace StormBot.Migrations
                     b.Property<ulong>("DiscordID")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("Wallet")
-                        .HasColumnType("INTEGER");
+                    b.Property<double>("Wallet")
+                        .HasColumnType("REAL");
 
                     b.HasKey("ServerID", "DiscordID");
 
