@@ -124,7 +124,7 @@ namespace StormBot.Services
 			string logStamp = GetLogStamp();
 
 			int randomNumber = random.Next(1, 201);
-			Console.WriteLine($"The winning number for the ongoing Storm in {serverName} is {randomNumber}.");
+			Console.WriteLine(logStamp + $"				The winning number for the ongoing Storm in {serverName} is {randomNumber}.");
 
 			OngoingStormsLevel.Add(channelId, 1);
 			OngoingStormsWinningNumber.Add(channelId, randomNumber);
@@ -205,7 +205,8 @@ __**First to guess the winning number correctly between 1 and 200 earns points!*
 Use '**{0}guess [number]**' to make a guess with a winning reward of {1} points!
 Use '**{0}bet [points] [number]**' to make a guess. If you win, you earn the amount of points bet within your wallet. If you lose, you lose those points.
 Use '**{0}wallet**' to show how many points you have in your wallet!
-Use '**{0}wallets**' to show how many points everyone has!", await GetServerPrefix(serverId), levelTwoReward)));
+Use '**{0}wallets**' to show how many points everyone has!
+Points earned are multiplied if you guess within 4 guesses!", await GetServerPrefix(serverId), levelTwoReward)));
 
 						// update storm to level 2
 						OngoingStormsLevel[channelId] = 2;

@@ -85,6 +85,8 @@ namespace StormBot.Services
 
 			while (isServiceRunning && _stormsService.isServiceRunning)
 			{
+				string logStamp = GetLogStamp();
+
 				// time between event invokes is between 1 hour and 4 hours (between 24 and 6 times a day)
 				int randomTimeWait = random.Next(3600, 14401) * 1000;
 
@@ -95,7 +97,7 @@ namespace StormBot.Services
 				int seconds = totalSeconds % 60;
 
 				if (server.AllowServerPermissionStorms && server.ToggleStorms)
-					Console.WriteLine($"\nThe next Storm in {server.ServerName} is in {hours} hours {minutes} minutes and {seconds} seconds.");
+					Console.WriteLine(logStamp + $"			The next Storm in {server.ServerName} is in {hours} hours {minutes} minutes and {seconds} seconds.");
 
 				await Task.Delay(randomTimeWait);
 
