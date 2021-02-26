@@ -49,6 +49,10 @@ namespace StormBot.Database.Entities
 		public ulong ModernWarfareKillsRoleID { get; set; }
 
 		public ulong BlackOpsColdWarKillsRoleID { get; set; }
+
+		public ulong StormsMostResetsRoleID { get; set; }
+
+		public ulong StormsMostRecentResetRoleID { get; set; }
 		#endregion
 	}
 }

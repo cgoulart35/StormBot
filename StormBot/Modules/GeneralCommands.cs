@@ -63,7 +63,9 @@ namespace StormBot.Modules
 **Black Ops Cold War kills role:** <@&{10}>
 **Modern Warfare kills role:** <@&{11}>
 **Warzone wins role:** <@&{12}>
-**Warzone kills role:** <@&{13}>", serverData.PrefixUsed, serverData.ToggleBlackOpsColdWarTracking ? "On" : "Off", serverData.ToggleModernWarfareTracking ? "On" : "Off", serverData.ToggleWarzoneTracking ? "On" : "Off", serverData.ToggleSoundpadCommands ? "On" : "Off", serverData.ToggleStorms ? "On" : "Off", serverData.CallOfDutyNotificationChannelID, serverData.SoundboardNotificationChannelID, serverData.StormsNotificationChannelID, serverData.AdminRoleID, serverData.BlackOpsColdWarKillsRoleID, serverData.ModernWarfareKillsRoleID, serverData.WarzoneWinsRoleID, serverData.WarzoneKillsRoleID);
+**Warzone kills role:** <@&{13}>
+**Most Storm resets role:** <@&{14}>
+**Latest Storm reset role:** <@&{15}>", serverData.PrefixUsed, serverData.ToggleBlackOpsColdWarTracking ? "On" : "Off", serverData.ToggleModernWarfareTracking ? "On" : "Off", serverData.ToggleWarzoneTracking ? "On" : "Off", serverData.ToggleSoundpadCommands ? "On" : "Off", serverData.ToggleStorms ? "On" : "Off", serverData.CallOfDutyNotificationChannelID, serverData.SoundboardNotificationChannelID, serverData.StormsNotificationChannelID, serverData.AdminRoleID, serverData.BlackOpsColdWarKillsRoleID, serverData.ModernWarfareKillsRoleID, serverData.WarzoneWinsRoleID, serverData.WarzoneKillsRoleID, serverData.StormsMostResetsRoleID, serverData.StormsMostRecentResetRoleID);
 
                     await ReplyAsync(message);
                 }
@@ -667,6 +669,100 @@ namespace StormBot.Modules
                 await ReplyAsync("This command can only be executed in servers.");
         }
 
+        // admin role command
+        [Command("config role storms most", RunMode = RunMode.Async)]
+        public async Task ConfigRoleStormMostCommand(params string[] args)
+        {
+            if (!Context.IsPrivate)
+            {
+                if (await _stormsService.GetServerAllowServerPermissionStorms(Context) && await _stormsService.GetServerToggleStorms(Context))
+                {
+                    await Context.Channel.TriggerTypingAsync();
+
+                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(_db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                    {
+                        await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
+                    }
+                    else
+                    {
+                        try
+                        {
+                            string input = GetSingleArg(args);
+                            ulong discordRoleID = GetDiscordID(input, false, false);
+
+                            ServersEntity serverData = await _db.Servers
+                                .AsQueryable()
+                                .Where(s => s.ServerID == Context.Guild.Id)
+                                .SingleAsync();
+
+                            if (serverData.StormsMostResetsRoleID != discordRoleID)
+                            {
+                                serverData.StormsMostResetsRoleID = discordRoleID;
+                                await _db.SaveChangesAsync();
+
+                                await ReplyAsync($"The Storms role for the most resets has been set to: <@&{discordRoleID}>");
+                            }
+                            else
+                                await ReplyAsync("The server is already using this role for the most Storm resets.");
+                        }
+                        catch
+                        {
+                            await ReplyAsync("Please provide a valid Discord role.");
+                        }
+                    }
+                }
+            }
+            else
+                await ReplyAsync("This command can only be executed in servers.");
+        }
+
+        // admin role command
+        [Command("config role storms recent", RunMode = RunMode.Async)]
+        public async Task ConfigRoleStormRecentCommand(params string[] args)
+        {
+            if (!Context.IsPrivate)
+            {
+                if (await _stormsService.GetServerAllowServerPermissionStorms(Context) && await _stormsService.GetServerToggleStorms(Context))
+                {
+                    await Context.Channel.TriggerTypingAsync();
+
+                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(_db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                    {
+                        await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
+                    }
+                    else
+                    {
+                        try
+                        {
+                            string input = GetSingleArg(args);
+                            ulong discordRoleID = GetDiscordID(input, false, false);
+
+                            ServersEntity serverData = await _db.Servers
+                                .AsQueryable()
+                                .Where(s => s.ServerID == Context.Guild.Id)
+                                .SingleAsync();
+
+                            if (serverData.StormsMostRecentResetRoleID != discordRoleID)
+                            {
+                                serverData.StormsMostRecentResetRoleID = discordRoleID;
+                                await _db.SaveChangesAsync();
+
+                                await ReplyAsync($"The Storms role for the most recent reset has been set to: <@&{discordRoleID}>");
+                            }
+                            else
+                                await ReplyAsync("The server is already using this role for the most recent Storm reset.");
+                        }
+                        catch
+                        {
+                            await ReplyAsync("Please provide a valid Discord role.");
+                        }
+                    }
+                }
+            }
+            else
+                await ReplyAsync("This command can only be executed in servers.");
+        }
+
         [Command("help", RunMode = RunMode.Async)]
         public async Task HelpCommand(params string[] args)
         {
@@ -834,7 +930,9 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
 '**{0}config role bocw kills [role]**' to set the server's role for the most weekly Black Ops Cold War kills __if you are a StormBot administrator__.
 '**{0}config role mw kills [role]**' to set the server's role for the most weekly Modern Warfare kills __if you are a StormBot administrator__.
 '**{0}config role wz wins [role]**' to set the server's role for the most Warzone wins __if you are a StormBot administrator__.
-'**{0}config role wz kills [role]**' to set the server's role for the most weekly Warzone kills __if you are a StormBot administrator__.", await GetServerPrefix(_db));
+'**{0}config role wz kills [role]**' to set the server's role for the most weekly Warzone kills __if you are a StormBot administrator__.
+'**{0}config role storms most [role]**' to set the server's role for the most Storm resets __if you are a StormBot administrator__.
+'**{0}config role storms recent [role]**' to set the server's role for the most recent Storm reset __if you are a StormBot administrator__.", await GetServerPrefix(_db));
             }
         }
 
@@ -850,10 +948,14 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
                     return string.Format("\n\n" + @"__**Help: Storm Commands**__
 
 '**{0}umbrella**' to start the incoming Storm and earn {1} points.
-'**{0}guess [number]**' to make a guess with a winning reward of {2} points.
-'**{0}bet [points] [number]**' to make a guess. If you win, you earn the amount of points bet within your wallet. If you lose, you lose those points.
+'**{0}guess [number]**' to make a guess with a winning reward of {2} points. (__during Storm only__)
+'**{0}bet [points] [number]**' to make a guess. If you win, you earn the amount of points bet within your wallet. If you lose, you lose those points. (__during Storm only__)
+'**{0}buy insurance**' to buy insurance for {3} points to protect your wallet from disasters.
+'**{0}cause disaster**' to cause a disaster for {4} points for a random player. Their wallet will be reset if they are not insured. (__during Storm only__)
+'**{0}steal**' to steal {5} points from the player with the most points. (__during Storm only__)
 '**{0}wallet**' to show how many points you have in your wallet.
-'**{0}wallets**' to show how many points everyone has.", await GetServerPrefix(_db), _stormsService.levelOneReward, _stormsService.levelTwoReward);
+'**{0}wallets**' to show how many points everyone has.
+'**{0}resets**' to show how many resets everyone has.", await GetServerPrefix(_db), _stormsService.levelOneReward, _stormsService.levelTwoReward, _stormsService.insuranceCost, _stormsService.disasterCost, _stormsService.stealAmount);
                 }
                 else
                     return null;

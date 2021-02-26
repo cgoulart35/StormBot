@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
 using StormBot.Database;
 using StormBot.Database.Entities;
@@ -53,6 +54,27 @@ namespace StormBot.Services
 		public string GetLogStamp()
 		{
 			return DateTime.Now.ToString("HH:mm:ss ") + Name;
+		}
+
+		public async Task UnassignRoleFromAllMembers(ulong roleID, SocketGuild guild)
+		{
+			var role = guild.GetRole(roleID);
+			IEnumerable<SocketGuildUser> roleMembers = guild.GetRole(roleID).Members;
+			foreach (SocketGuildUser roleMember in roleMembers)
+			{
+				await roleMember.RemoveRoleAsync(role);
+			}
+		}
+
+		public async Task GiveUsersRole(ulong roleID, List<ulong> discordIDs, SocketGuild guild)
+		{
+			var role = guild.GetRole(roleID);
+
+			foreach (ulong discordID in discordIDs)
+			{
+				var roleMember = guild.GetUser(discordID);
+				await roleMember.AddRoleAsync(role);
+			}
 		}
 
 		#region QUERIES

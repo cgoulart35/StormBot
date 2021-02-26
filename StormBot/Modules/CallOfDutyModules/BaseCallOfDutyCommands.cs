@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Discord;
-using Discord.WebSocket;
 using StormBot.Services;
 using StormBot.Database.Entities;
 
@@ -10,27 +9,6 @@ namespace StormBot.Modules.CallOfDutyModules
 {
 	public class BaseCallOfDutyCommands : BaseCommand
 	{
-        public async Task UnassignRoleFromAllMembers(ulong roleID, SocketGuild guild)
-        {
-            var role = guild.GetRole(roleID);
-            IEnumerable<SocketGuildUser> roleMembers = guild.GetRole(roleID).Members;
-            foreach (SocketGuildUser roleMember in roleMembers)
-            {
-                await roleMember.RemoveRoleAsync(role);
-            }
-        }
-
-        public async Task GiveUsersRole(ulong roleID, List<ulong> discordIDs, SocketGuild guild)
-        {
-            var role = guild.GetRole(roleID);
-
-            foreach (ulong discordID in discordIDs)
-            {
-                var roleMember = guild.GetUser(discordID);
-                await roleMember.AddRoleAsync(role);
-            }
-        }
-
         public async Task<bool> AddAParticipant(CallOfDutyService service, ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
         {
             CallOfDutyPlayerDataEntity newAccount = new CallOfDutyPlayerDataEntity();

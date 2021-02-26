@@ -11,5 +11,9 @@ namespace StormBot.Database.Entities
 		public ulong DiscordID { get; set; }
 
 		public double Wallet { get; set; }
+
+		public int ResetCount { get; set; }
+
+		public bool HasInsurance { get; set; }
 	}
 }

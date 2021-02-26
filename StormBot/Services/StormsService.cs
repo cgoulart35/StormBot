@@ -27,9 +27,16 @@ namespace StormBot.Services
 		public Emoji umbrella2;
 		public Emoji white_sun_rain_cloud;
 		public Emoji sun_with_face;
+		public Emoji rotating_light;
 
 		public double levelOneReward = 1;
 		public double levelTwoReward = 2;
+
+		public double resetMark = 50000;
+		public double resetBalance = 10;
+		public double insuranceCost = 100;
+		public double disasterCost = 1500;
+		public double stealAmount = 5;
 
 		public List<IUserMessage> purgeCollection;
 
@@ -52,6 +59,7 @@ namespace StormBot.Services
 			umbrella2 = new Emoji("☂️");
 			white_sun_rain_cloud = new Emoji("🌦️");
 			sun_with_face = new Emoji("🌞");
+			rotating_light = new Emoji("🚨");
 			
 			levelOneReward = 1;
 			levelTwoReward = 2;
@@ -181,7 +189,7 @@ First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute 
 				await EndStorm(channelId);
 		}
 
-		public async Task TryToUpdateOngoingStorm(ulong serverId, ulong discordId, ulong channelId, int inputLevel, int? guess = null, double? bet = null)
+		public async Task TryToUpdateOngoingStorm(SocketGuild guild, ulong serverId, ulong discordId, ulong channelId, int inputLevel, int? guess = null, double? bet = null)
 		{
 			int actualLevel;
 
@@ -204,9 +212,17 @@ First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute 
 __**First to guess the winning number correctly between 1 and 200 earns points!**__
 Use '**{0}guess [number]**' to make a guess with a winning reward of {1} points!
 Use '**{0}bet [points] [number]**' to make a guess. If you win, you earn the amount of points bet within your wallet. If you lose, you lose those points.
+
+Use '**{0}buy insurance**' to buy insurance for {2} points to protect your wallet from disasters.
+Use '**{0}cause disaster**' to cause a disaster for {3} points for a random player. Their wallet will be reset if they are not insured.
+Use '**{0}steal**' to steal {4} points from the player with the most points.
+
 Use '**{0}wallet**' to show how many points you have in your wallet!
 Use '**{0}wallets**' to show how many points everyone has!
-Points earned are multiplied if you guess within 4 guesses!", await GetServerPrefix(serverId), levelTwoReward)));
+Use '**{0}resets**' to show how many resets everyone has.
+
+Points earned are multiplied if you guess within 4 guesses!
+All wallets are reset to {5} points once someone reaches {6} points.", await GetServerPrefix(serverId), levelTwoReward, insuranceCost, disasterCost, stealAmount, resetBalance, resetMark)));
 
 						// update storm to level 2
 						OngoingStormsLevel[channelId] = 2;
@@ -259,7 +275,7 @@ Points earned are multiplied if you guess within 4 guesses!", await GetServerPre
 
 							// end storm at level 3
 							OngoingStormsLevel[channelId] = 3;
-							await EndStorm(channelId);
+							EndStorm(channelId);
 						}
 						else
 						{
@@ -303,6 +319,70 @@ Points earned are multiplied if you guess within 4 guesses!", await GetServerPre
 			}
 		}
 
+		public async Task CheckForReset(SocketGuild guild, ulong serverId, ulong discordId, ulong channelId)
+		{
+			StormPlayerDataEntity playerData = await GetStormPlayerDataEntity(serverId, discordId);
+
+			// increment players reset count, set everyones wallets back to base amount, and give appropriate roles
+			if (playerData.Wallet >= resetMark)
+			{
+				playerData.ResetCount++;
+
+				// give everyone the base wallet amount and no insurance
+				await HandleReset(serverId);
+
+				await _db.SaveChangesAsync();
+
+				ulong mostRecentRoleID = await GetStormsMostRecentResetRoleID(serverId);
+				ulong mostResetsRoleID = await GetStormsMostResetsRoleID(serverId);
+
+				// unassign both roles from everyone
+				await UnassignRoleFromAllMembers(mostResetsRoleID, guild);
+				await UnassignRoleFromAllMembers(mostRecentRoleID, guild);
+
+				// assign most recent reset role to the resetting player
+				List<ulong> resettingPlayer = new List<ulong>();
+				resettingPlayer.Add(playerData.DiscordID);
+				await GiveUsersRole(mostRecentRoleID, resettingPlayer, guild);
+
+				// assign the most resets role to the player(s) with the most resets
+				List<StormPlayerDataEntity> allPlayerData = await GetAllStormPlayerDataEntities(serverId);
+				int topScore = allPlayerData.OrderByDescending(player => player.ResetCount).First().ResetCount;
+				List<ulong> topPlayersDiscordIDs = allPlayerData.Where(player => player.ResetCount == topScore).Select(player => player.DiscordID).ToList();
+				await GiveUsersRole(mostResetsRoleID, topPlayersDiscordIDs, guild);
+
+				string topPlayersStr = "";
+				foreach (ulong DiscordID in topPlayersDiscordIDs)
+				{
+					topPlayersStr += string.Format(@"<@!{0}>, ", DiscordID);
+				}
+
+				// display reset message and post role announcements; this message is rare and therefore is not purged with other messages
+				await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(rotating_light.ToString() + rotating_light.ToString() + rotating_light.ToString() + " __**RESET TRIGGERED**__ " + rotating_light.ToString() + rotating_light.ToString() + rotating_light.ToString() + string.Format(@"
+
+Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have been given the <@&{2}> role. Everyone now has {3} points in their wallet and no insurance.
+
+{4}you currently have the <@&{5}> role.", playerData.DiscordID, resetMark, mostRecentRoleID, resetBalance, topPlayersStr, mostResetsRoleID));
+			}
+		}
+
+		public async Task HandleReset(ulong serverId)
+		{
+			List<StormPlayerDataEntity> playerData = await GetAllStormPlayerDataEntities(serverId);
+
+			foreach (StormPlayerDataEntity player in playerData)
+			{
+				player.Wallet = resetBalance;
+				player.HasInsurance = false;
+			}
+		}
+
+		public bool IsOngoingStorm(ulong channelId)
+		{
+			int actualLevel;
+			return OngoingStormsLevel.TryGetValue(channelId, out actualLevel);
+		}
+
 		#region QUERIES
 		public async Task<StormPlayerDataEntity> AddPlayerToDbTableIfNotExist(ulong serverID, ulong discordID)
 		{
@@ -314,7 +394,9 @@ Points earned are multiplied if you guess within 4 guesses!", await GetServerPre
 				{
 					ServerID = serverID,
 					DiscordID = discordID,
-					Wallet = 0
+					Wallet = 0,
+					ResetCount = 0,
+					HasInsurance = false
 				};
 
 				_db.StormPlayerData.Add(newPlayerData);
@@ -379,6 +461,24 @@ Points earned are multiplied if you guess within 4 guesses!", await GetServerPre
 			}
 			else
 				return true;
+		}
+
+		public async Task<ulong> GetStormsMostResetsRoleID(ulong serverId)
+		{
+			return await _db.Servers
+				.AsQueryable()
+				.Where(s => s.ServerID == serverId)
+				.Select(s => s.StormsMostResetsRoleID)
+				.SingleOrDefaultAsync();
+		}
+
+		public async Task<ulong> GetStormsMostRecentResetRoleID(ulong serverId)
+		{
+			return await _db.Servers
+				.AsQueryable()
+				.Where(s => s.ServerID == serverId)
+				.Select(s => s.StormsMostRecentResetRoleID)
+				.SingleOrDefaultAsync();
 		}
 		#endregion
 	}

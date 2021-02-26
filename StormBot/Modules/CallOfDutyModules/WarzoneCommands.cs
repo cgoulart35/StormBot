@@ -139,8 +139,8 @@ namespace StormBot.Modules.CallOfDutyModules
                     string roleStr = "";
                     if (roleID != 0)
                     {
-                        await UnassignRoleFromAllMembers(roleID, guild);
-                        await GiveUsersRole(roleID, topPlayersDiscordIDs, guild);
+                        await _service.UnassignRoleFromAllMembers(roleID, guild);
+                        await _service.GiveUsersRole(roleID, topPlayersDiscordIDs, guild);
                         roleStr = $" You have been assigned the role <@&{roleID}>!";
                     }
 
@@ -252,8 +252,8 @@ namespace StormBot.Modules.CallOfDutyModules
                     ulong roleID = await _service.GetServerWarzoneWinsRoleID(guild.Id);
                     if (updateRoles && roleID != 0)
                     {
-                        await UnassignRoleFromAllMembers(roleID, guild);
-                        await GiveUsersRole(roleID, topPlayersDiscordIDs, guild);
+                        await _service.UnassignRoleFromAllMembers(roleID, guild);
+                        await _service.GiveUsersRole(roleID, topPlayersDiscordIDs, guild);
 
                         output = ValidateOutputLimit(output, $" You have been assigned the role <@&{roleID}>!");
                     }
