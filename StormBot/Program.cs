@@ -252,7 +252,9 @@ namespace StormBot
                 WarzoneWinsRoleID = 0,
                 WarzoneKillsRoleID = 0,
                 ModernWarfareKillsRoleID = 0,
-                BlackOpsColdWarKillsRoleID = 0
+                BlackOpsColdWarKillsRoleID = 0,
+                StormsMostResetsRoleID = 0,
+                StormsMostRecentResetRoleID = 0
             };
 
             _db.Servers.Add(newServerData);
