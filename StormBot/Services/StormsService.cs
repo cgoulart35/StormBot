@@ -19,6 +19,7 @@ namespace StormBot.Services
 		private Dictionary<ulong, int> OngoingStormsLevel;
 		private Dictionary<ulong, int> OngoingStormsWinningNumber;
 		private Dictionary<ulong, Dictionary<ulong, int>> OngoingStormsUserGuessCount;
+		private Dictionary<ulong, List<ulong>> OngoingStormsUsersWaitingForStealTimeLimit;
 
 		private Random random;
 
@@ -29,14 +30,14 @@ namespace StormBot.Services
 		public Emoji sun_with_face;
 		public Emoji rotating_light;
 
-		public double levelOneReward = 1;
-		public double levelTwoReward = 2;
-
-		public double resetMark = 50000;
+		public double levelOneReward = 10;
+		public double levelTwoReward = 50;
 		public double resetBalance = 10;
-		public double insuranceCost = 100;
-		public double disasterCost = 1500;
+		public double resetMark = 50000;
+		public double disasterMark = 2000;
+		public double insuranceCost = 1000;
 		public double stealAmount = 5;
+		public int stealTimeLimitInSeconds = 10;
 
 		public List<IUserMessage> purgeCollection;
 
@@ -51,6 +52,7 @@ namespace StormBot.Services
 			OngoingStormsLevel = new Dictionary<ulong, int>();
 			OngoingStormsWinningNumber = new Dictionary<ulong, int>();
 			OngoingStormsUserGuessCount = new Dictionary<ulong, Dictionary<ulong, int>>();
+			OngoingStormsUsersWaitingForStealTimeLimit = new Dictionary<ulong, List<ulong>>();
 
 			random = new Random();
 
@@ -60,9 +62,6 @@ namespace StormBot.Services
 			white_sun_rain_cloud = new Emoji("🌦️");
 			sun_with_face = new Emoji("🌞");
 			rotating_light = new Emoji("🚨");
-			
-			levelOneReward = 1;
-			levelTwoReward = 2;
 
 			purgeCollection = new List<IUserMessage>();
 	}
@@ -140,6 +139,9 @@ namespace StormBot.Services
 			Dictionary<ulong, int> UserGuessCountsInServer = new Dictionary<ulong, int>();
 			OngoingStormsUserGuessCount.Add(channelId, UserGuessCountsInServer);
 
+			List<ulong> UsersWaitingInServerForSteal = new List<ulong>();
+			OngoingStormsUsersWaitingForStealTimeLimit.Add(channelId, UsersWaitingInServerForSteal);
+
 			purgeCollection.Add(await((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(cloud_rain.ToString() + thunder_cloud_rain.ToString() + umbrella2.ToString() + " __**STORM INCOMING**__ " + umbrella2.ToString() + thunder_cloud_rain.ToString() + cloud_rain.ToString() + string.Format(@"
 
 First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute countdown starting now!", await GetServerPrefix(serverId), levelOneReward)));
@@ -149,17 +151,21 @@ First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute 
 
 		public async Task EndStorm(ulong channelId)
 		{
-			OngoingStormsLevel.Remove(channelId);
+			bool wasRemoved = OngoingStormsLevel.Remove(channelId);
 			OngoingStormsWinningNumber.Remove(channelId);
 			OngoingStormsUserGuessCount.Remove(channelId);
+			OngoingStormsUsersWaitingForStealTimeLimit.Remove(channelId);
 
-			purgeCollection.Add(await((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(sun_with_face.ToString() + sun_with_face.ToString() + sun_with_face.ToString() + " __**STORM OVER**__ " + sun_with_face.ToString() + sun_with_face.ToString() + sun_with_face.ToString()));
+			if (wasRemoved)
+			{
+				purgeCollection.Add(await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(sun_with_face.ToString() + sun_with_face.ToString() + sun_with_face.ToString() + " __**STORM OVER**__ " + sun_with_face.ToString() + sun_with_face.ToString() + sun_with_face.ToString()));
 
-			// wait 1 minute
-			await Task.Delay(60 * 1000);
+				// wait 1 minute
+				await Task.Delay(60 * 1000);
 
-			// delete all messages added to purge collection
-			await ((ITextChannel)_client.GetChannel(channelId)).DeleteMessagesAsync(purgeCollection);
+				// delete all messages added to purge collection
+				await ((ITextChannel)_client.GetChannel(channelId)).DeleteMessagesAsync(purgeCollection);
+			}
 		}
 
 		public async Task StartStormCountdown(ulong channelId)
@@ -189,6 +195,14 @@ First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute 
 				await EndStorm(channelId);
 		}
 
+		public async Task StartUsersStealTimeLimitCountdown(ulong channelId, ulong discordId)
+		{
+			// wait x seconds before removal from waitlist
+			await Task.Delay(stealTimeLimitInSeconds * 1000);
+
+			OngoingStormsUsersWaitingForStealTimeLimit[channelId].Remove(discordId);
+		}
+
 		public async Task TryToUpdateOngoingStorm(SocketGuild guild, ulong serverId, ulong discordId, ulong channelId, int inputLevel, int? guess = null, double? bet = null)
 		{
 			int actualLevel;
@@ -200,6 +214,7 @@ First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute 
 				if (actualLevel == inputLevel)
 				{
 					StormPlayerDataEntity playerData = await GetStormPlayerDataEntity(serverId, discordId);
+					bool hadDisasterMark = playerData.Wallet >= disasterMark;
 
 					if (actualLevel == 1)
 					{
@@ -212,17 +227,16 @@ First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute 
 __**First to guess the winning number correctly between 1 and 200 earns points!**__
 Use '**{0}guess [number]**' to make a guess with a winning reward of {1} points!
 Use '**{0}bet [points] [number]**' to make a guess. If you win, you earn the amount of points bet within your wallet. If you lose, you lose those points.
+Use '**{0}steal**' to steal {2} points from the player with the most points.
 
-Use '**{0}buy insurance**' to buy insurance for {2} points to protect your wallet from disasters.
-Use '**{0}cause disaster**' to cause a disaster for {3} points for a random player. Their wallet will be reset if they are not insured.
-Use '**{0}steal**' to steal {4} points from the player with the most points.
-
+Use '**{0}buy insurance**' to buy insurance for {3} points to protect your wallet from disasters.
 Use '**{0}wallet**' to show how many points you have in your wallet!
 Use '**{0}wallets**' to show how many points everyone has!
 Use '**{0}resets**' to show how many resets everyone has.
 
 Points earned are multiplied if you guess within 4 guesses!
-All wallets are reset to {5} points once someone reaches {6} points.", await GetServerPrefix(serverId), levelTwoReward, insuranceCost, disasterCost, stealAmount, resetBalance, resetMark)));
+When anyone reaches {4} points, a disaster will occur for a random player. Their wallet will be reset to {5} points if they are not insured.
+All wallets are reset to {5} points once someone reaches {6} points.", await GetServerPrefix(serverId), levelTwoReward, stealAmount, insuranceCost, disasterMark, resetBalance, resetMark)));
 
 						// update storm to level 2
 						OngoingStormsLevel[channelId] = 2;
@@ -315,21 +329,85 @@ All wallets are reset to {5} points once someone reaches {6} points.", await Get
 							purgeCollection.Add(await((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(message));
 						}
 					}
+
+					await CheckForReset(guild, serverId, discordId, channelId);
+					await CheckForDisaster(serverId, discordId, channelId, hadDisasterMark);
 				}
 			}
 		}
 
-		public async Task CheckForReset(SocketGuild guild, ulong serverId, ulong discordId, ulong channelId)
+		public async Task TryToSteal(SocketGuild guild, ulong serverId, ulong discordId, ulong channelId)
+		{
+			int actualLevel;
+
+			// make sure that there is an ongoing storm on level two
+			if (OngoingStormsLevel.TryGetValue(channelId, out actualLevel) && actualLevel == 2)
+			{
+				// make sure user has not stolen in the last ten seconds
+				if (!OngoingStormsUsersWaitingForStealTimeLimit[channelId].Contains(discordId))
+				{
+					// add user to list of users waiting and trigger removal after set time in seconds
+					OngoingStormsUsersWaitingForStealTimeLimit[channelId].Add(discordId);
+					StartUsersStealTimeLimitCountdown(channelId, discordId);
+
+					StormPlayerDataEntity playerData = await AddPlayerToDbTableIfNotExist(serverId, discordId);
+					bool hadDisasterMark = playerData.Wallet >= disasterMark;
+
+					List<StormPlayerDataEntity> allPlayerData = await GetAllStormPlayerDataEntities(serverId);
+					StormPlayerDataEntity topPlayer = allPlayerData.OrderByDescending(player => player.Wallet).First();
+
+					// do not let users steal from themselves
+					//if (topPlayer.DiscordID != discordId)
+					//{
+						// set top player's wallet and criminal's wallet
+						double oldWallet = topPlayer.Wallet;
+						double newWallet = oldWallet - stealAmount;
+						double diff;
+						if (newWallet < 0)
+						{
+							topPlayer.Wallet = 0;
+							diff = oldWallet;
+						}
+						else
+						{
+							topPlayer.Wallet = newWallet;
+							diff = stealAmount;
+						}
+
+						playerData.Wallet += diff;
+
+						await _db.SaveChangesAsync();
+
+						purgeCollection.Add(await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you stole {diff} points from <@!{topPlayer.DiscordID}>!"));
+
+						await CheckForReset(guild, serverId, discordId, channelId);
+						await CheckForDisaster(serverId, discordId, channelId, hadDisasterMark);
+					//}
+				}
+				else
+					purgeCollection.Add(await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, please wait {stealTimeLimitInSeconds} seconds before stealing again."));
+			}
+		}
+
+		private async Task CheckForReset(SocketGuild guild, ulong serverId, ulong discordId, ulong channelId)
 		{
 			StormPlayerDataEntity playerData = await GetStormPlayerDataEntity(serverId, discordId);
 
 			// increment players reset count, set everyones wallets back to base amount, and give appropriate roles
 			if (playerData.Wallet >= resetMark)
 			{
+				// end the ongoing storm if there is a reset
+				EndStorm(channelId);
+
 				playerData.ResetCount++;
 
 				// give everyone the base wallet amount and no insurance
-				await HandleReset(serverId);
+				List<StormPlayerDataEntity> allPlayerData = await GetAllStormPlayerDataEntities(serverId);
+				foreach (StormPlayerDataEntity player in allPlayerData)
+				{
+					player.Wallet = resetBalance;
+					player.HasInsurance = false;
+				}
 
 				await _db.SaveChangesAsync();
 
@@ -346,7 +424,6 @@ All wallets are reset to {5} points once someone reaches {6} points.", await Get
 				await GiveUsersRole(mostRecentRoleID, resettingPlayer, guild);
 
 				// assign the most resets role to the player(s) with the most resets
-				List<StormPlayerDataEntity> allPlayerData = await GetAllStormPlayerDataEntities(serverId);
 				int topScore = allPlayerData.OrderByDescending(player => player.ResetCount).First().ResetCount;
 				List<ulong> topPlayersDiscordIDs = allPlayerData.Where(player => player.ResetCount == topScore).Select(player => player.DiscordID).ToList();
 				await GiveUsersRole(mostResetsRoleID, topPlayersDiscordIDs, guild);
@@ -366,21 +443,48 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 			}
 		}
 
-		public async Task HandleReset(ulong serverId)
+		private async Task CheckForDisaster(ulong serverId, ulong discordId, ulong channelId, bool hadDisasterMark)
 		{
-			List<StormPlayerDataEntity> playerData = await GetAllStormPlayerDataEntities(serverId);
+			StormPlayerDataEntity playerData = await GetStormPlayerDataEntity(serverId, discordId);
 
-			foreach (StormPlayerDataEntity player in playerData)
+			if (playerData.Wallet >= disasterMark && !hadDisasterMark)
 			{
-				player.Wallet = resetBalance;
-				player.HasInsurance = false;
-			}
-		}
+				// reset random player's wallet if they are uninsured
+				List<StormPlayerDataEntity> allPlayerData = await GetAllStormPlayerDataEntities(serverId);
+				Random random = new Random();
+				int randomIndex = random.Next(0, allPlayerData.Count);
 
-		public bool IsOngoingStorm(ulong channelId)
-		{
-			int actualLevel;
-			return OngoingStormsLevel.TryGetValue(channelId, out actualLevel);
+				string theyYouStr = "";
+				string theirYour = "";
+				string onPersonAffected = "";
+				if (allPlayerData[randomIndex].DiscordID == discordId)
+				{
+					theyYouStr = " You";
+					theirYour = " your";
+					onPersonAffected = " on yourself";
+				}
+				else
+				{
+					theyYouStr = " They";
+					theirYour = " their";
+					onPersonAffected = $" for <@!{allPlayerData[randomIndex].DiscordID}>";
+				}
+
+				string insuredOrNotStr = "";
+				if (!allPlayerData[randomIndex].HasInsurance)
+				{
+					insuredOrNotStr = theyYouStr + " were not insured and" + theirYour + " wallet has been reset!";
+					allPlayerData[randomIndex].Wallet = resetBalance;
+				}
+				else
+				{
+					insuredOrNotStr = " However," + theyYouStr + " were insured and not affected.";
+				}
+
+				await _db.SaveChangesAsync();
+
+				purgeCollection.Add(await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you caused a disaster" + onPersonAffected + $" since you passed {disasterMark} points!" + insuredOrNotStr));
+			}
 		}
 
 		#region QUERIES

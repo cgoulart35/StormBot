@@ -2,7 +2,7 @@
 
 StormBot is a Discord server bot that has functionality for competitive Storm mini-games, remote and automated Soundpad control (the soundboard program available on Steam), and Call of Duty statistic tracking (Black Ops Cold War, Modern Warfare, and Warzone).
 
-The latest version 2.3 added resets to the Storms mini-game, and also added the ability to buy insurance, cause random disasters, and steal points from the top player.
+The latest version 2.3 added resets and disasters to the Storms mini-game, and also added the ability to buy insurance and steal points from the top player.
 
 Version 2.2 enabled the Soundpad service on Remote Boot Mode. The StormBot Soundpad API (https://github.com/cgoulart35/StormBotSoundpadApi) can be hosted on the same machine where Soundpad is installed. This application will communicate with StormBot via web requests for remote use of the soundboard (use case; when hosting the bot 24/7 on a Raspberry Pi).
 
@@ -69,11 +69,9 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
 
 - **'.bet [points] [number]'** to make a guess. If you win, you earn the amount of points bet within your wallet. If you lose, you lose those points. (during Storm only)
 
-- **'.buy insurance'** to buy insurance for y1 points to protect your wallet from disasters.
+- **'.steal'** to steal x3 points from the player with the most points. (during Storm only)
 
-- **'.cause disaster'** to cause a disaster for y2 points for a random player. Their wallet will be reset if they are not insured. (during Storm only)
-
-- **'.steal'** to steal y3 points from the player with the most points. (during Storm only)
+- **'.buy insurance'** to buy insurance for x4 points to protect your wallet from disasters.
 
 - **'.wallet'** to show how many points you have in your wallet.
 

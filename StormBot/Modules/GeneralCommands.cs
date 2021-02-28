@@ -950,12 +950,11 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
 '**{0}umbrella**' to start the incoming Storm and earn {1} points.
 '**{0}guess [number]**' to make a guess with a winning reward of {2} points. (__during Storm only__)
 '**{0}bet [points] [number]**' to make a guess. If you win, you earn the amount of points bet within your wallet. If you lose, you lose those points. (__during Storm only__)
-'**{0}buy insurance**' to buy insurance for {3} points to protect your wallet from disasters.
-'**{0}cause disaster**' to cause a disaster for {4} points for a random player. Their wallet will be reset if they are not insured. (__during Storm only__)
-'**{0}steal**' to steal {5} points from the player with the most points. (__during Storm only__)
+'**{0}steal**' to steal {3} points from the player with the most points. (__during Storm only__)
+'**{0}buy insurance**' to buy insurance for {4} points to protect your wallet from disasters.
 '**{0}wallet**' to show how many points you have in your wallet.
 '**{0}wallets**' to show how many points everyone has.
-'**{0}resets**' to show how many resets everyone has.", await GetServerPrefix(_db), _stormsService.levelOneReward, _stormsService.levelTwoReward, _stormsService.insuranceCost, _stormsService.disasterCost, _stormsService.stealAmount);
+'**{0}resets**' to show how many resets everyone has.", await GetServerPrefix(_db), _stormsService.levelOneReward, _stormsService.levelTwoReward, _stormsService.stealAmount, _stormsService.insuranceCost);
                 }
                 else
                     return null;

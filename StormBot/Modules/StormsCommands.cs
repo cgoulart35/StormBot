@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
-using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using StormBot.Services;
@@ -51,8 +50,6 @@ namespace StormBot.Modules
                         await _service.AddPlayerToDbTableIfNotExist(serverId, discordId);
 
                         await _service.TryToUpdateOngoingStorm(guild, serverId, discordId, channelId, 1);
-
-                        await _service.CheckForReset(guild, serverId, discordId, channelId);
                     }
                 }
             }
@@ -89,8 +86,6 @@ namespace StormBot.Modules
                                     await _service.AddPlayerToDbTableIfNotExist(serverId, discordId);
 
                                     await _service.TryToUpdateOngoingStorm(guild, serverId, discordId, channelId, 2, guess);
-
-                                    await _service.CheckForReset(guild, serverId, discordId, channelId);
                                 }
                                 else
                                     _service.purgeCollection.Add(await ReplyAsync($"<@!{discordId}>, please provide a guess between 1 and 200."));
@@ -143,14 +138,36 @@ namespace StormBot.Modules
                                     else
                                     {
                                         await _service.TryToUpdateOngoingStorm(guild, serverId, discordId, channelId, 2, guess, bet);
-
-                                        await _service.CheckForReset(guild, serverId, discordId, channelId);
                                     }
                                 }
                                 else
                                     _service.purgeCollection.Add(await ReplyAsync($"<@!{discordId}>, please provide a guess between 1 and 200."));
                             }
                         }
+                    }
+                }
+            }
+            else
+                await ReplyAsync("This command can only be executed in servers.");
+        }
+
+        [Command("steal", RunMode = RunMode.Async)]
+        public async Task StealCommand()
+        {
+            if (!Context.IsPrivate)
+            {
+                _service.purgeCollection.Add(Context.Message);
+
+                if (await _service.GetServerAllowServerPermissionStorms(Context) && await _service.GetServerToggleStorms(Context))
+                {
+                    if (DisableIfServiceNotRunning(_service, "steal"))
+                    {
+                        SocketGuild guild = Context.Guild;
+                        ulong serverId = Context.Guild.Id;
+                        ulong channelId = Context.Channel.Id;
+                        ulong discordId = Context.User.Id;
+
+                        await _service.TryToSteal(guild, serverId, discordId, channelId);
                     }
                 }
             }
@@ -189,133 +206,6 @@ namespace StormBot.Modules
                             await _service._db.SaveChangesAsync();
 
                             _service.purgeCollection.Add(await ReplyAsync($"<@!{discordId}>, you purchased insurance for {_service.insuranceCost} points."));
-                        }
-                    }
-                }
-            }
-            else
-                await ReplyAsync("This command can only be executed in servers.");
-        }
-
-        [Command("cause disaster", RunMode = RunMode.Async)]
-        public async Task CauseDisasterCommand()
-        {
-            if (!Context.IsPrivate)
-            {
-                _service.purgeCollection.Add(Context.Message);
-
-                if (await _service.GetServerAllowServerPermissionStorms(Context) && await _service.GetServerToggleStorms(Context))
-                {
-                    if (DisableIfServiceNotRunning(_service, "cause disaster"))
-                    {
-                        ulong serverId = Context.Guild.Id;
-                        ulong channelId = Context.Channel.Id;
-                        ulong discordId = Context.User.Id;
-
-                        StormPlayerDataEntity playerData = await _service.AddPlayerToDbTableIfNotExist(serverId, discordId);
-
-                        if (playerData.Wallet < _service.disasterCost)
-                        {
-                            _service.purgeCollection.Add(await ReplyAsync($"<@!{discordId}>, you have insufficient funds."));
-                        }
-                        else
-                        {
-                            if (_service.IsOngoingStorm(channelId))
-                            {
-                                playerData.Wallet -= _service.disasterCost;
-
-                                // reset random player's wallet if they are uninsured
-                                List<StormPlayerDataEntity> allPlayerData = await _service.GetAllStormPlayerDataEntities(Context.Guild.Id);
-                                Random random = new Random();
-                                int randomIndex = random.Next(0, allPlayerData.Count);
-
-                                string theyYouStr = "";
-                                string theirYour = "";
-                                string onPersonAffected = "";
-                                if (allPlayerData[randomIndex].DiscordID == discordId)
-                                {
-                                    theyYouStr = " You";
-                                    theirYour = " your";
-                                    onPersonAffected = " on yourself";
-                                }
-                                else
-                                {
-                                    theyYouStr = " They";
-                                    theirYour = " their";
-                                    onPersonAffected = $" for <@!{allPlayerData[randomIndex].DiscordID}>";
-                                }
-
-                                string insuredOrNotStr = "";
-                                if (!allPlayerData[randomIndex].HasInsurance)
-                                {
-                                    insuredOrNotStr = theyYouStr + " were not insured and" + theirYour + " wallet has been reset!";
-                                    allPlayerData[randomIndex].Wallet = _service.resetBalance;
-                                }
-                                else
-                                {
-                                    insuredOrNotStr = " However," + theyYouStr + " were insured and not affected.";
-                                }
-
-                                await _service._db.SaveChangesAsync();
-
-                                _service.purgeCollection.Add(await ReplyAsync($"<@!{discordId}>, you caused a disaster" + onPersonAffected + $" for {_service.disasterCost} points!" + insuredOrNotStr));
-                            }
-                        }
-                    }
-                }
-            }
-            else
-                await ReplyAsync("This command can only be executed in servers.");
-        }
-
-        [Command("steal", RunMode = RunMode.Async)]
-        public async Task StealCommand()
-        {
-            if (!Context.IsPrivate)
-            {
-                _service.purgeCollection.Add(Context.Message);
-
-                if (await _service.GetServerAllowServerPermissionStorms(Context) && await _service.GetServerToggleStorms(Context))
-                {
-                    if (DisableIfServiceNotRunning(_service, "steal"))
-                    {
-                        SocketGuild guild = Context.Guild;
-                        ulong serverId = Context.Guild.Id;
-                        ulong channelId = Context.Channel.Id;
-                        ulong discordId = Context.User.Id;
-
-                        if (_service.IsOngoingStorm(channelId))
-                        {
-                            StormPlayerDataEntity playerData = await _service.AddPlayerToDbTableIfNotExist(serverId, discordId);
-                            List<StormPlayerDataEntity> allPlayerData = await _service.GetAllStormPlayerDataEntities(serverId);
-                            StormPlayerDataEntity topPlayer = allPlayerData.OrderByDescending(player => player.Wallet).First();
-
-                            // do not let users steal from themselves
-                            if (topPlayer.DiscordID != discordId)
-                            {
-                                // set top player's wallet and criminal's wallet
-                                double oldWallet = topPlayer.Wallet;
-                                double newWallet = oldWallet - _service.stealAmount;
-                                double diff;
-                                if (newWallet < 0)
-                                {
-                                    topPlayer.Wallet = 0;
-                                    diff = oldWallet;
-                                }
-                                else
-                                {
-                                    topPlayer.Wallet = newWallet;
-                                    diff = _service.stealAmount;
-                                }
-
-                                //playerData.Wallet += diff;
-
-                                await _service._db.SaveChangesAsync();
-
-                                _service.purgeCollection.Add(await ReplyAsync($"<@!{discordId}>, you stole {diff} points from <@!{topPlayer.DiscordID}>!"));
-
-                                await _service.CheckForReset(guild, serverId, discordId, channelId);
-                            }
                         }
                     }
                 }
