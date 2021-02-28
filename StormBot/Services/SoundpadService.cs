@@ -174,11 +174,19 @@ namespace StormBot.Services
 
         public ConnectionStatus GetConnectionStatusAPI()
         {
-            RestClient client = new RestClient(Program.configurationSettingsModel.StormBotSoundpadApiHostname + "status");
-            RestRequest request = new RestRequest(Method.GET);
-            IRestResponse response = client.Execute(request);
+            // if the machine hosting the API is offline, catch the exception otherwise polling will stop working
+            try
+            {
+                RestClient client = new RestClient(Program.configurationSettingsModel.StormBotSoundpadApiHostname + "status");
+                RestRequest request = new RestRequest(Method.GET);
+                IRestResponse response = client.Execute(request);
 
-            return JsonConvert.DeserializeObject<ConnectionStatus>(response.Content);
+                return JsonConvert.DeserializeObject<ConnectionStatus>(response.Content);
+            }
+            catch
+            {
+                return ConnectionStatus.Disconnected;
+            }
         }
 
         public CategoryResponse GetCategoryAPI(int index)
