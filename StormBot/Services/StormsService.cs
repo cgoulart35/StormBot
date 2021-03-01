@@ -357,8 +357,8 @@ All wallets are reset to {5} points once someone reaches {6} points.", await Get
 					StormPlayerDataEntity topPlayer = allPlayerData.OrderByDescending(player => player.Wallet).First();
 
 					// do not let users steal from themselves
-					//if (topPlayer.DiscordID != discordId)
-					//{
+					if (topPlayer.DiscordID != discordId)
+					{
 						// set top player's wallet and criminal's wallet
 						double oldWallet = topPlayer.Wallet;
 						double newWallet = oldWallet - stealAmount;
@@ -382,7 +382,7 @@ All wallets are reset to {5} points once someone reaches {6} points.", await Get
 
 						await CheckForReset(guild, serverId, discordId, channelId);
 						await CheckForDisaster(serverId, discordId, channelId, hadDisasterMark);
-					//}
+					}
 				}
 				else
 					purgeCollection.Add(await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, please wait {stealTimeLimitInSeconds} seconds before stealing again."));
