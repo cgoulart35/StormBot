@@ -354,34 +354,46 @@ All wallets are reset to {5} points once someone reaches {6} points.", await Get
 					bool hadDisasterMark = playerData.Wallet >= disasterMark;
 
 					List<StormPlayerDataEntity> allPlayerData = await GetAllStormPlayerDataEntities(serverId);
-					StormPlayerDataEntity topPlayer = allPlayerData.OrderByDescending(player => player.Wallet).First();
 
-					// do not let users steal from themselves
-					if (topPlayer.DiscordID != discordId)
+					double? topScore = allPlayerData.OrderByDescending(player => player.Wallet).Select(player => player.Wallet).FirstOrDefault();
+
+					// make sure there is atleast one player with a score above zero
+					if (topScore != null && topScore != 0)
 					{
-						// set top player's wallet and criminal's wallet
-						double oldWallet = topPlayer.Wallet;
-						double newWallet = oldWallet - stealAmount;
-						double diff;
-						if (newWallet < 0)
+						// get the top players to steal from (exclude the criminal/person stealing)
+						List<StormPlayerDataEntity> topPlayers = allPlayerData.Where(player => player.Wallet == topScore && player.DiscordID != discordId).ToList();
+
+						// do not let users steal from just themselves (when count is zero)
+						if (topPlayers.Count != 0)
 						{
-							topPlayer.Wallet = 0;
-							diff = oldWallet;
+							// set top players' wallets and criminal's wallet
+							foreach (StormPlayerDataEntity topPlayer in topPlayers)
+							{
+								double oldWalletTopPlayer = topPlayer.Wallet;
+								double newWalletTopPlayer = oldWalletTopPlayer - (stealAmount / topPlayers.Count);
+
+								double diff;
+								if (newWalletTopPlayer < 0)
+								{
+									topPlayer.Wallet = 0;
+									diff = oldWalletTopPlayer;
+								}
+								else
+								{
+									topPlayer.Wallet = newWalletTopPlayer;
+									diff = stealAmount / topPlayers.Count;
+								}
+
+								playerData.Wallet += diff;
+
+								await _db.SaveChangesAsync();
+
+								purgeCollection.Add(await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you stole {diff} points from <@!{topPlayer.DiscordID}>!"));
+
+								await CheckForReset(guild, serverId, discordId, channelId);
+								await CheckForDisaster(serverId, discordId, channelId, hadDisasterMark);
+							}
 						}
-						else
-						{
-							topPlayer.Wallet = newWallet;
-							diff = stealAmount;
-						}
-
-						playerData.Wallet += diff;
-
-						await _db.SaveChangesAsync();
-
-						purgeCollection.Add(await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you stole {diff} points from <@!{topPlayer.DiscordID}>!"));
-
-						await CheckForReset(guild, serverId, discordId, channelId);
-						await CheckForDisaster(serverId, discordId, channelId, hadDisasterMark);
 					}
 				}
 				else
