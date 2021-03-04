@@ -33,7 +33,7 @@ namespace StormBot.Services
 		public double levelOneReward = 10;
 		public double levelTwoReward = 50;
 		public double resetBalance = 10;
-		public double resetMark = 50000;
+		public double resetMark = 25000;
 		public double disasterMark = 2000;
 		public double insuranceCost = 1000;
 		public double stealAmount = 5;
@@ -486,7 +486,10 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 				if (!allPlayerData[randomIndex].HasInsurance)
 				{
 					insuredOrNotStr = theyYouStr + " were not insured and" + theirYour + " wallet has been reset!";
-					allPlayerData[randomIndex].Wallet = resetBalance;
+					if (allPlayerData[randomIndex].Wallet <= resetBalance)
+						allPlayerData[randomIndex].Wallet = 0;
+					else
+						allPlayerData[randomIndex].Wallet = resetBalance;
 				}
 				else
 				{
