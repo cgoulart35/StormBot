@@ -284,7 +284,7 @@ namespace StormBot
         {
             _services = new ServiceCollection()
                 .AddSingleton(_client)
-                .AddDbContext<StormBotContext>()
+                .AddTransient<StormBotContext>()
                 .AddSingleton<CommandService>()
                 .AddSingleton<InteractiveService>()
                 .AddSingleton<CommandHandler>()
