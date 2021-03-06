@@ -62,12 +62,7 @@ namespace StormBot.Services
 					List<ServersEntity> servers = await _stormsService.GetAllServerEntities();
 					foreach (ServersEntity server in servers)
 					{
-						bool stormBotBool = server.AllowServerPermissionStorms && server.ToggleStorms;
-
-						if (stormBotBool && server.StormsNotificationChannelID != 0)
-						{
-							StartStormAnnouncements(server);
-						}
+						StartStormAnnouncements(server);
 					}
 				}
 
@@ -96,12 +91,14 @@ namespace StormBot.Services
 				int minutes = (totalSeconds % 3600) / 60;
 				int seconds = totalSeconds % 60;
 
-				if (server.AllowServerPermissionStorms && server.ToggleStorms)
+				bool stormServerBool = server.AllowServerPermissionStorms && server.ToggleStorms && server.StormsNotificationChannelID != 0;
+
+				if (stormServerBool)
 					Console.WriteLine(logStamp + $"			The next Storm in {server.ServerName} is in {hours} hours {minutes} minutes and {seconds} seconds.");
 
 				await Task.Delay(randomTimeWait);
 
-				if (server.AllowServerPermissionStorms && server.ToggleStorms)
+				if (stormServerBool)
 					await RandomStormAnnouncement.Invoke(this, server.ServerID, server.ServerName, server.StormsNotificationChannelID);
 			}
 		}
