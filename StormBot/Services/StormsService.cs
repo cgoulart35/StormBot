@@ -32,8 +32,8 @@ namespace StormBot.Services
 		public double levelTwoReward = 50;
 		public double resetBalance = 10;
 		public double resetMark = 25000;
-		public double disasterMark = 2000;
-		public double insuranceCost = 1000;
+		public double disasterMark = 150;
+		public double insuranceCost = 500;
 		public double stealAmount = 5;
 		public int stealTimeLimitInSeconds = 10;
 
@@ -512,7 +512,7 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 					_db.SaveChanges();
 				}
 
-				purgeCollection.Add(await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you caused a disaster" + onPersonAffected + $" since you passed {disasterMark} points!" + insuredOrNotStr));
+				await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you caused a disaster" + onPersonAffected + $" since you passed {disasterMark} points!" + insuredOrNotStr);
 			}
 		}
 
