@@ -41,10 +41,9 @@ namespace StormBot.Services
 
 		public List<IUserMessage> purgeCollection;
 
-		public StormsService(IServiceProvider services)
+		public StormsService(IServiceProvider services) : base(services)
 		{
 			_client = services.GetRequiredService<DiscordSocketClient>();
-			_db = services.GetRequiredService<StormBotContext>();
 
 			Name = "Storm Service";
 			isServiceRunning = false;

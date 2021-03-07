@@ -79,7 +79,7 @@ namespace StormBot.Modules.CallOfDutyModules
                     return "cancel";
                 }
                 // if same user starts another command while awaiting a response, end this one but don't display request cancelled
-                else if (requestedString.StartsWith(await GetServerPrefix(service._db)))
+                else if (requestedString.StartsWith(await GetServerPrefix(BaseService._db)))
                 {
                     return "cancel";
                 }
@@ -139,7 +139,7 @@ namespace StormBot.Modules.CallOfDutyModules
                         return -1;
                     }
                     // if same user starts another command while awaiting a response, end this one but don't display request cancelled
-                    else if (requestedNumber.StartsWith(await GetServerPrefix(service._db)))
+                    else if (requestedNumber.StartsWith(await GetServerPrefix(BaseService._db)))
                     {
                         return -1;
                     }

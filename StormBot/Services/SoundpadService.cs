@@ -27,10 +27,9 @@ namespace StormBot.Services
 
         public bool isSoundpadRunning { get; set; }
 
-        public SoundpadService(IServiceProvider services)
+        public SoundpadService(IServiceProvider services) : base(services)
         {
             _client = services.GetRequiredService<DiscordSocketClient>();
-            _db = services.GetRequiredService<StormBotContext>();
 
             Name = "Soundpad Service";
             isServiceRunning = false;

@@ -26,23 +26,22 @@ namespace StormBot.Services
 
         public BaseService WarzoneComponent { get; set; }
 
-        public CallOfDutyService(IServiceProvider services)
+        public CallOfDutyService(IServiceProvider services) : base(services)
         {
             _client = services.GetRequiredService<DiscordSocketClient>();
-            _db = services.GetRequiredService<StormBotContext>();
 
             Name = "Call Of Duty Service";
             isServiceRunning = false;
 
-            BlackOpsColdWarComponent = new BaseService();
+            BlackOpsColdWarComponent = new BaseService(services);
             BlackOpsColdWarComponent.Name = "Black Ops Cold War Service";
             BlackOpsColdWarComponent.isServiceRunning = false;
 
-            ModernWarfareComponent = new BaseService();
+            ModernWarfareComponent = new BaseService(services);
             ModernWarfareComponent.Name = "Modern Warfare Service";
             ModernWarfareComponent.isServiceRunning = false;
 
-            WarzoneComponent = new BaseService();
+            WarzoneComponent = new BaseService(services);
             WarzoneComponent.Name = "Warzone Service";
             WarzoneComponent.isServiceRunning = false;
         }

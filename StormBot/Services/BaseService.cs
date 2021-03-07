@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using StormBot.Database;
 using StormBot.Database.Entities;
 
@@ -17,7 +18,12 @@ namespace StormBot.Services
 
 		public bool isServiceRunning { get; set; }
 
-		public StormBotContext _db { get; set; }
+		public static StormBotContext _db;
+
+		public BaseService(IServiceProvider services)
+		{
+			_db = services.GetRequiredService<StormBotContext>();
+		}
 
 		public virtual async Task StartService()
 		{
@@ -84,6 +90,14 @@ namespace StormBot.Services
 				.AsQueryable()
 				.AsAsyncEnumerable()
 				.ToListAsync();
+		}
+
+		public async Task<ServersEntity> GetServerEntity(ulong serverId)
+		{
+			return await _db.Servers
+				.AsQueryable()
+				.Where(s => s.ServerID == serverId)
+				.SingleAsync();
 		}
 
 		public async Task<string> GetServerPrefix(ulong serverId)

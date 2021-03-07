@@ -203,7 +203,7 @@ namespace StormBot.Modules
                         {
                             playerData.Wallet -= _service.insuranceCost;
                             playerData.HasInsurance = true;
-                            await _service._db.SaveChangesAsync();
+                            await BaseService._db.SaveChangesAsync();
 
                             _service.purgeCollection.Add(await ReplyAsync($"<@!{discordId}>, you purchased insurance for {_service.insuranceCost} points."));
                         }

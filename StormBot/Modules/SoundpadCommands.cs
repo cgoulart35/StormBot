@@ -21,8 +21,6 @@ namespace StormBot.Modules
     {
         private SoundpadService _service;
 
-        private StormBotContext _db;
-
         private Soundpad _soundpad;
 
         private readonly string _categoryFoldersLocation = Program.configurationSettingsModel.CategoryFoldersLocation;
@@ -32,7 +30,6 @@ namespace StormBot.Modules
         public SoundpadCommands(IServiceProvider services)
         {
             _service = services.GetRequiredService<SoundpadService>();
-            _db = services.GetRequiredService<StormBotContext>();
             _soundpad = _service._soundpad;
         }
 
@@ -117,7 +114,7 @@ namespace StormBot.Modules
                     {
                         await Context.Channel.TriggerTypingAsync();
 
-                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(_db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                         {
                             await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                         }
@@ -182,7 +179,7 @@ namespace StormBot.Modules
                     {
                         await Context.Channel.TriggerTypingAsync();
 
-                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(_db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                         {
                             await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                         }
@@ -227,7 +224,7 @@ namespace StormBot.Modules
                     {
                         await Context.Channel.TriggerTypingAsync();
 
-                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(_db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                         {
                             await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                         }
@@ -340,7 +337,7 @@ namespace StormBot.Modules
 
                         if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
                         {
-                            string categoryName = GetSingleArg(args);
+                            string categoryName = GetSingleArg(args).ToLower();
 
                             Tuple<List<int>, bool> loadedSounds = await LoadSounds(true, categoryName);
 
@@ -511,7 +508,7 @@ namespace StormBot.Modules
                     await ReplyAsync("Request cancelled.");
                 }
                 // if same user starts another command while awaiting a response, end this one but don't display request cancelled
-                else if (requestedNumber.StartsWith(await GetServerPrefix(_db)) && waitingForAnswer)
+                else if (requestedNumber.StartsWith(await GetServerPrefix(BaseService._db)) && waitingForAnswer)
                 {
                 }
                 // if not cancel, request another response
@@ -648,7 +645,7 @@ namespace StormBot.Modules
                         return -1;
                     }
                     // if same user starts another command while awaiting a response, end this one but don't display request cancelled
-                    else if (requestedNumber != null && requestedNumber.StartsWith(await GetServerPrefix(_db)))
+                    else if (requestedNumber != null && requestedNumber.StartsWith(await GetServerPrefix(BaseService._db)))
                     {
                         return -1;
                     }

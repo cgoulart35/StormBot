@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
-using StormBot.Database;
 using StormBot.Database.Entities;
 using System.Collections.Generic;
 using Discord;
@@ -26,12 +25,11 @@ namespace StormBot.Services
 		private StormsService _stormsService;
 		private CallOfDutyService _callOfDutyService;
 
-		public AnnouncementsService(IServiceProvider services)
+		public AnnouncementsService(IServiceProvider services) : base(services)
 		{
 			_client = services.GetRequiredService<DiscordSocketClient>();
 			_stormsService = services.GetRequiredService<StormsService>();
 			_callOfDutyService = services.GetRequiredService<CallOfDutyService>();
-			_db = services.GetRequiredService<StormBotContext>();
 
 			Name = "Announcements Service";
 			isServiceRunning = false;
@@ -59,10 +57,10 @@ namespace StormBot.Services
 
 				if (_stormsService.isServiceRunning)
 				{
-					List<ServersEntity> servers = await _stormsService.GetAllServerEntities();
+					List<ServersEntity> servers = await GetAllServerEntities();
 					foreach (ServersEntity server in servers)
 					{
-						StartStormAnnouncements(server);
+						StartStormAnnouncements(server.ServerID);
 					}
 				}
 
@@ -74,9 +72,10 @@ namespace StormBot.Services
 			}
 		}
 
-		public async Task StartStormAnnouncements(ServersEntity server)
+		public async Task StartStormAnnouncements(ulong serverID)
 		{
 			Random random = new Random();
+			ServersEntity server;
 
 			while (isServiceRunning && _stormsService.isServiceRunning)
 			{
@@ -91,14 +90,18 @@ namespace StormBot.Services
 				int minutes = (totalSeconds % 3600) / 60;
 				int seconds = totalSeconds % 60;
 
-				bool stormServerBool = server.AllowServerPermissionStorms && server.ToggleStorms && server.StormsNotificationChannelID != 0;
+				// need to get latest info on server config every iteration
+				server = await GetServerEntity(serverID);
 
-				if (stormServerBool)
+				if (server.AllowServerPermissionStorms && server.ToggleStorms && server.StormsNotificationChannelID != 0)
 					Console.WriteLine(logStamp + $"			The next Storm in {server.ServerName} is in {hours} hours {minutes} minutes and {seconds} seconds.");
 
 				await Task.Delay(randomTimeWait);
 
-				if (stormServerBool)
+				// need to get latest info on server config every iteration
+				server = await GetServerEntity(serverID);
+
+				if (server.AllowServerPermissionStorms && server.ToggleStorms && server.StormsNotificationChannelID != 0)
 					await RandomStormAnnouncement.Invoke(this, server.ServerID, server.ServerName, server.StormsNotificationChannelID);
 			}
 		}
@@ -111,7 +114,7 @@ namespace StormBot.Services
 				DateTime currentTime = DateTime.Now;
 				if (!weeklySent && currentTime.DayOfWeek == DayOfWeek.Sunday && currentTime.Hour == 1 && currentTime.Minute == 0 && WeeklyCallOfDutyAnnouncement != null)
 				{
-					List<ServersEntity> servers = await _callOfDutyService.GetAllServerEntities();
+					List<ServersEntity> servers = await GetAllServerEntities();
 					foreach (ServersEntity server in servers)
 					{
 						bool coldWarBool = _callOfDutyService.BlackOpsColdWarComponent.isServiceRunning && server.AllowServerPermissionBlackOpsColdWarTracking && server.ToggleBlackOpsColdWarTracking;
@@ -143,7 +146,7 @@ namespace StormBot.Services
 				DateTime currentTime = DateTime.Now;
 				if (!dailySent && currentTime.Hour == 22 && currentTime.Minute == 0 && DailyCallOfDutyAnnouncement != null)
 				{
-					List<ServersEntity> servers = await _callOfDutyService.GetAllServerEntities();
+					List<ServersEntity> servers = await GetAllServerEntities();
 					foreach (ServersEntity server in servers)
 					{
 						bool coldWarBool = _callOfDutyService.BlackOpsColdWarComponent.isServiceRunning && server.AllowServerPermissionBlackOpsColdWarTracking && server.ToggleBlackOpsColdWarTracking;

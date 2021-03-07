@@ -15,14 +15,12 @@ namespace StormBot.Services
     {
         private readonly CommandService _commandService;
         private readonly DiscordSocketClient _client;
-        private StormBotContext _db;
         private readonly IServiceProvider _services;
 
         public CommandHandler(IServiceProvider services)
         {
             _commandService = services.GetRequiredService<CommandService>();
             _client = services.GetRequiredService<DiscordSocketClient>();
-            _db = services.GetRequiredService<StormBotContext>();
 
             _services = services;
 
@@ -52,7 +50,7 @@ namespace StormBot.Services
                 if (!context.IsPrivate)
                 {
                     int argPos = 0;
-                    string serverPrefix = await _db.Servers
+                    string serverPrefix = await BaseService._db.Servers
                         .AsQueryable()
                         .Where(s => s.ServerID == context.Guild.Id)
                         .Select(s => s.PrefixUsed)
