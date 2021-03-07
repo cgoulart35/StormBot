@@ -7,11 +7,9 @@ using Discord;
 using Discord.WebSocket;
 using Discord.Commands;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using RestSharp;
 using StormBot.Models.CallOfDutyModels;
-using StormBot.Database;
 using StormBot.Database.Entities;
 
 namespace StormBot.Services
@@ -68,7 +66,7 @@ namespace StormBot.Services
                 await ModernWarfareComponent.StartService();
                 await WarzoneComponent.StartService();
 
-                List<ServersEntity> servers = await GetAllServerEntities();
+                List<ServersEntity> servers = GetAllServerEntities();
                 foreach (ServersEntity server in servers)
                 {
                     string message = "";
@@ -102,7 +100,7 @@ namespace StormBot.Services
 
                 isServiceRunning = false;
 
-                List<ServersEntity> servers = await GetAllServerEntities();
+                List<ServersEntity> servers = GetAllServerEntities();
                 foreach (ServersEntity server in servers)
                 {
                     string message = "";
@@ -137,7 +135,7 @@ namespace StormBot.Services
             serverIds.Add(serverId);
 
             // get all data of all players in the specified servers for the specified games
-            List<CallOfDutyPlayerDataEntity> allStoredPlayersData = await GetServersPlayerData(serverIds, gameAbbrev, modeAbbrev);
+            List<CallOfDutyPlayerDataEntity> allStoredPlayersData = GetServersPlayerData(serverIds, gameAbbrev, modeAbbrev);
 
             // if no player data is returned, return null
             if (allStoredPlayersData.Count == 0)
@@ -224,7 +222,10 @@ namespace StormBot.Services
                         storedPlayerData.Date = DateTime.Now;
                     }
 
-                    _db.SaveChangesAsync();
+                    lock (BaseService.queryLock)
+                    {
+                        _db.SaveChanges();
+                    }
                 }
 
                 newPlayerData.DiscordID = storedPlayerData.DiscordID;
@@ -263,7 +264,7 @@ namespace StormBot.Services
             List<ulong> serverIdList = new List<ulong>();
             serverIdList.Add(serverId);
 
-            List<CallOfDutyPlayerDataEntity> entityData = await GetServersPlayerData(serverIdList, gameAbbrev, modeAbbrev);
+            List<CallOfDutyPlayerDataEntity> entityData = GetServersPlayerData(serverIdList, gameAbbrev, modeAbbrev);
 
             List<CallOfDutyPlayerModel> modelData = new List<CallOfDutyPlayerModel>();
 
@@ -296,7 +297,7 @@ namespace StormBot.Services
 
         public async Task<bool> MissedLastDataFetch(ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
         {
-            CallOfDutyPlayerDataEntity data = await GetCallOfDutyPlayerDataEntity(serverID, discordID, gameAbbrev, modeAbbrev);
+            CallOfDutyPlayerDataEntity data = GetCallOfDutyPlayerDataEntity(serverID, discordID, gameAbbrev, modeAbbrev);
 
             DateTime lastDataFetchDay = DateTime.Now;
 
@@ -313,239 +314,287 @@ namespace StormBot.Services
 
         public void AddParticipantToDatabase(CallOfDutyPlayerDataEntity playerData)
         {
-            _db.CallOfDutyPlayerData.Add(playerData);
-            _db.SaveChangesAsync();
+            lock (BaseService.queryLock)
+            {
+                _db.CallOfDutyPlayerData.Add(playerData);
+                _db.SaveChanges();
+            }
         }
 
         public void RemoveParticipantFromDatabase(CallOfDutyPlayerDataEntity playerData)
         {
-            _db.CallOfDutyPlayerData.Remove(playerData);
-            _db.SaveChangesAsync();
-        }
-
-        public async Task<List<CallOfDutyPlayerDataEntity>> GetServersPlayerData(List<ulong> serverIds, string gameAbbrev, string modeAbbrev)
-        {
-            if (gameAbbrev == null || modeAbbrev == null)
+            lock (BaseService.queryLock)
             {
-                return await _db.CallOfDutyPlayerData
-                    .AsQueryable()
-                    .Where(player => serverIds.Contains(player.ServerID))
-                    .AsAsyncEnumerable()
-                    .ToListAsync();
-            }
-            else
-            {
-                return await _db.CallOfDutyPlayerData
-                    .AsQueryable()
-                    .Where(player => serverIds.Contains(player.ServerID) && player.GameAbbrev == gameAbbrev && player.ModeAbbrev == modeAbbrev)
-                    .AsAsyncEnumerable()
-                    .ToListAsync();
+                _db.CallOfDutyPlayerData.Remove(playerData);
+                _db.SaveChanges();
             }
         }
 
-        public async Task<CallOfDutyPlayerDataEntity> GetCallOfDutyPlayerDataEntity(ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
+        public List<CallOfDutyPlayerDataEntity> GetServersPlayerData(List<ulong> serverIds, string gameAbbrev, string modeAbbrev)
         {
-            return await _db.CallOfDutyPlayerData
+            lock (BaseService.queryLock)
+            {
+                if (gameAbbrev == null || modeAbbrev == null)
+                {
+                    return _db.CallOfDutyPlayerData
+                        .AsQueryable()
+                        .Where(player => serverIds.Contains(player.ServerID))
+                        .AsEnumerable()
+                        .ToList();
+                }
+                else
+                {
+                    return _db.CallOfDutyPlayerData
+                        .AsQueryable()
+                        .Where(player => serverIds.Contains(player.ServerID) && player.GameAbbrev == gameAbbrev && player.ModeAbbrev == modeAbbrev)
+                        .AsEnumerable()
+                        .ToList();
+                }
+            }
+        }
+
+        public CallOfDutyPlayerDataEntity GetCallOfDutyPlayerDataEntity(ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
+        {
+            lock (BaseService.queryLock)
+            {
+                return _db.CallOfDutyPlayerData
                 .AsQueryable()
                 .Where(player => player.ServerID == serverID && player.DiscordID == discordID && player.GameAbbrev == gameAbbrev && player.ModeAbbrev == modeAbbrev)
-                .SingleOrDefaultAsync();
+                .SingleOrDefault();
+            }
         }
 
-        public async Task<List<ulong>> GetAllValidatedServerIds(string gameAbbrev, string modeAbbrev)
+        public List<ulong> GetAllValidatedServerIds(string gameAbbrev, string modeAbbrev)
         {
-            if (gameAbbrev == "mw" && modeAbbrev == "mp")
+            lock (BaseService.queryLock)
             {
-                return await _db.Servers
-                    .AsQueryable()
-                    .Where(s => s.AllowServerPermissionModernWarfareTracking && s.ToggleModernWarfareTracking)
-                    .Select(s => s.ServerID)
-                    .AsAsyncEnumerable()
-                    .ToListAsync();
+                if (gameAbbrev == "mw" && modeAbbrev == "mp")
+                {
+                    return _db.Servers
+                        .AsQueryable()
+                        .Where(s => s.AllowServerPermissionModernWarfareTracking && s.ToggleModernWarfareTracking)
+                        .Select(s => s.ServerID)
+                        .AsEnumerable()
+                        .ToList();
+                }
+                else if (gameAbbrev == "mw" && modeAbbrev == "wz")
+                {
+                    return _db.Servers
+                        .AsQueryable()
+                        .Where(s => s.AllowServerPermissionWarzoneTracking && s.ToggleWarzoneTracking)
+                        .Select(s => s.ServerID)
+                        .AsEnumerable()
+                        .ToList();
+                }
+                else if (gameAbbrev == "cw" && modeAbbrev == "mp")
+                {
+                    return _db.Servers
+                        .AsQueryable()
+                        .Where(s => s.AllowServerPermissionBlackOpsColdWarTracking && s.ToggleBlackOpsColdWarTracking)
+                        .Select(s => s.ServerID)
+                        .AsEnumerable()
+                        .ToList();
+                }
+                else
+                    return null;
             }
-            else if (gameAbbrev == "mw" && modeAbbrev == "wz")
-            {
-                return await _db.Servers
-                    .AsQueryable()
-                    .Where(s => s.AllowServerPermissionWarzoneTracking && s.ToggleWarzoneTracking)
-                    .Select(s => s.ServerID)
-                    .AsAsyncEnumerable()
-                    .ToListAsync();
-            }
-            else if (gameAbbrev == "cw" && modeAbbrev == "mp")
-            {
-                return await _db.Servers
-                    .AsQueryable()
-                    .Where(s => s.AllowServerPermissionBlackOpsColdWarTracking && s.ToggleBlackOpsColdWarTracking)
-                    .Select(s => s.ServerID)
-                    .AsAsyncEnumerable()
-                    .ToListAsync();
-            }
-            else
-                return null;
         }
 
-        public async Task<IMessageChannel> GetServerCallOfDutyNotificationChannel(ulong serverId)
+        public IMessageChannel GetServerCallOfDutyNotificationChannel(ulong serverId)
         {
-            var channelId = await _db.Servers
+            lock (BaseService.queryLock)
+            {
+                var channelId = _db.Servers
                 .AsQueryable()
                 .Where(s => s.ServerID == serverId)
                 .Select(s => s.CallOfDutyNotificationChannelID)
-                .SingleOrDefaultAsync();
+                .SingleOrDefault();
 
-            if (channelId != 0)
-                return _client.GetChannel(channelId) as IMessageChannel;
-            else
-                return null;
+                if (channelId != 0)
+                    return _client.GetChannel(channelId) as IMessageChannel;
+                else
+                    return null;
+            }
         }
 
-        public async Task<ulong> GetServerModernWarfareKillsRoleID(ulong serverId)
+        public ulong GetServerModernWarfareKillsRoleID(ulong serverId)
         {
-            return await _db.Servers
+            lock (BaseService.queryLock)
+            {
+                return _db.Servers
                 .AsQueryable()
                 .Where(s => s.ServerID == serverId)
                 .Select(s => s.ModernWarfareKillsRoleID)
-                .SingleOrDefaultAsync();
+                .SingleOrDefault();
+            }
         }
 
-        public async Task<ulong> GetServerWarzoneWinsRoleID(ulong serverId)
+        public ulong GetServerWarzoneWinsRoleID(ulong serverId)
         {
-            return await _db.Servers
+            lock (BaseService.queryLock)
+            {
+                return _db.Servers
                 .AsQueryable()
                 .Where(s => s.ServerID == serverId)
                 .Select(s => s.WarzoneWinsRoleID)
-                .SingleOrDefaultAsync();
+                .SingleOrDefault();
+            }
         }
 
-        public async Task<ulong> GetServerWarzoneKillsRoleID(ulong serverId)
+        public ulong GetServerWarzoneKillsRoleID(ulong serverId)
         {
-            return await _db.Servers
+            lock (BaseService.queryLock)
+            {
+                return _db.Servers
                 .AsQueryable()
                 .Where(s => s.ServerID == serverId)
                 .Select(s => s.WarzoneKillsRoleID)
-                .SingleOrDefaultAsync();
+                .SingleOrDefault();
+            }
         }
 
-        public async Task<ulong> GetServerBlackOpsColdWarKillsRoleID(ulong serverId)
+        public ulong GetServerBlackOpsColdWarKillsRoleID(ulong serverId)
         {
-            return await _db.Servers
+            lock (BaseService.queryLock)
+            {
+                return _db.Servers
                 .AsQueryable()
                 .Where(s => s.ServerID == serverId)
                 .Select(s => s.BlackOpsColdWarKillsRoleID)
-                .SingleOrDefaultAsync();
+                .SingleOrDefault();
+            }
         }
 
-        public async Task<bool> GetServerToggleBlackOpsColdWarTracking(SocketCommandContext context)
+        public bool GetServerToggleBlackOpsColdWarTracking(SocketCommandContext context)
         {
-            if (!context.IsPrivate)
+            lock (BaseService.queryLock)
             {
-                bool flag = await _db.Servers
+                if (!context.IsPrivate)
+                {
+                    bool flag = _db.Servers
+                        .AsQueryable()
+                        .Where(s => s.ServerID == context.Guild.Id)
+                        .Select(s => s.ToggleBlackOpsColdWarTracking)
+                        .Single();
+
+                    if (!flag)
+                        Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
+
+                    return flag;
+                }
+                else
+                    return true;
+            }
+        }
+
+        public bool GetServerToggleModernWarfareTracking(SocketCommandContext context)
+        {
+            lock (BaseService.queryLock)
+            {
+                if (!context.IsPrivate)
+                {
+                    bool flag = _db.Servers
                     .AsQueryable()
                     .Where(s => s.ServerID == context.Guild.Id)
-                    .Select(s => s.ToggleBlackOpsColdWarTracking)
-                    .SingleAsync();
+                    .Select(s => s.ToggleModernWarfareTracking)
+                    .Single();
 
-                if (!flag)
-                    Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
+                    if (!flag)
+                        Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
 
-                return flag;
+                    return flag;
+                }
+                else
+                    return true;
             }
-            else
-                return true;
         }
 
-        public async Task<bool> GetServerToggleModernWarfareTracking(SocketCommandContext context)
+        public bool GetServerToggleWarzoneTracking(SocketCommandContext context)
         {
-            if (!context.IsPrivate)
+            lock (BaseService.queryLock)
             {
-                bool flag = await _db.Servers
-                .AsQueryable()
-                .Where(s => s.ServerID == context.Guild.Id)
-                .Select(s => s.ToggleModernWarfareTracking)
-                .SingleAsync();
+                if (!context.IsPrivate)
+                {
+                    bool flag = _db.Servers
+                    .AsQueryable()
+                    .Where(s => s.ServerID == context.Guild.Id)
+                    .Select(s => s.ToggleModernWarfareTracking)
+                    .Single();
 
-                if (!flag)
-                    Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
+                    if (!flag)
+                        Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
 
-                return flag;
+                    return flag;
+                }
+                else
+                    return true;
             }
-            else
-                return true;
         }
 
-        public async Task<bool> GetServerToggleWarzoneTracking(SocketCommandContext context)
+        public bool GetServerAllowServerPermissionBlackOpsColdWarTracking(SocketCommandContext context)
         {
-            if (!context.IsPrivate)
+            lock (BaseService.queryLock)
             {
-                bool flag = await _db.Servers
-                .AsQueryable()
-                .Where(s => s.ServerID == context.Guild.Id)
-                .Select(s => s.ToggleModernWarfareTracking)
-                .SingleAsync();
+                if (!context.IsPrivate)
+                {
+                    bool flag = _db.Servers
+                    .AsQueryable()
+                    .Where(s => s.ServerID == context.Guild.Id)
+                    .Select(s => s.AllowServerPermissionBlackOpsColdWarTracking)
+                    .Single();
 
-                if (!flag)
-                    Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
+                    if (!flag)
+                        Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
 
-                return flag;
+                    return flag;
+                }
+                else
+                    return true;
             }
-            else
-                return true;
         }
 
-        public async Task<bool> GetServerAllowServerPermissionBlackOpsColdWarTracking(SocketCommandContext context)
+        public bool GetServerAllowServerPermissionModernWarfareTracking(SocketCommandContext context)
         {
-            if (!context.IsPrivate)
+            lock (BaseService.queryLock)
             {
-                bool flag = await _db.Servers
-                .AsQueryable()
-                .Where(s => s.ServerID == context.Guild.Id)
-                .Select(s => s.AllowServerPermissionBlackOpsColdWarTracking)
-                .SingleAsync();
+                if (!context.IsPrivate)
+                {
+                    bool flag = _db.Servers
+                    .AsQueryable()
+                    .Where(s => s.ServerID == context.Guild.Id)
+                    .Select(s => s.AllowServerPermissionModernWarfareTracking)
+                    .Single();
 
-                if (!flag)
-                    Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
+                    if (!flag)
+                        Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
 
-                return flag;
+                    return flag;
+                }
+                else
+                    return true;
             }
-            else
-                return true;
         }
 
-        public async Task<bool> GetServerAllowServerPermissionModernWarfareTracking(SocketCommandContext context)
+        public bool GetServerAllowServerPermissionWarzoneTracking(SocketCommandContext context)
         {
-            if (!context.IsPrivate)
+            lock (BaseService.queryLock)
             {
-                bool flag = await _db.Servers
-                .AsQueryable()
-                .Where(s => s.ServerID == context.Guild.Id)
-                .Select(s => s.AllowServerPermissionModernWarfareTracking)
-                .SingleAsync();
+                if (!context.IsPrivate)
+                {
+                    bool flag = _db.Servers
+                    .AsQueryable()
+                    .Where(s => s.ServerID == context.Guild.Id)
+                    .Select(s => s.AllowServerPermissionWarzoneTracking)
+                    .Single();
 
-                if (!flag)
-                    Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
+                    if (!flag)
+                        Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
 
-                return flag;
+                    return flag;
+                }
+                else
+                    return true;
             }
-            else
-                return true;
-        }
-
-        public async Task<bool> GetServerAllowServerPermissionWarzoneTracking(SocketCommandContext context)
-        {
-            if (!context.IsPrivate)
-            {
-                bool flag = await _db.Servers
-                .AsQueryable()
-                .Where(s => s.ServerID == context.Guild.Id)
-                .Select(s => s.AllowServerPermissionWarzoneTracking)
-                .SingleAsync();
-
-                if (!flag)
-                    Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
-
-                return flag;
-            }
-            else
-                return true;
         }
 		#endregion
 	}

@@ -36,10 +36,10 @@ namespace StormBot.Modules.CallOfDutyModules
             // if service is running, display updates
             if (DisableIfServiceNotRunning(_service.WarzoneComponent))
             {
-                List<ulong> serverIds = await _service.GetAllValidatedServerIds("mw", "wz");
+                List<ulong> serverIds = _service.GetAllValidatedServerIds("mw", "wz");
                 foreach (ulong serverId in serverIds)
                 {
-                    var channel = await _service.GetServerCallOfDutyNotificationChannel(serverId);
+                    var channel = _service.GetServerCallOfDutyNotificationChannel(serverId);
 
                     if (channel != null)
                     {
@@ -72,10 +72,10 @@ namespace StormBot.Modules.CallOfDutyModules
             // if service is running, display updates
             if (DisableIfServiceNotRunning(_service.WarzoneComponent))
             {
-                List<ulong> serverIds = await _service.GetAllValidatedServerIds("mw", "wz");
+                List<ulong> serverIds = _service.GetAllValidatedServerIds("mw", "wz");
                 foreach (ulong serverId in serverIds)
                 {
-                    var channel = await _service.GetServerCallOfDutyNotificationChannel(serverId);
+                    var channel = _service.GetServerCallOfDutyNotificationChannel(serverId);
 
                     if (channel != null)
                     {
@@ -135,7 +135,7 @@ namespace StormBot.Modules.CallOfDutyModules
                     double topScore = newData[0].Data.Weekly.All.Properties.Kills;
                     List<ulong> topPlayersDiscordIDs = newData.Where(player => player.Data.Weekly.All.Properties?.Kills == topScore).Select(player => player.DiscordID).ToList();
 
-                    ulong roleID = await _service.GetServerWarzoneKillsRoleID(guild.Id);
+                    ulong roleID = _service.GetServerWarzoneKillsRoleID(guild.Id);
                     string roleStr = "";
                     if (roleID != 0)
                     {
@@ -249,7 +249,7 @@ namespace StormBot.Modules.CallOfDutyModules
                     output = ValidateOutputLimit(output, "\n" + string.Format(@"{0}you have the most Warzone wins out of all Warzone participants!", winners));
 
                     // update the roles only every week
-                    ulong roleID = await _service.GetServerWarzoneWinsRoleID(guild.Id);
+                    ulong roleID = _service.GetServerWarzoneWinsRoleID(guild.Id);
                     if (updateRoles && roleID != 0)
                     {
                         await _service.UnassignRoleFromAllMembers(roleID, guild);
@@ -277,13 +277,13 @@ namespace StormBot.Modules.CallOfDutyModules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionWarzoneTracking(Context) && await _service.GetServerToggleWarzoneTracking(Context))
+                if (_service.GetServerAllowServerPermissionWarzoneTracking(Context) && _service.GetServerToggleWarzoneTracking(Context))
                 {
                     if (DisableIfServiceNotRunning(_service.WarzoneComponent, "wz wins"))
                     {
                         await Context.Channel.TriggerTypingAsync();
 
-                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                         {
                             await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                         }
@@ -313,13 +313,13 @@ namespace StormBot.Modules.CallOfDutyModules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionWarzoneTracking(Context) && await _service.GetServerToggleWarzoneTracking(Context))
+                if (_service.GetServerAllowServerPermissionWarzoneTracking(Context) && _service.GetServerToggleWarzoneTracking(Context))
                 {
                     if (DisableIfServiceNotRunning(_service.WarzoneComponent, "wz wins"))
                     {
                         await Context.Channel.TriggerTypingAsync();
 
-                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                         {
                             await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                         }
@@ -406,13 +406,13 @@ namespace StormBot.Modules.CallOfDutyModules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionWarzoneTracking(Context) && await _service.GetServerToggleWarzoneTracking(Context))
+                if (_service.GetServerAllowServerPermissionWarzoneTracking(Context) && _service.GetServerToggleWarzoneTracking(Context))
                 {
                     if (DisableIfServiceNotRunning(_service.ModernWarfareComponent, "wz participants"))
                     {
                         await Context.Channel.TriggerTypingAsync();
 
-                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                         {
                             await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                         }
@@ -437,13 +437,13 @@ namespace StormBot.Modules.CallOfDutyModules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionWarzoneTracking(Context) && await _service.GetServerToggleWarzoneTracking(Context))
+                if (_service.GetServerAllowServerPermissionWarzoneTracking(Context) && _service.GetServerToggleWarzoneTracking(Context))
                 {
                     if (DisableIfServiceNotRunning(_service.ModernWarfareComponent, "wz add participant"))
                     {
                         await Context.Channel.TriggerTypingAsync();
 
-                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                         {
                             await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                         }
@@ -480,13 +480,13 @@ namespace StormBot.Modules.CallOfDutyModules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionWarzoneTracking(Context) && await _service.GetServerToggleWarzoneTracking(Context))
+                if (_service.GetServerAllowServerPermissionWarzoneTracking(Context) && _service.GetServerToggleWarzoneTracking(Context))
                 {
                     if (DisableIfServiceNotRunning(_service.ModernWarfareComponent, "wz rm participant"))
                     {
                         await Context.Channel.TriggerTypingAsync();
 
-                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                         {
                             await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                         }
@@ -520,7 +520,7 @@ namespace StormBot.Modules.CallOfDutyModules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionWarzoneTracking(Context) && await _service.GetServerToggleWarzoneTracking(Context))
+                if (_service.GetServerAllowServerPermissionWarzoneTracking(Context) && _service.GetServerToggleWarzoneTracking(Context))
                 {
                     if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent, "wz participate"))
                     {
@@ -554,7 +554,7 @@ namespace StormBot.Modules.CallOfDutyModules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionWarzoneTracking(Context) && await _service.GetServerToggleWarzoneTracking(Context))
+                if (_service.GetServerAllowServerPermissionWarzoneTracking(Context) && _service.GetServerToggleWarzoneTracking(Context))
                 {
                     if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent, "wz leave"))
                     {

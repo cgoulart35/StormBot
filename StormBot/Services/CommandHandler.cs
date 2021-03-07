@@ -3,11 +3,9 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore;
 using Discord.Commands;
 using Discord.WebSocket;
 using Discord;
-using StormBot.Database;
 
 namespace StormBot.Services
 {
@@ -50,11 +48,16 @@ namespace StormBot.Services
                 if (!context.IsPrivate)
                 {
                     int argPos = 0;
-                    string serverPrefix = await BaseService._db.Servers
+                    string serverPrefix;
+
+                    lock (BaseService.queryLock)
+                    {
+                        serverPrefix = BaseService._db.Servers
                         .AsQueryable()
                         .Where(s => s.ServerID == context.Guild.Id)
                         .Select(s => s.PrefixUsed)
-                        .SingleAsync();
+                        .Single();
+                    }
 
                     if (message.HasStringPrefix(serverPrefix, ref argPos))
                     {

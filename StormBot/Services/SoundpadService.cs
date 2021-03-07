@@ -9,10 +9,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using RestSharp;
-using StormBot.Database;
 using StormBot.Models.SoundpadApiModels;
 
 namespace StormBot.Services
@@ -89,7 +87,7 @@ namespace StormBot.Services
                     string message = "SOUNDBOARD DISCONNECTED.";
                     Console.WriteLine(logStamp + message.PadLeft(75 - logStamp.Length));
 
-                    var channels = await GetAllServerSoundpadChannels();
+                    var channels = GetAllServerSoundpadChannels();
                     
                     if (channels.Count() != 0)
                         channels.ToList().ForEach(channel => channel.SendMessageAsync("_**[    " + message + "    ]**_"));
@@ -113,7 +111,7 @@ namespace StormBot.Services
                 string message = "SOUNDBOARD CONNECTED.";
                 Console.WriteLine(logStamp + message.PadLeft(72 - logStamp.Length));
 
-                var channels = await GetAllServerSoundpadChannels();
+                var channels = GetAllServerSoundpadChannels();
 
                 if (channels.Count() != 0)
                     channels.ToList().ForEach(channel => channel.SendMessageAsync("_**[    " + message + "    ]**_"));
@@ -125,7 +123,7 @@ namespace StormBot.Services
                 string message = "SOUNDBOARD DISCONNECTED.";
                 Console.WriteLine(logStamp + message.PadLeft(75 - logStamp.Length));
 
-                var channels = await GetAllServerSoundpadChannels();
+                var channels = GetAllServerSoundpadChannels();
 
                 if (channels.Count() != 0)
                     channels.ToList().ForEach(channel => channel.SendMessageAsync("_**[    " + message + "    ]**_"));
@@ -369,54 +367,63 @@ namespace StormBot.Services
         #endregion
 
         #region QUERIES
-        private async Task<IEnumerable<IMessageChannel>> GetAllServerSoundpadChannels()
+        private IEnumerable<IMessageChannel> GetAllServerSoundpadChannels()
         {
-            var channelIds = await _db.Servers
+            lock (BaseService.queryLock)
+            {
+                var channelIds = _db.Servers
                 .AsQueryable()
                 .Where(s => s.SoundboardNotificationChannelID != 0 && s.AllowServerPermissionSoundpadCommands && s.ToggleSoundpadCommands)
                 .Select(s => s.SoundboardNotificationChannelID)
-                .AsAsyncEnumerable()
-                .ToListAsync();
+                .AsEnumerable()
+                .ToList();
 
-            return channelIds.Select(channelId => _client.GetChannel(channelId) as IMessageChannel);
+                return channelIds.Select(channelId => _client.GetChannel(channelId) as IMessageChannel);
+            }
         }
 
-        public async Task<bool> GetServerToggleSoundpadCommands(SocketCommandContext context)
+        public bool GetServerToggleSoundpadCommands(SocketCommandContext context)
         {
-            if (!context.IsPrivate)
+            lock (BaseService.queryLock)
             {
-                bool flag = await _db.Servers
-                .AsQueryable()
-                .Where(s => s.ServerID == context.Guild.Id)
-                .Select(s => s.ToggleSoundpadCommands)
-                .SingleAsync();
+                if (!context.IsPrivate)
+                {
+                    bool flag = _db.Servers
+                    .AsQueryable()
+                    .Where(s => s.ServerID == context.Guild.Id)
+                    .Select(s => s.ToggleSoundpadCommands)
+                    .Single();
 
-                if (!flag)
-                    Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
+                    if (!flag)
+                        Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
 
-                return flag;
+                    return flag;
+                }
+                else
+                    return true;
             }
-            else
-                return true;
         }
 
-        public async Task<bool> GetServerAllowServerPermissionSoundpadCommands(SocketCommandContext context)
+        public bool GetServerAllowServerPermissionSoundpadCommands(SocketCommandContext context)
         {
-            if (!context.IsPrivate)
+            lock (BaseService.queryLock)
             {
-                bool flag = await _db.Servers
-                .AsQueryable()
-                .Where(s => s.ServerID == context.Guild.Id)
-                .Select(s => s.AllowServerPermissionSoundpadCommands)
-                .SingleAsync();
+                if (!context.IsPrivate)
+                {
+                    bool flag = _db.Servers
+                    .AsQueryable()
+                    .Where(s => s.ServerID == context.Guild.Id)
+                    .Select(s => s.AllowServerPermissionSoundpadCommands)
+                    .Single();
 
-                if (!flag)
-                    Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
+                    if (!flag)
+                        Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
 
-                return flag;
+                    return flag;
+                }
+                else
+                    return true;
             }
-            else
-                return true;
         }
 		#endregion
 	}

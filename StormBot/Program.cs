@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -230,61 +229,67 @@ namespace StormBot
 
         private async Task AddServerToDatabase(SocketGuild guild)
         {
-            ServersEntity newServerData = new ServersEntity()
+            lock (BaseService.queryLock)
             {
-                ServerID = guild.Id,
-                ServerName = guild.Name,
-                PrefixUsed = configurationSettingsModel.PrivateMessagePrefix,
-                AllowServerPermissionBlackOpsColdWarTracking = true,
-                ToggleBlackOpsColdWarTracking = false,
-                AllowServerPermissionModernWarfareTracking = true,
-                ToggleModernWarfareTracking = false,
-                AllowServerPermissionWarzoneTracking = true,
-                ToggleWarzoneTracking = false,
-                AllowServerPermissionSoundpadCommands = true,
-                ToggleSoundpadCommands = false,
-                AllowServerPermissionStorms = true,
-                ToggleStorms = false,
-                CallOfDutyNotificationChannelID = 0,
-                SoundboardNotificationChannelID = 0,
-                StormsNotificationChannelID = 0,
-                AdminRoleID = 0,
-                WarzoneWinsRoleID = 0,
-                WarzoneKillsRoleID = 0,
-                ModernWarfareKillsRoleID = 0,
-                BlackOpsColdWarKillsRoleID = 0,
-                StormsMostResetsRoleID = 0,
-                StormsMostRecentResetRoleID = 0
-            };
+                ServersEntity newServerData = new ServersEntity()
+                {
+                    ServerID = guild.Id,
+                    ServerName = guild.Name,
+                    PrefixUsed = configurationSettingsModel.PrivateMessagePrefix,
+                    AllowServerPermissionBlackOpsColdWarTracking = true,
+                    ToggleBlackOpsColdWarTracking = false,
+                    AllowServerPermissionModernWarfareTracking = true,
+                    ToggleModernWarfareTracking = false,
+                    AllowServerPermissionWarzoneTracking = true,
+                    ToggleWarzoneTracking = false,
+                    AllowServerPermissionSoundpadCommands = true,
+                    ToggleSoundpadCommands = false,
+                    AllowServerPermissionStorms = true,
+                    ToggleStorms = false,
+                    CallOfDutyNotificationChannelID = 0,
+                    SoundboardNotificationChannelID = 0,
+                    StormsNotificationChannelID = 0,
+                    AdminRoleID = 0,
+                    WarzoneWinsRoleID = 0,
+                    WarzoneKillsRoleID = 0,
+                    ModernWarfareKillsRoleID = 0,
+                    BlackOpsColdWarKillsRoleID = 0,
+                    StormsMostResetsRoleID = 0,
+                    StormsMostRecentResetRoleID = 0
+                };
 
-            _db.Servers.Add(newServerData);
-            await _db.SaveChangesAsync();
+                _db.Servers.Add(newServerData);
+                _db.SaveChanges();
+            }
         }
 
         private async Task RemoveServerFromDatabase(SocketGuild guild)
         {
-            var s = await _db.Servers
+            lock (BaseService.queryLock)
+            {
+                var s = _db.Servers
                 .AsQueryable()
                 .Where(s => s.ServerID == guild.Id)
-                .AsAsyncEnumerable()
-                .ToListAsync();
+                .AsEnumerable()
+                .ToList();
 
-            var c = await _db.CallOfDutyPlayerData
-                .AsQueryable()
-                .Where(c => c.ServerID == guild.Id)
-                .AsAsyncEnumerable()
-                .ToListAsync();
+                var c = _db.CallOfDutyPlayerData
+                    .AsQueryable()
+                    .Where(c => c.ServerID == guild.Id)
+                    .AsEnumerable()
+                    .ToList();
 
-            _db.RemoveRange(s);
-            _db.RemoveRange(c);
-            await _db.SaveChangesAsync();
+                _db.RemoveRange(s);
+                _db.RemoveRange(c);
+                _db.SaveChanges();
+            }
         }
 
         private void ConfigureServices()
         {
             _services = new ServiceCollection()
                 .AddSingleton(_client)
-                .AddTransient<StormBotContext>()
+                .AddDbContext<StormBotContext>()
                 .AddSingleton<CommandService>()
                 .AddSingleton<InteractiveService>()
                 .AddSingleton<CommandHandler>()

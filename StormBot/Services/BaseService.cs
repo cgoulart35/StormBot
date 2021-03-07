@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord.WebSocket;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using StormBot.Database;
 using StormBot.Database.Entities;
@@ -19,6 +18,8 @@ namespace StormBot.Services
 		public bool isServiceRunning { get; set; }
 
 		public static StormBotContext _db;
+
+		public static readonly object queryLock = new object();
 
 		public BaseService(IServiceProvider services)
 		{
@@ -84,29 +85,38 @@ namespace StormBot.Services
 		}
 
 		#region QUERIES
-		public async Task<List<ServersEntity>> GetAllServerEntities()
+		public List<ServersEntity> GetAllServerEntities()
 		{
-			return await _db.Servers
+			lock (BaseService.queryLock)
+			{
+				return _db.Servers
 				.AsQueryable()
-				.AsAsyncEnumerable()
-				.ToListAsync();
+				.AsEnumerable()
+				.ToList();
+			}
 		}
 
-		public async Task<ServersEntity> GetServerEntity(ulong serverId)
+		public ServersEntity GetServerEntity(ulong serverId)
 		{
-			return await _db.Servers
+			lock (BaseService.queryLock)
+			{
+				return _db.Servers
 				.AsQueryable()
 				.Where(s => s.ServerID == serverId)
-				.SingleAsync();
+				.Single();
+			}
 		}
 
-		public async Task<string> GetServerPrefix(ulong serverId)
+		public string GetServerPrefix(ulong serverId)
 		{
-			return await _db.Servers
+			lock (BaseService.queryLock)
+			{
+				return _db.Servers
 				.AsQueryable()
 				.Where(s => s.ServerID == serverId)
 				.Select(s => s.PrefixUsed)
-				.SingleAsync();
+				.Single();
+			}
 		}
 		#endregion
 	}

@@ -57,7 +57,7 @@ namespace StormBot.Services
 
 				if (_stormsService.isServiceRunning)
 				{
-					List<ServersEntity> servers = await GetAllServerEntities();
+					List<ServersEntity> servers = GetAllServerEntities();
 					foreach (ServersEntity server in servers)
 					{
 						StartStormAnnouncements(server.ServerID);
@@ -91,7 +91,7 @@ namespace StormBot.Services
 				int seconds = totalSeconds % 60;
 
 				// need to get latest info on server config every iteration
-				server = await GetServerEntity(serverID);
+				server = GetServerEntity(serverID);
 
 				if (server.AllowServerPermissionStorms && server.ToggleStorms && server.StormsNotificationChannelID != 0)
 					Console.WriteLine(logStamp + $"			The next Storm in {server.ServerName} is in {hours} hours {minutes} minutes and {seconds} seconds.");
@@ -99,7 +99,7 @@ namespace StormBot.Services
 				await Task.Delay(randomTimeWait);
 
 				// need to get latest info on server config every iteration
-				server = await GetServerEntity(serverID);
+				server = GetServerEntity(serverID);
 
 				if (server.AllowServerPermissionStorms && server.ToggleStorms && server.StormsNotificationChannelID != 0)
 					await RandomStormAnnouncement.Invoke(this, server.ServerID, server.ServerName, server.StormsNotificationChannelID);
@@ -114,7 +114,7 @@ namespace StormBot.Services
 				DateTime currentTime = DateTime.Now;
 				if (!weeklySent && currentTime.DayOfWeek == DayOfWeek.Sunday && currentTime.Hour == 1 && currentTime.Minute == 0 && WeeklyCallOfDutyAnnouncement != null)
 				{
-					List<ServersEntity> servers = await GetAllServerEntities();
+					List<ServersEntity> servers = GetAllServerEntities();
 					foreach (ServersEntity server in servers)
 					{
 						bool coldWarBool = _callOfDutyService.BlackOpsColdWarComponent.isServiceRunning && server.AllowServerPermissionBlackOpsColdWarTracking && server.ToggleBlackOpsColdWarTracking;
@@ -146,7 +146,7 @@ namespace StormBot.Services
 				DateTime currentTime = DateTime.Now;
 				if (!dailySent && currentTime.Hour == 22 && currentTime.Minute == 0 && DailyCallOfDutyAnnouncement != null)
 				{
-					List<ServersEntity> servers = await GetAllServerEntities();
+					List<ServersEntity> servers = GetAllServerEntities();
 					foreach (ServersEntity server in servers)
 					{
 						bool coldWarBool = _callOfDutyService.BlackOpsColdWarComponent.isServiceRunning && server.AllowServerPermissionBlackOpsColdWarTracking && server.ToggleBlackOpsColdWarTracking;

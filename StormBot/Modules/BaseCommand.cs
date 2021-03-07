@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using System.Linq;
-using Microsoft.EntityFrameworkCore;
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using StormBot.Services;
@@ -98,29 +96,35 @@ namespace StormBot.Modules
         }
 
 		#region QUERIES
-		public async Task<string> GetServerPrefix(StormBotContext _db)
+		public string GetServerPrefix(StormBotContext _db)
         {
-            if (!Context.IsPrivate)
+            lock (BaseService.queryLock)
             {
-                return await _db.Servers
-                    .AsQueryable()
-                    .Where(s => s.ServerID == Context.Guild.Id)
-                    .Select(s => s.PrefixUsed)
-                    .SingleAsync();
-            }
-            else
-            {
-                return Program.configurationSettingsModel.PrivateMessagePrefix;
+                if (!Context.IsPrivate)
+                {
+                    return _db.Servers
+                        .AsQueryable()
+                        .Where(s => s.ServerID == Context.Guild.Id)
+                        .Select(s => s.PrefixUsed)
+                        .Single();
+                }
+                else
+                {
+                    return Program.configurationSettingsModel.PrivateMessagePrefix;
+                }
             }
         }
 
-        public async Task<ulong> GetServerAdminRole(StormBotContext _db)
+        public ulong GetServerAdminRole(StormBotContext _db)
         {
-            return await _db.Servers
+            lock (BaseService.queryLock)
+            {
+                return _db.Servers
                 .AsQueryable()
                 .Where(s => s.ServerID == Context.Guild.Id)
                 .Select(s => s.AdminRoleID)
-                .SingleAsync();
+                .Single();
+            }
         }
 		#endregion
 	}

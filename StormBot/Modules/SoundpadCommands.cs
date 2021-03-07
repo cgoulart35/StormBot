@@ -12,7 +12,6 @@ using SoundpadConnector.Response;
 using SoundpadConnector.XML;
 using VideoLibrary;
 using StormBot.Services;
-using StormBot.Database;
 using StormBot.Models.SoundpadApiModels;
 
 namespace StormBot.Modules
@@ -39,7 +38,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionSoundpadCommands(Context) && await _service.GetServerToggleSoundpadCommands(Context))
+                if (_service.GetServerAllowServerPermissionSoundpadCommands(Context) && _service.GetServerToggleSoundpadCommands(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "add"))
                     {
@@ -108,13 +107,13 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionSoundpadCommands(Context) && await _service.GetServerToggleSoundpadCommands(Context))
+                if (_service.GetServerAllowServerPermissionSoundpadCommands(Context) && _service.GetServerToggleSoundpadCommands(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "approve"))
                     {
                         await Context.Channel.TriggerTypingAsync();
 
-                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                         {
                             await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                         }
@@ -148,7 +147,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionSoundpadCommands(Context) && await _service.GetServerToggleSoundpadCommands(Context))
+                if (_service.GetServerAllowServerPermissionSoundpadCommands(Context) && _service.GetServerToggleSoundpadCommands(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "categories"))
                     {
@@ -173,13 +172,13 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionSoundpadCommands(Context) && await _service.GetServerToggleSoundpadCommands(Context))
+                if (_service.GetServerAllowServerPermissionSoundpadCommands(Context) && _service.GetServerToggleSoundpadCommands(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "delete"))
                     {
                         await Context.Channel.TriggerTypingAsync();
 
-                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                         {
                             await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                         }
@@ -218,13 +217,13 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionSoundpadCommands(Context) && await _service.GetServerToggleSoundpadCommands(Context))
+                if (_service.GetServerAllowServerPermissionSoundpadCommands(Context) && _service.GetServerToggleSoundpadCommands(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "deny"))
                     {
                         await Context.Channel.TriggerTypingAsync();
 
-                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                         {
                             await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                         }
@@ -258,7 +257,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionSoundpadCommands(Context) && await _service.GetServerToggleSoundpadCommands(Context))
+                if (_service.GetServerAllowServerPermissionSoundpadCommands(Context) && _service.GetServerToggleSoundpadCommands(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "pause"))
                     {
@@ -292,7 +291,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionSoundpadCommands(Context) && await _service.GetServerToggleSoundpadCommands(Context))
+                if (_service.GetServerAllowServerPermissionSoundpadCommands(Context) && _service.GetServerToggleSoundpadCommands(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "play"))
                     {
@@ -329,7 +328,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionSoundpadCommands(Context) && await _service.GetServerToggleSoundpadCommands(Context))
+                if (_service.GetServerAllowServerPermissionSoundpadCommands(Context) && _service.GetServerToggleSoundpadCommands(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "sounds"))
                     {
@@ -337,7 +336,7 @@ namespace StormBot.Modules
 
                         if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
                         {
-                            string categoryName = GetSingleArg(args).ToLower();
+                            string categoryName = GetSingleArg(args)?.ToLower();
 
                             Tuple<List<int>, bool> loadedSounds = await LoadSounds(true, categoryName);
 
@@ -366,7 +365,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionSoundpadCommands(Context) && await _service.GetServerToggleSoundpadCommands(Context))
+                if (_service.GetServerAllowServerPermissionSoundpadCommands(Context) && _service.GetServerToggleSoundpadCommands(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "stop"))
                     {
@@ -430,10 +429,10 @@ namespace StormBot.Modules
             {
                 if (category.Name != "All sounds")
                 {
-                    if (category.Name == categoryName)
+                    if (category.Name.ToLower() == categoryName)
                         categoryExists = true;
 
-                    if (categoryName == null || category.Name == categoryName)
+                    if (categoryName == null || category.Name.ToLower() == categoryName)
                         output = ValidateOutputLimit(output, "\n**" + displayedCategoryNumber + ".) " + category.Name + "**");
 
                     if (!categoriesMode)
@@ -442,7 +441,7 @@ namespace StormBot.Modules
 
                         foreach (Sound sound in soundList)
                         {
-                            if (categoryName == null || category.Name == categoryName)
+                            if (categoryName == null || category.Name.ToLower() == categoryName)
                                 output = ValidateOutputLimit(output, "\n" + "     " + displayedSoundNumber + ".) " + sound.Title);
 
                             displayedSoundNumber++;
@@ -508,7 +507,7 @@ namespace StormBot.Modules
                     await ReplyAsync("Request cancelled.");
                 }
                 // if same user starts another command while awaiting a response, end this one but don't display request cancelled
-                else if (requestedNumber.StartsWith(await GetServerPrefix(BaseService._db)) && waitingForAnswer)
+                else if (requestedNumber.StartsWith(GetServerPrefix(BaseService._db)) && waitingForAnswer)
                 {
                 }
                 // if not cancel, request another response
@@ -645,7 +644,7 @@ namespace StormBot.Modules
                         return -1;
                     }
                     // if same user starts another command while awaiting a response, end this one but don't display request cancelled
-                    else if (requestedNumber != null && requestedNumber.StartsWith(await GetServerPrefix(BaseService._db)))
+                    else if (requestedNumber != null && requestedNumber.StartsWith(GetServerPrefix(BaseService._db)))
                     {
                         return -1;
                     }

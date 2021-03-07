@@ -5,8 +5,6 @@ using System.Linq;
 using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore;
-using StormBot.Database;
 using StormBot.Database.Entities;
 using Discord.Commands;
 
@@ -83,7 +81,7 @@ namespace StormBot.Services
 
 				isServiceRunning = true;
 
-				List<ServersEntity> servers = await GetAllServerEntities();
+				List<ServersEntity> servers = GetAllServerEntities();
 				foreach (ServersEntity server in servers)
 				{
 					string message = "";
@@ -107,7 +105,7 @@ namespace StormBot.Services
 			{
 				Console.WriteLine(logStamp + "Stopping service.".PadLeft(68 - logStamp.Length));
 
-				List<ServersEntity> servers = await GetAllServerEntities();
+				List<ServersEntity> servers = GetAllServerEntities();
 				foreach (ServersEntity server in servers)
 				{
 					string message = "";
@@ -143,7 +141,7 @@ namespace StormBot.Services
 
 			purgeCollection.Add(await((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(cloud_rain.ToString() + thunder_cloud_rain.ToString() + umbrella2.ToString() + " __**STORM INCOMING**__ " + umbrella2.ToString() + thunder_cloud_rain.ToString() + cloud_rain.ToString() + string.Format(@"
 
-First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute countdown starting now!", await GetServerPrefix(serverId), levelOneReward)));
+First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute countdown starting now!", GetServerPrefix(serverId), levelOneReward)));
 
 			StartStormCountdown(channelId);
 		}
@@ -212,14 +210,17 @@ First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute 
 				// if the ongoing storm is on the correct step for this command, give the user points and update the storm level
 				if (actualLevel == inputLevel)
 				{
-					StormPlayerDataEntity playerData = await GetStormPlayerDataEntity(serverId, discordId);
+					StormPlayerDataEntity playerData = GetStormPlayerDataEntity(serverId, discordId);
 					bool hadDisasterMark = playerData.Wallet >= disasterMark;
 
 					if (actualLevel == 1)
 					{
 						// give user points for level 1
-						playerData.Wallet += levelOneReward;
-						await _db.SaveChangesAsync();
+						lock (BaseService.queryLock)
+						{
+							playerData.Wallet += levelOneReward;
+							_db.SaveChanges();
+						}
 
 						purgeCollection.Add(await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you put up your umbrella first and earned {levelOneReward} points!" + string.Format(@"
 
@@ -235,7 +236,7 @@ Use '**{0}resets**' to show how many resets everyone has.
 
 Points earned are multiplied if you guess within 4 guesses!
 When anyone reaches {4} points, a disaster will occur for a random player. Their wallet will be reset to {5} points if they are not insured.
-All wallets are reset to {5} points once someone reaches {6} points.", await GetServerPrefix(serverId), levelTwoReward, stealAmount, insuranceCost, disasterMark, resetBalance, resetMark)));
+All wallets are reset to {5} points once someone reaches {6} points.", GetServerPrefix(serverId), levelTwoReward, stealAmount, insuranceCost, disasterMark, resetBalance, resetMark)));
 
 						// update storm to level 2
 						OngoingStormsLevel[channelId] = 2;
@@ -277,8 +278,11 @@ All wallets are reset to {5} points once someone reaches {6} points.", await Get
 							if (bet != null && bet.Value > levelTwoReward)
 								reward = bet.Value;
 
-							playerData.Wallet += reward * multiplier;
-							await _db.SaveChangesAsync();
+							lock (BaseService.queryLock)
+							{
+								playerData.Wallet += reward * multiplier;
+								_db.SaveChanges();
+							}
 
 							string multiplierStr = "";
 							if (multiplier > 1)
@@ -300,12 +304,15 @@ All wallets are reset to {5} points once someone reaches {6} points.", await Get
 
 								// take points from user if they bet
 								double newWallet = playerData.Wallet - bet.Value;
-								if (newWallet < 0)
-									playerData.Wallet = 0;
-								else
-									playerData.Wallet = newWallet;
+								lock (BaseService.queryLock)
+								{
+									if (newWallet < 0)
+										playerData.Wallet = 0;
+									else
+										playerData.Wallet = newWallet;
 
-								await _db.SaveChangesAsync();
+									_db.SaveChanges();
+								}
 							}
 							else
 							{
@@ -352,7 +359,7 @@ All wallets are reset to {5} points once someone reaches {6} points.", await Get
 					StormPlayerDataEntity playerData = await AddPlayerToDbTableIfNotExist(serverId, discordId);
 					bool hadDisasterMark = playerData.Wallet >= disasterMark;
 
-					List<StormPlayerDataEntity> allPlayerData = await GetAllStormPlayerDataEntities(serverId);
+					List<StormPlayerDataEntity> allPlayerData = GetAllStormPlayerDataEntities(serverId);
 
 					double? topScore = allPlayerData.OrderByDescending(player => player.Wallet).Select(player => player.Wallet).FirstOrDefault();
 
@@ -383,9 +390,11 @@ All wallets are reset to {5} points once someone reaches {6} points.", await Get
 									diff = stealAmount / topPlayers.Count;
 								}
 
-								playerData.Wallet += diff;
-
-								await _db.SaveChangesAsync();
+								lock (BaseService.queryLock)
+								{
+									playerData.Wallet += diff;
+									_db.SaveChanges();
+								}
 
 								purgeCollection.Add(await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you stole {diff} points from <@!{topPlayer.DiscordID}>!"));
 
@@ -402,7 +411,7 @@ All wallets are reset to {5} points once someone reaches {6} points.", await Get
 
 		private async Task CheckForReset(SocketGuild guild, ulong serverId, ulong discordId, ulong channelId)
 		{
-			StormPlayerDataEntity playerData = await GetStormPlayerDataEntity(serverId, discordId);
+			StormPlayerDataEntity playerData = GetStormPlayerDataEntity(serverId, discordId);
 
 			// increment players reset count, set everyones wallets back to base amount, and give appropriate roles
 			if (playerData.Wallet >= resetMark)
@@ -413,17 +422,20 @@ All wallets are reset to {5} points once someone reaches {6} points.", await Get
 				playerData.ResetCount++;
 
 				// give everyone the base wallet amount and no insurance
-				List<StormPlayerDataEntity> allPlayerData = await GetAllStormPlayerDataEntities(serverId);
-				foreach (StormPlayerDataEntity player in allPlayerData)
+				List<StormPlayerDataEntity> allPlayerData = GetAllStormPlayerDataEntities(serverId);
+				lock (BaseService.queryLock)
 				{
-					player.Wallet = resetBalance;
-					player.HasInsurance = false;
+					foreach (StormPlayerDataEntity player in allPlayerData)
+					{
+						player.Wallet = resetBalance;
+						player.HasInsurance = false;
+					}
+
+					_db.SaveChanges();
 				}
 
-				await _db.SaveChangesAsync();
-
-				ulong mostRecentRoleID = await GetStormsMostRecentResetRoleID(serverId);
-				ulong mostResetsRoleID = await GetStormsMostResetsRoleID(serverId);
+				ulong mostRecentRoleID = GetStormsMostRecentResetRoleID(serverId);
+				ulong mostResetsRoleID = GetStormsMostResetsRoleID(serverId);
 
 				// unassign both roles from everyone
 				await UnassignRoleFromAllMembers(mostResetsRoleID, guild);
@@ -456,12 +468,12 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 
 		private async Task CheckForDisaster(ulong serverId, ulong discordId, ulong channelId, bool hadDisasterMark)
 		{
-			StormPlayerDataEntity playerData = await GetStormPlayerDataEntity(serverId, discordId);
+			StormPlayerDataEntity playerData = GetStormPlayerDataEntity(serverId, discordId);
+			List<StormPlayerDataEntity> allPlayerData = GetAllStormPlayerDataEntities(serverId);
 
 			if (playerData.Wallet >= disasterMark && !hadDisasterMark)
 			{
 				// reset random player's wallet if they are uninsured
-				List<StormPlayerDataEntity> allPlayerData = await GetAllStormPlayerDataEntities(serverId);
 				Random random = new Random();
 				int randomIndex = random.Next(0, allPlayerData.Count);
 
@@ -482,20 +494,23 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 				}
 
 				string insuredOrNotStr = "";
-				if (!allPlayerData[randomIndex].HasInsurance)
+				lock (BaseService.queryLock)
 				{
-					insuredOrNotStr = theyYouStr + " were not insured and" + theirYour + " wallet has been reset!";
-					if (allPlayerData[randomIndex].Wallet <= resetBalance)
-						allPlayerData[randomIndex].Wallet = 0;
+					if (!allPlayerData[randomIndex].HasInsurance)
+					{
+						insuredOrNotStr = theyYouStr + " were not insured and" + theirYour + " wallet has been reset!";
+						if (allPlayerData[randomIndex].Wallet <= resetBalance)
+							allPlayerData[randomIndex].Wallet = 0;
+						else
+							allPlayerData[randomIndex].Wallet = resetBalance;
+					}
 					else
-						allPlayerData[randomIndex].Wallet = resetBalance;
-				}
-				else
-				{
-					insuredOrNotStr = " However," + theyYouStr + " were insured and not affected.";
-				}
+					{
+						insuredOrNotStr = " However," + theyYouStr + " were insured and not affected.";
+					}
 
-				await _db.SaveChangesAsync();
+					_db.SaveChanges();
+				}
 
 				purgeCollection.Add(await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you caused a disaster" + onPersonAffected + $" since you passed {disasterMark} points!" + insuredOrNotStr));
 			}
@@ -504,99 +519,120 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 		#region QUERIES
 		public async Task<StormPlayerDataEntity> AddPlayerToDbTableIfNotExist(ulong serverID, ulong discordID)
 		{
-			StormPlayerDataEntity playerData = await GetStormPlayerDataEntity(serverID, discordID);
+			StormPlayerDataEntity playerData = GetStormPlayerDataEntity(serverID, discordID);
 
-			if (playerData == null)
+			lock (BaseService.queryLock)
 			{
-				StormPlayerDataEntity newPlayerData = new StormPlayerDataEntity()
+				if (playerData == null)
 				{
-					ServerID = serverID,
-					DiscordID = discordID,
-					Wallet = 0,
-					ResetCount = 0,
-					HasInsurance = false
-				};
+					StormPlayerDataEntity newPlayerData = new StormPlayerDataEntity()
+					{
+						ServerID = serverID,
+						DiscordID = discordID,
+						Wallet = 0,
+						ResetCount = 0,
+						HasInsurance = false
+					};
 
-				_db.StormPlayerData.Add(newPlayerData);
-				await _db.SaveChangesAsync();
+					_db.StormPlayerData.Add(newPlayerData);
+					_db.SaveChanges();
 
-				return newPlayerData;
+					return newPlayerData;
+				}
+
+				return playerData;
 			}
-
-			return playerData;
 		}
 
-		public async Task<StormPlayerDataEntity> GetStormPlayerDataEntity(ulong serverID, ulong discordID)
+		public StormPlayerDataEntity GetStormPlayerDataEntity(ulong serverID, ulong discordID)
 		{
-			return await _db.StormPlayerData
+			lock (BaseService.queryLock)
+			{
+				return _db.StormPlayerData
 				.AsQueryable()
 				.Where(player => player.ServerID == serverID && player.DiscordID == discordID)
-				.SingleOrDefaultAsync();
+				.SingleOrDefault();
+			}
 		}
 
-		public async Task<List<StormPlayerDataEntity>> GetAllStormPlayerDataEntities(ulong serverID)
+		public List<StormPlayerDataEntity> GetAllStormPlayerDataEntities(ulong serverID)
 		{
-			return await _db.StormPlayerData
+			lock (BaseService.queryLock)
+			{
+				return _db.StormPlayerData
 				.AsQueryable()
 				.Where(player => player.ServerID == serverID)
-				.AsAsyncEnumerable()
-				.ToListAsync();
-		}
-
-		public async Task<bool> GetServerToggleStorms(SocketCommandContext context)
-		{
-			if (!context.IsPrivate)
-			{
-				bool flag = await _db.Servers
-				.AsQueryable()
-				.Where(s => s.ServerID == context.Guild.Id)
-				.Select(s => s.ToggleStorms)
-				.SingleAsync();
-
-				if (!flag)
-					Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
-
-				return flag;
+				.AsEnumerable()
+				.ToList();
 			}
-			else
-				return true;
 		}
 
-		public async Task<bool> GetServerAllowServerPermissionStorms(SocketCommandContext context)
+		public bool GetServerToggleStorms(SocketCommandContext context)
 		{
-			if (!context.IsPrivate)
+			lock (BaseService.queryLock)
 			{
-				bool flag = await _db.Servers
-				.AsQueryable()
-				.Where(s => s.ServerID == context.Guild.Id)
-				.Select(s => s.AllowServerPermissionStorms)
-				.SingleAsync();
+				if (!context.IsPrivate)
+				{
+					bool flag = _db.Servers
+					.AsQueryable()
+					.Where(s => s.ServerID == context.Guild.Id)
+					.Select(s => s.ToggleStorms)
+					.Single();
 
-				if (!flag)
-					Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
+					if (!flag)
+						Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
 
-				return flag;
+					return flag;
+				}
+				else
+					return true;
 			}
-			else
-				return true;
 		}
 
-		public async Task<ulong> GetStormsMostResetsRoleID(ulong serverId)
+		public bool GetServerAllowServerPermissionStorms(SocketCommandContext context)
 		{
-			return await _db.Servers
+			lock (BaseService.queryLock)
+			{
+				if (!context.IsPrivate)
+				{
+					bool flag = _db.Servers
+					.AsQueryable()
+					.Where(s => s.ServerID == context.Guild.Id)
+					.Select(s => s.AllowServerPermissionStorms)
+					.Single();
+
+					if (!flag)
+						Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
+
+					return flag;
+				}
+				else
+					return true;
+			}
+		}
+
+		public ulong GetStormsMostResetsRoleID(ulong serverId)
+		{
+			lock (BaseService.queryLock)
+			{
+				return _db.Servers
 				.AsQueryable()
 				.Where(s => s.ServerID == serverId)
 				.Select(s => s.StormsMostResetsRoleID)
-				.SingleOrDefaultAsync();
+				.SingleOrDefault();
+			}
 		}
 
-		public async Task<ulong> GetStormsMostRecentResetRoleID(ulong serverId)
+		public ulong GetStormsMostRecentResetRoleID(ulong serverId)
 		{
-			return await _db.Servers
+			lock (BaseService.queryLock)
+			{
+				return _db.Servers
 				.AsQueryable()
 				.Where(s => s.ServerID == serverId)
 				.Select(s => s.StormsMostRecentResetRoleID)
-				.SingleOrDefaultAsync();
+				.SingleOrDefault();
+			}
 		}
 		#endregion
 	}

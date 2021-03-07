@@ -6,9 +6,7 @@ using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore;
 using StormBot.Services;
-using StormBot.Database;
 using StormBot.Database.Entities;
 
 namespace StormBot.Modules
@@ -35,18 +33,22 @@ namespace StormBot.Modules
 
             if (!Context.IsPrivate)
             {
-                if (!(((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db))) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                if (!(((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db))) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                 {
                     await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                 }
                 else
                 {
-                    ServersEntity serverData = await BaseService._db.Servers
+                    string message;
+
+                    lock (BaseService.queryLock)
+                    {
+                        ServersEntity serverData = BaseService._db.Servers
                         .AsQueryable()
                         .Where(s => s.ServerID == Context.Guild.Id)
-                        .SingleAsync();
+                        .Single();
 
-                    string message = string.Format(@"__**Current Configurations:**__
+                        message = string.Format(@"__**Current Configurations:**__
 
 **Prefix:** {0}
 **Black Ops Cold War Tracking Feature:** {1}
@@ -64,6 +66,7 @@ namespace StormBot.Modules
 **Warzone kills role:** <@&{13}>
 **Most Storm resets role:** <@&{14}>
 **Latest Storm reset role:** <@&{15}>", serverData.PrefixUsed, serverData.ToggleBlackOpsColdWarTracking ? "On" : "Off", serverData.ToggleModernWarfareTracking ? "On" : "Off", serverData.ToggleWarzoneTracking ? "On" : "Off", serverData.ToggleSoundpadCommands ? "On" : "Off", serverData.ToggleStorms ? "On" : "Off", serverData.CallOfDutyNotificationChannelID, serverData.SoundboardNotificationChannelID, serverData.StormsNotificationChannelID, serverData.AdminRoleID, serverData.BlackOpsColdWarKillsRoleID, serverData.ModernWarfareKillsRoleID, serverData.WarzoneWinsRoleID, serverData.WarzoneKillsRoleID, serverData.StormsMostResetsRoleID, serverData.StormsMostRecentResetRoleID);
+                    }
 
                     await ReplyAsync(message);
                 }
@@ -80,7 +83,7 @@ namespace StormBot.Modules
 
             if (!Context.IsPrivate)
             {
-                if (!(((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db))) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                if (!(((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db))) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                 {
                     await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                 }
@@ -90,18 +93,21 @@ namespace StormBot.Modules
                     {
                         string prefix = GetSingleArg(args);
 
-                        string currentPrefix = await GetServerPrefix(BaseService._db);
+                        string currentPrefix = GetServerPrefix(BaseService._db);
                         if (prefix != currentPrefix)
                         {
-                            ServersEntity serverData = await BaseService._db.Servers
+                            lock (BaseService.queryLock)
+                            {
+                                ServersEntity serverData = BaseService._db.Servers
                                 .AsQueryable()
                                 .Where(s => s.ServerID == Context.Guild.Id)
-                                .SingleAsync();
+                                .Single();
 
-                            serverData.PrefixUsed = prefix;
-                            await BaseService._db.SaveChangesAsync();
+                                serverData.PrefixUsed = prefix;
+                                BaseService._db.SaveChanges();
+                            }
 
-                            await ReplyAsync("The server prefix was set to: " + await GetServerPrefix(BaseService._db));
+                            await ReplyAsync("The server prefix was set to: " + GetServerPrefix(BaseService._db));
                         }
                         else
                             await ReplyAsync("The server is already using this prefix.");
@@ -120,24 +126,29 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _callOfDutyService.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context))
+                if (_callOfDutyService.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
-                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                     {
                         await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                     }
                     else
                     {
-                        ServersEntity serverData = await BaseService._db.Servers
+                        bool flag;
+
+                        lock (BaseService.queryLock)
+                        {
+                            ServersEntity serverData = BaseService._db.Servers
                             .AsQueryable()
                             .Where(s => s.ServerID == Context.Guild.Id)
-                            .SingleAsync();
+                            .Single();
 
-                        bool flag = serverData.ToggleBlackOpsColdWarTracking;
-                        serverData.ToggleBlackOpsColdWarTracking = !flag;
-                        await BaseService._db.SaveChangesAsync();
+                            flag = serverData.ToggleBlackOpsColdWarTracking;
+                            serverData.ToggleBlackOpsColdWarTracking = !flag;
+                            BaseService._db.SaveChanges();
+                        }
 
                         if (!flag)
                             await ReplyAsync("Black Ops Cold War tracking was enabled.");
@@ -156,24 +167,29 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _callOfDutyService.GetServerAllowServerPermissionModernWarfareTracking(Context))
+                if (_callOfDutyService.GetServerAllowServerPermissionModernWarfareTracking(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
-                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                     {
                         await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                     }
                     else
                     {
-                        ServersEntity serverData = await BaseService._db.Servers
+                        bool flag;
+
+                        lock (BaseService.queryLock)
+                        {
+                            ServersEntity serverData = BaseService._db.Servers
                             .AsQueryable()
                             .Where(s => s.ServerID == Context.Guild.Id)
-                            .SingleAsync();
+                            .Single();
 
-                        bool flag = serverData.ToggleModernWarfareTracking;
-                        serverData.ToggleModernWarfareTracking = !flag;
-                        await BaseService._db.SaveChangesAsync();
+                            flag = serverData.ToggleModernWarfareTracking;
+                            serverData.ToggleModernWarfareTracking = !flag;
+                            BaseService._db.SaveChanges();
+                        }
 
                         if (!flag)
                             await ReplyAsync("Modern Warfare tracking was enabled.");
@@ -192,24 +208,29 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _callOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context))
+                if (_callOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
-                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                     {
                         await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                     }
                     else
                     {
-                        ServersEntity serverData = await BaseService._db.Servers
-                            .AsQueryable()
-                            .Where(s => s.ServerID == Context.Guild.Id)
-                            .SingleAsync();
+                        bool flag;
 
-                        bool flag = serverData.ToggleWarzoneTracking;
-                        serverData.ToggleWarzoneTracking = !flag;
-                        await BaseService._db.SaveChangesAsync();
+                        lock (BaseService.queryLock)
+                        {
+                            ServersEntity serverData = BaseService._db.Servers
+                                .AsQueryable()
+                                .Where(s => s.ServerID == Context.Guild.Id)
+                                .Single();
+
+                            flag = serverData.ToggleWarzoneTracking;
+                            serverData.ToggleWarzoneTracking = !flag;
+                            BaseService._db.SaveChanges();
+                        }
 
                         if (!flag)
                             await ReplyAsync("Warzone tracking was enabled.");
@@ -228,24 +249,29 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _soundpadService.GetServerAllowServerPermissionSoundpadCommands(Context))
+                if (_soundpadService.GetServerAllowServerPermissionSoundpadCommands(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
-                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                     {
                         await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                     }
                     else
                     {
-                        ServersEntity serverData = await BaseService._db.Servers
+                        bool flag;
+
+                        lock (BaseService.queryLock)
+                        {
+                            ServersEntity serverData = BaseService._db.Servers
                             .AsQueryable()
                             .Where(s => s.ServerID == Context.Guild.Id)
-                            .SingleAsync();
+                            .Single();
 
-                        bool flag = serverData.ToggleSoundpadCommands;
-                        serverData.ToggleSoundpadCommands = !flag;
-                        await BaseService._db.SaveChangesAsync();
+                            flag = serverData.ToggleSoundpadCommands;
+                            serverData.ToggleSoundpadCommands = !flag;
+                            BaseService._db.SaveChanges();
+                        }
 
                         if (!flag)
                             await ReplyAsync("Soundboard commands were enabled.");
@@ -264,24 +290,29 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _stormsService.GetServerAllowServerPermissionStorms(Context))
+                if (_stormsService.GetServerAllowServerPermissionStorms(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
-                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                     {
                         await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                     }
                     else
                     {
-                        ServersEntity serverData = await BaseService._db.Servers
+                        bool flag;
+
+                        lock (BaseService.queryLock)
+                        {
+                            ServersEntity serverData = BaseService._db.Servers
                             .AsQueryable()
                             .Where(s => s.ServerID == Context.Guild.Id)
-                            .SingleAsync();
+                            .Single();
 
-                        bool flag = serverData.ToggleStorms;
-                        serverData.ToggleStorms = !flag;
-                        await BaseService._db.SaveChangesAsync();
+                            flag = serverData.ToggleStorms;
+                            serverData.ToggleStorms = !flag;
+                            BaseService._db.SaveChanges();
+                        }
 
                         if (!flag)
                             await ReplyAsync("Storms were enabled.");
@@ -300,11 +331,11 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if ((await _callOfDutyService.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && await _callOfDutyService.GetServerToggleBlackOpsColdWarTracking(Context)) || (await _callOfDutyService.GetServerAllowServerPermissionModernWarfareTracking(Context) && await _callOfDutyService.GetServerToggleModernWarfareTracking(Context)) || (await _callOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context) && await _callOfDutyService.GetServerToggleWarzoneTracking(Context)))
+                if ((_callOfDutyService.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && _callOfDutyService.GetServerToggleBlackOpsColdWarTracking(Context)) || (_callOfDutyService.GetServerAllowServerPermissionModernWarfareTracking(Context) && _callOfDutyService.GetServerToggleModernWarfareTracking(Context)) || (_callOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context) && _callOfDutyService.GetServerToggleWarzoneTracking(Context)))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
-                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                     {
                         await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                     }
@@ -315,18 +346,25 @@ namespace StormBot.Modules
                             string input = GetSingleArg(args);
                             ulong discordChannelID = GetDiscordID(input, false);
 
-                            ServersEntity serverData = await BaseService._db.Servers
+                            bool changed = false;
+
+                            lock (BaseService.queryLock)
+                            {
+                                ServersEntity serverData = BaseService._db.Servers
                                 .AsQueryable()
                                 .Where(s => s.ServerID == Context.Guild.Id)
-                                .SingleAsync();
+                                .Single();
 
-                            if (serverData.CallOfDutyNotificationChannelID != discordChannelID)
-                            {
-                                serverData.CallOfDutyNotificationChannelID = discordChannelID;
-                                await BaseService._db.SaveChangesAsync();
-
-                                await ReplyAsync($"The Call of Duty notification channel has been set to: <#{discordChannelID}>");
+                                if (serverData.CallOfDutyNotificationChannelID != discordChannelID)
+                                {
+                                    serverData.CallOfDutyNotificationChannelID = discordChannelID;
+                                    BaseService._db.SaveChanges();
+                                    changed = true;
+                                }
                             }
+
+                            if (changed)
+                                await ReplyAsync($"The Call of Duty notification channel has been set to: <#{discordChannelID}>");
                             else
                                 await ReplyAsync("The server is already using this channel for Call of Duty notifications.");
                         }
@@ -347,11 +385,11 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _soundpadService.GetServerAllowServerPermissionSoundpadCommands(Context) && await _soundpadService.GetServerToggleSoundpadCommands(Context))
+                if (_soundpadService.GetServerAllowServerPermissionSoundpadCommands(Context) && _soundpadService.GetServerToggleSoundpadCommands(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
-                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                     {
                         await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                     }
@@ -362,18 +400,26 @@ namespace StormBot.Modules
                             string input = GetSingleArg(args);
                             ulong discordChannelID = GetDiscordID(input, false);
 
-                            ServersEntity serverData = await BaseService._db.Servers
+                            bool changed = false;
+
+                            lock (BaseService.queryLock)
+                            {
+
+                                ServersEntity serverData = BaseService._db.Servers
                                 .AsQueryable()
                                 .Where(s => s.ServerID == Context.Guild.Id)
-                                .SingleAsync();
+                                .Single();
 
-                            if (serverData.SoundboardNotificationChannelID != discordChannelID)
-                            {
-                                serverData.SoundboardNotificationChannelID = discordChannelID;
-                                await BaseService._db.SaveChangesAsync();
-
-                                await ReplyAsync($"The Soundboard notification channel has been set to: <#{discordChannelID}>");
+                                if (serverData.SoundboardNotificationChannelID != discordChannelID)
+                                {
+                                    serverData.SoundboardNotificationChannelID = discordChannelID;
+                                    BaseService._db.SaveChanges();
+                                    changed = true;
+                                }
                             }
+
+                            if (changed)
+                                await ReplyAsync($"The Soundboard notification channel has been set to: <#{discordChannelID}>");
                             else
                                 await ReplyAsync("The server is already using this channel for Soundboard notifications.");
                         }
@@ -394,11 +440,11 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _stormsService.GetServerAllowServerPermissionStorms(Context) && await _stormsService.GetServerToggleStorms(Context))
+                if (_stormsService.GetServerAllowServerPermissionStorms(Context) && _stormsService.GetServerToggleStorms(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
-                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                     {
                         await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                     }
@@ -409,18 +455,25 @@ namespace StormBot.Modules
                             string input = GetSingleArg(args);
                             ulong discordChannelID = GetDiscordID(input, false);
 
-                            ServersEntity serverData = await BaseService._db.Servers
+                            bool changed = false;
+
+                            lock (BaseService.queryLock)
+                            {
+                                ServersEntity serverData = BaseService._db.Servers
                                 .AsQueryable()
                                 .Where(s => s.ServerID == Context.Guild.Id)
-                                .SingleAsync();
+                                .Single();
 
-                            if (serverData.StormsNotificationChannelID != discordChannelID)
-                            {
-                                serverData.StormsNotificationChannelID = discordChannelID;
-                                await BaseService._db.SaveChangesAsync();
-
-                                await ReplyAsync($"The Storm notification channel has been set to: <#{discordChannelID}>");
+                                if (serverData.StormsNotificationChannelID != discordChannelID)
+                                {
+                                    serverData.StormsNotificationChannelID = discordChannelID;
+                                    BaseService._db.SaveChanges();
+                                    changed = true;
+                                }
                             }
+
+                            if (changed)
+                                await ReplyAsync($"The Storm notification channel has been set to: <#{discordChannelID}>");
                             else
                                 await ReplyAsync("The server is already using this channel for Storm notifications.");
                         }
@@ -443,7 +496,7 @@ namespace StormBot.Modules
             {
                 await Context.Channel.TriggerTypingAsync();
 
-                if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                 {
                     await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                 }
@@ -454,18 +507,25 @@ namespace StormBot.Modules
                         string input = GetSingleArg(args);
                         ulong discordRoleID = GetDiscordID(input, false, false);
 
-                        ServersEntity serverData = await BaseService._db.Servers
+                        bool changed = false;
+
+                        lock (BaseService.queryLock)
+                        {
+                            ServersEntity serverData = BaseService._db.Servers
                             .AsQueryable()
                             .Where(s => s.ServerID == Context.Guild.Id)
-                            .SingleAsync();
+                            .Single();
 
-                        if (serverData.AdminRoleID != discordRoleID)
-                        {
-                            serverData.AdminRoleID = discordRoleID;
-                            await BaseService._db.SaveChangesAsync();
-
-                            await ReplyAsync($"The admin role has been set to: <@&{discordRoleID}>");
+                            if (serverData.AdminRoleID != discordRoleID)
+                            {
+                                serverData.AdminRoleID = discordRoleID;
+                                BaseService._db.SaveChanges();
+                                changed = true;
+                            }
                         }
+
+                        if (changed)
+                            await ReplyAsync($"The admin role has been set to: <@&{discordRoleID}>");
                         else
                             await ReplyAsync("The server is already using this role as the admin role.");
                     }
@@ -485,11 +545,11 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _callOfDutyService.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && await _callOfDutyService.GetServerToggleBlackOpsColdWarTracking(Context))
+                if (_callOfDutyService.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && _callOfDutyService.GetServerToggleBlackOpsColdWarTracking(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
-                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                     {
                         await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                     }
@@ -500,18 +560,25 @@ namespace StormBot.Modules
                             string input = GetSingleArg(args);
                             ulong discordRoleID = GetDiscordID(input, false, false);
 
-                            ServersEntity serverData = await BaseService._db.Servers
+                            bool changed = false;
+
+                            lock (BaseService.queryLock)
+                            {
+                                ServersEntity serverData = BaseService._db.Servers
                                 .AsQueryable()
                                 .Where(s => s.ServerID == Context.Guild.Id)
-                                .SingleAsync();
+                                .Single();
 
-                            if (serverData.BlackOpsColdWarKillsRoleID != discordRoleID)
-                            {
-                                serverData.BlackOpsColdWarKillsRoleID = discordRoleID;
-                                await BaseService._db.SaveChangesAsync();
-
-                                await ReplyAsync($"The Black Ops Cold War kills role has been set to: <@&{discordRoleID}>");
+                                if (serverData.BlackOpsColdWarKillsRoleID != discordRoleID)
+                                {
+                                    serverData.BlackOpsColdWarKillsRoleID = discordRoleID;
+                                    BaseService._db.SaveChanges();
+                                    changed = true;
+                                }
                             }
+
+                            if (changed)
+                                await ReplyAsync($"The Black Ops Cold War kills role has been set to: <@&{discordRoleID}>");
                             else
                                 await ReplyAsync("The server is already using this role as the Black Ops Cold War kills role.");
                         }
@@ -532,11 +599,11 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _callOfDutyService.GetServerAllowServerPermissionModernWarfareTracking(Context) && await _callOfDutyService.GetServerToggleModernWarfareTracking(Context))
+                if (_callOfDutyService.GetServerAllowServerPermissionModernWarfareTracking(Context) && _callOfDutyService.GetServerToggleModernWarfareTracking(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
-                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                     {
                         await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                     }
@@ -547,18 +614,25 @@ namespace StormBot.Modules
                             string input = GetSingleArg(args);
                             ulong discordRoleID = GetDiscordID(input, false, false);
 
-                            ServersEntity serverData = await BaseService._db.Servers
+                            bool changed = false;
+
+                            lock (BaseService.queryLock)
+                            {
+                                ServersEntity serverData = BaseService._db.Servers
                                 .AsQueryable()
                                 .Where(s => s.ServerID == Context.Guild.Id)
-                                .SingleAsync();
+                                .Single();
 
-                            if (serverData.ModernWarfareKillsRoleID != discordRoleID)
-                            {
-                                serverData.ModernWarfareKillsRoleID = discordRoleID;
-                                await BaseService._db.SaveChangesAsync();
-
-                                await ReplyAsync($"The Modern Warfare kills role has been set to: <@&{discordRoleID}>");
+                                if (serverData.ModernWarfareKillsRoleID != discordRoleID)
+                                {
+                                    serverData.ModernWarfareKillsRoleID = discordRoleID;
+                                    BaseService._db.SaveChanges();
+                                    changed = true;
+                                }
                             }
+
+                            if (changed)
+                                await ReplyAsync($"The Modern Warfare kills role has been set to: <@&{discordRoleID}>");
                             else
                                 await ReplyAsync("The server is already using this role as the Modern Warfare kills role.");
                         }
@@ -579,11 +653,11 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _callOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context) && await _callOfDutyService.GetServerToggleWarzoneTracking(Context))
+                if (_callOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context) && _callOfDutyService.GetServerToggleWarzoneTracking(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
-                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                     {
                         await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                     }
@@ -594,18 +668,25 @@ namespace StormBot.Modules
                             string input = GetSingleArg(args);
                             ulong discordRoleID = GetDiscordID(input, false, false);
 
-                            ServersEntity serverData = await BaseService._db.Servers
+                            bool changed = false;
+
+                            lock (BaseService.queryLock)
+                            {
+                                ServersEntity serverData = BaseService._db.Servers
                                 .AsQueryable()
                                 .Where(s => s.ServerID == Context.Guild.Id)
-                                .SingleAsync();
+                                .Single();
 
-                            if (serverData.WarzoneWinsRoleID != discordRoleID)
-                            {
-                                serverData.WarzoneWinsRoleID = discordRoleID;
-                                await BaseService._db.SaveChangesAsync();
-
-                                await ReplyAsync($"The Warzone wins role has been set to: <@&{discordRoleID}>");
+                                if (serverData.WarzoneWinsRoleID != discordRoleID)
+                                {
+                                    serverData.WarzoneWinsRoleID = discordRoleID;
+                                    BaseService._db.SaveChanges();
+                                    changed = true;
+                                }
                             }
+
+                            if (changed)
+                                await ReplyAsync($"The Warzone wins role has been set to: <@&{discordRoleID}>");
                             else
                                 await ReplyAsync("The server is already using this role as the Warzone wins role.");
                         }
@@ -626,11 +707,11 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _callOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context) && await _callOfDutyService.GetServerToggleWarzoneTracking(Context))
+                if (_callOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context) && _callOfDutyService.GetServerToggleWarzoneTracking(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
-                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                     {
                         await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                     }
@@ -641,18 +722,25 @@ namespace StormBot.Modules
                             string input = GetSingleArg(args);
                             ulong discordRoleID = GetDiscordID(input, false, false);
 
-                            ServersEntity serverData = await BaseService._db.Servers
+                            bool changed = false;
+
+                            lock (BaseService.queryLock)
+                            {
+                                ServersEntity serverData = BaseService._db.Servers
                                 .AsQueryable()
                                 .Where(s => s.ServerID == Context.Guild.Id)
-                                .SingleAsync();
+                                .Single();
 
-                            if (serverData.WarzoneKillsRoleID != discordRoleID)
-                            {
-                                serverData.WarzoneKillsRoleID = discordRoleID;
-                                await BaseService._db.SaveChangesAsync();
-
-                                await ReplyAsync($"The Warzone kills role has been set to: <@&{discordRoleID}>");
+                                if (serverData.WarzoneKillsRoleID != discordRoleID)
+                                {
+                                    serverData.WarzoneKillsRoleID = discordRoleID;
+                                    BaseService._db.SaveChanges();
+                                    changed = true;
+                                }
                             }
+
+                            if (changed)
+                                await ReplyAsync($"The Warzone kills role has been set to: <@&{discordRoleID}>");
                             else
                                 await ReplyAsync("The server is already using this role as the Warzone kills role.");
                         }
@@ -673,11 +761,11 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _stormsService.GetServerAllowServerPermissionStorms(Context) && await _stormsService.GetServerToggleStorms(Context))
+                if (_stormsService.GetServerAllowServerPermissionStorms(Context) && _stormsService.GetServerToggleStorms(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
-                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                     {
                         await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                     }
@@ -688,18 +776,25 @@ namespace StormBot.Modules
                             string input = GetSingleArg(args);
                             ulong discordRoleID = GetDiscordID(input, false, false);
 
-                            ServersEntity serverData = await BaseService._db.Servers
+                            bool changed = false;
+
+                            lock (BaseService.queryLock)
+                            {
+                                ServersEntity serverData = BaseService._db.Servers
                                 .AsQueryable()
                                 .Where(s => s.ServerID == Context.Guild.Id)
-                                .SingleAsync();
+                                .Single();
 
-                            if (serverData.StormsMostResetsRoleID != discordRoleID)
-                            {
-                                serverData.StormsMostResetsRoleID = discordRoleID;
-                                await BaseService._db.SaveChangesAsync();
-
-                                await ReplyAsync($"The Storms role for the most resets has been set to: <@&{discordRoleID}>");
+                                if (serverData.StormsMostResetsRoleID != discordRoleID)
+                                {
+                                    serverData.StormsMostResetsRoleID = discordRoleID;
+                                    BaseService._db.SaveChanges();
+                                    changed = true;
+                                }
                             }
+
+                            if (changed)
+                                await ReplyAsync($"The Storms role for the most resets has been set to: <@&{discordRoleID}>");
                             else
                                 await ReplyAsync("The server is already using this role for the most Storm resets.");
                         }
@@ -720,11 +815,11 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (await _stormsService.GetServerAllowServerPermissionStorms(Context) && await _stormsService.GetServerToggleStorms(Context))
+                if (_stormsService.GetServerAllowServerPermissionStorms(Context) && _stormsService.GetServerToggleStorms(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
-                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                     {
                         await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                     }
@@ -735,18 +830,25 @@ namespace StormBot.Modules
                             string input = GetSingleArg(args);
                             ulong discordRoleID = GetDiscordID(input, false, false);
 
-                            ServersEntity serverData = await BaseService._db.Servers
+                            bool changed = false;
+
+                            lock (BaseService.queryLock)
+                            {
+                                ServersEntity serverData = BaseService._db.Servers
                                 .AsQueryable()
                                 .Where(s => s.ServerID == Context.Guild.Id)
-                                .SingleAsync();
+                                .Single();
 
-                            if (serverData.StormsMostRecentResetRoleID != discordRoleID)
-                            {
-                                serverData.StormsMostRecentResetRoleID = discordRoleID;
-                                await BaseService._db.SaveChangesAsync();
-
-                                await ReplyAsync($"The Storms role for the most recent reset has been set to: <@&{discordRoleID}>");
+                                if (serverData.StormsMostRecentResetRoleID != discordRoleID)
+                                {
+                                    serverData.StormsMostRecentResetRoleID = discordRoleID;
+                                    BaseService._db.SaveChanges();
+                                    changed = true;
+                                }
                             }
+
+                            if (changed)
+                                await ReplyAsync($"The Storms role for the most recent reset has been set to: <@&{discordRoleID}>");
                             else
                                 await ReplyAsync("The server is already using this role for the most recent Storm reset.");
                         }
@@ -770,7 +872,7 @@ namespace StormBot.Modules
 
             bool notAdmin = true;
             if (!Context.IsPrivate)
-                notAdmin = !((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator);
+                notAdmin = !((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator);
 
             if (subject == null)
             {
@@ -843,42 +945,42 @@ namespace StormBot.Modules
         {
             bool notAdmin = true;
             if (!Context.IsPrivate)
-                notAdmin = !((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator);
+                notAdmin = !((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator);
 
             if (!notAdmin)
                 await Context.Channel.TriggerTypingAsync();
 
             string output = "__**Subjects:**__\nHelp\nConfig\n";
 
-            if (await _stormsService.GetServerAllowServerPermissionStorms(Context) && await _stormsService.GetServerToggleStorms(Context))
+            if (_stormsService.GetServerAllowServerPermissionStorms(Context) && _stormsService.GetServerToggleStorms(Context))
             {
                 if (DisableIfServiceNotRunning(_stormsService, "subjects (storms subject)"))
                 {
                     output += "Storms\n";
                 }
             }
-            if (await _soundpadService.GetServerAllowServerPermissionSoundpadCommands(Context) && await _soundpadService.GetServerToggleSoundpadCommands(Context))
+            if (_soundpadService.GetServerAllowServerPermissionSoundpadCommands(Context) && _soundpadService.GetServerToggleSoundpadCommands(Context))
             {
                 if (DisableIfServiceNotRunning(_soundpadService, "subjects (soundpad subject)"))
                 {
                     output += "Soundpad\n";
                 }
             }
-            if (await _callOfDutyService.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && await _callOfDutyService.GetServerToggleBlackOpsColdWarTracking(Context))
+            if (_callOfDutyService.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && _callOfDutyService.GetServerToggleBlackOpsColdWarTracking(Context))
             {
                 if (DisableIfServiceNotRunning(_callOfDutyService.BlackOpsColdWarComponent, "subjects (Black Ops Cold War subject)"))
                 {
                     output += "Black Ops Cold War\n";
                 }
             }
-            if (await _callOfDutyService.GetServerAllowServerPermissionModernWarfareTracking(Context) && await _callOfDutyService.GetServerToggleModernWarfareTracking(Context))
+            if (_callOfDutyService.GetServerAllowServerPermissionModernWarfareTracking(Context) && _callOfDutyService.GetServerToggleModernWarfareTracking(Context))
             {
                 if (DisableIfServiceNotRunning(_callOfDutyService.ModernWarfareComponent, "subjects (Modern Warfare subject)"))
                 {
                     output += "Modern Warfare\n";
                 }
             }
-            if (await _callOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context) && await _callOfDutyService.GetServerToggleWarzoneTracking(Context))
+            if (_callOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context) && _callOfDutyService.GetServerToggleWarzoneTracking(Context))
             {
                 if (DisableIfServiceNotRunning(_callOfDutyService.WarzoneComponent, "subjects (Warzone subject)"))
                 {
@@ -899,7 +1001,7 @@ namespace StormBot.Modules
 
 '**{0}help**' to display information on all commands.
 '**{0}help [subject]**' to display information on all commands for a specific subject.
-'**{0}subjects**' to display the existing command subjects.", await GetServerPrefix(BaseService._db));
+'**{0}subjects**' to display the existing command subjects.", GetServerPrefix(BaseService._db));
         }
 
         private async Task<string> HelpConfigCommands(bool partTwo)
@@ -917,7 +1019,7 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
 '**{0}config toggle wz**' to enable/disable Warzone commands and stat tracking on the server __if you are a StormBot administrator__.
 Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking for Warzone participants will resume after the next weekly data fetch (Sundays, 1:00 AM EST).
 '**{0}config toggle sb**' to enable/disable Soundpad commands on the server __if you are a StormBot administrator__.
-'**{0}config toggle storms**' to enable/disable Storms and reactive commands on the server __if you are a StormBot administrator__.", await GetServerPrefix(BaseService._db));
+'**{0}config toggle storms**' to enable/disable Storms and reactive commands on the server __if you are a StormBot administrator__.", GetServerPrefix(BaseService._db));
             }
             else
             {
@@ -930,13 +1032,13 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
 '**{0}config role wz wins [role]**' to set the server's role for the most Warzone wins __if you are a StormBot administrator__.
 '**{0}config role wz kills [role]**' to set the server's role for the most weekly Warzone kills __if you are a StormBot administrator__.
 '**{0}config role storms most [role]**' to set the server's role for the most Storm resets __if you are a StormBot administrator__.
-'**{0}config role storms recent [role]**' to set the server's role for the most recent Storm reset __if you are a StormBot administrator__.", await GetServerPrefix(BaseService._db));
+'**{0}config role storms recent [role]**' to set the server's role for the most recent Storm reset __if you are a StormBot administrator__.", GetServerPrefix(BaseService._db));
             }
         }
 
         private async Task<string> HelpStormCommands(bool notAdmin)
         {
-            if (await _stormsService.GetServerAllowServerPermissionStorms(Context) && await _stormsService.GetServerToggleStorms(Context))
+            if (_stormsService.GetServerAllowServerPermissionStorms(Context) && _stormsService.GetServerToggleStorms(Context))
             {
                 if (DisableIfServiceNotRunning(_stormsService, "help storms"))
                 {
@@ -952,7 +1054,7 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
 '**{0}buy insurance**' to buy insurance for {4} points to protect your wallet from disasters.
 '**{0}wallet**' to show how many points you have in your wallet.
 '**{0}wallets**' to show how many points everyone has.
-'**{0}resets**' to show how many resets everyone has.", await GetServerPrefix(BaseService._db), _stormsService.levelOneReward, _stormsService.levelTwoReward, _stormsService.stealAmount, _stormsService.insuranceCost);
+'**{0}resets**' to show how many resets everyone has.", GetServerPrefix(BaseService._db), _stormsService.levelOneReward, _stormsService.levelTwoReward, _stormsService.stealAmount, _stormsService.insuranceCost);
                 }
                 else
                     return null;
@@ -963,7 +1065,7 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
 
         private async Task<string> HelpSoundboardCommands(bool notAdmin)
         {
-            if (await _soundpadService.GetServerAllowServerPermissionSoundpadCommands(Context) && await _soundpadService.GetServerToggleSoundpadCommands(Context))
+            if (_soundpadService.GetServerAllowServerPermissionSoundpadCommands(Context) && _soundpadService.GetServerToggleSoundpadCommands(Context))
             {
                 if (DisableIfServiceNotRunning(_soundpadService, "help soundpad"))
                 {
@@ -984,7 +1086,7 @@ The bot will then ask you to select a category to add the sound to.
 The bot will then ask you to play a sound by entering the corresponding number.
 '**{0}sounds [category name]**' to display all playable sounds in the specified category.
 The bot will then ask you to play a sound by entering the corresponding number.
-'**{0}stop**' to stop the sound currently playing.", await GetServerPrefix(BaseService._db));
+'**{0}stop**' to stop the sound currently playing.", GetServerPrefix(BaseService._db));
                 }
                 else
                     return null;
@@ -995,7 +1097,7 @@ The bot will then ask you to play a sound by entering the corresponding number.
 
         private async Task<string> HelpBlackOpsColdWarCommands(bool notAdmin)
         {
-            if (await _callOfDutyService.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && await _callOfDutyService.GetServerToggleBlackOpsColdWarTracking(Context))
+            if (_callOfDutyService.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && _callOfDutyService.GetServerToggleBlackOpsColdWarTracking(Context))
             {
                 if (DisableIfServiceNotRunning(_callOfDutyService.BlackOpsColdWarComponent, "help black ops cold war"))
                 {
@@ -1005,7 +1107,7 @@ The bot will then ask you to play a sound by entering the corresponding number.
                     string roleStr = "";
                     if (!Context.IsPrivate && !notAdmin)
                     {
-                        roleStr += " <@&" + (await _callOfDutyService.GetServerBlackOpsColdWarKillsRoleID(Context.Guild.Id)).ToString() + ">";
+                        roleStr += " <@&" + (_callOfDutyService.GetServerBlackOpsColdWarKillsRoleID(Context.Guild.Id)).ToString() + ">";
                     }
 
                     return string.Format("\n\n" + @"__**Help: Black Ops Cold War Commands**__
@@ -1019,7 +1121,7 @@ The bot will then ask you to enter the account name, tag, and platform.
 '**{0}bocw rm participant [user]**' to remove an account from the list of Call of Duty accounts participating in the Black Ops Cold War services __if you are a StormBot administrator__.
 '**{0}bocw lifetime kills**' to display the lifetime total game kills of all participating Black Ops Cold War players from highest to lowest __if you are a StormBot administrator__.
 '**{0}bocw weekly kills**' to display the total game kills so far this week of all participating Black Ops Cold War players from highest to lowest __if you are a StormBot administrator__.
-The bot will only assign the{1} role for Black Ops Cold War kills to the player in first place at the end of the week.", await GetServerPrefix(BaseService._db), roleStr);
+The bot will only assign the{1} role for Black Ops Cold War kills to the player in first place at the end of the week.", GetServerPrefix(BaseService._db), roleStr);
                 }
                 else
                     return null;
@@ -1030,7 +1132,7 @@ The bot will only assign the{1} role for Black Ops Cold War kills to the player 
 
         private async Task<string> HelpModernWarfareCommands(bool notAdmin)
         {
-            if (await _callOfDutyService.GetServerAllowServerPermissionModernWarfareTracking(Context) && await _callOfDutyService.GetServerToggleModernWarfareTracking(Context))
+            if (_callOfDutyService.GetServerAllowServerPermissionModernWarfareTracking(Context) && _callOfDutyService.GetServerToggleModernWarfareTracking(Context))
             {
                 if (DisableIfServiceNotRunning(_callOfDutyService.ModernWarfareComponent, "help modern warfare"))
                 {
@@ -1040,7 +1142,7 @@ The bot will only assign the{1} role for Black Ops Cold War kills to the player 
                     string roleStr = "";
                     if (!Context.IsPrivate && !notAdmin)
                     {
-                        roleStr += " <@&" + (await _callOfDutyService.GetServerModernWarfareKillsRoleID(Context.Guild.Id)).ToString() + ">";
+                        roleStr += " <@&" + (_callOfDutyService.GetServerModernWarfareKillsRoleID(Context.Guild.Id)).ToString() + ">";
                     }
 
                     return string.Format("\n\n" + @"__**Help: Modern Warfare Commands**__
@@ -1054,7 +1156,7 @@ The bot will then ask you to enter the account name, tag, and platform.
 '**{0}mw rm participant [user]**' to remove an account from the list of Call of Duty accounts participating in the Modern Warfare services __if you are a StormBot administrator__.
 '**{0}mw wz lifetime kills**' to display the lifetime total game kills (Modern Warfare + Warzone) of all participating Modern Warfare players from highest to lowest __if you are a StormBot administrator__.
 '**{0}mw wz weekly kills**' to display the total game kills (Modern Warfare + Warzone) so far this week of all participating Modern Warfare players from highest to lowest __if you are a StormBot administrator__.
-The bot will only assign the{1} role for Modern Warfare kills to the player in first place at the end of the week with the most multiplayer kills (not Warzone).", await GetServerPrefix(BaseService._db), roleStr);
+The bot will only assign the{1} role for Modern Warfare kills to the player in first place at the end of the week with the most multiplayer kills (not Warzone).", GetServerPrefix(BaseService._db), roleStr);
                 }
                 else
                     return null;
@@ -1065,7 +1167,7 @@ The bot will only assign the{1} role for Modern Warfare kills to the player in f
 
         private async Task<string> HelpWarzoneCommands(bool notAdmin)
         {
-            if (await _callOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context) && await _callOfDutyService.GetServerToggleWarzoneTracking(Context))
+            if (_callOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context) && _callOfDutyService.GetServerToggleWarzoneTracking(Context))
             {
                 if (DisableIfServiceNotRunning(_callOfDutyService.WarzoneComponent, "help warzone"))
                 {
@@ -1075,13 +1177,13 @@ The bot will only assign the{1} role for Modern Warfare kills to the player in f
                     string winsRoleStr = "";
                     if (!Context.IsPrivate && !notAdmin)
                     {
-                        winsRoleStr += " <@&" + (await _callOfDutyService.GetServerWarzoneWinsRoleID(Context.Guild.Id)).ToString() + ">";
+                        winsRoleStr += " <@&" + (_callOfDutyService.GetServerWarzoneWinsRoleID(Context.Guild.Id)).ToString() + ">";
                     }
 
                     string killsRoleStr = "";
                     if (!Context.IsPrivate && !notAdmin)
                     {
-                        killsRoleStr += " <@&" + (await _callOfDutyService.GetServerWarzoneKillsRoleID(Context.Guild.Id)).ToString() + ">";
+                        killsRoleStr += " <@&" + (_callOfDutyService.GetServerWarzoneKillsRoleID(Context.Guild.Id)).ToString() + ">";
                     }
 
                     return string.Format("\n\n" + @"__**Help: Warzone Commands**__
@@ -1096,7 +1198,7 @@ The bot will then ask you to enter the account name, tag, and platform.
 '**{0}wz lifetime wins**' to display the lifetime total Warzone wins of all participating players from highest to lowest __if you are a StormBot administrator__.
 '**{0}wz weekly wins**' to display the total Warzone wins so far this week of all participating players from highest to lowest __if you are a StormBot administrator__.
 The bot will only assign the{1} role for Warzone wins to the player in first place at the end of the week with the most Warzone wins.
-The bot will only assign the{2} role for Warzone kills to the player in first place at the end of the week with the most Warzone kills (not multiplayer).", await GetServerPrefix(BaseService._db), winsRoleStr, killsRoleStr);
+The bot will only assign the{2} role for Warzone kills to the player in first place at the end of the week with the most Warzone kills (not multiplayer).", GetServerPrefix(BaseService._db), winsRoleStr, killsRoleStr);
                 }
                 else
                     return null;

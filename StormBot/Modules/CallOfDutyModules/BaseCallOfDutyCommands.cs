@@ -42,7 +42,7 @@ namespace StormBot.Modules.CallOfDutyModules
 
         public async Task<bool> RemoveAParticipant(CallOfDutyService service, ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
         {
-            CallOfDutyPlayerDataEntity removeAccount = await service.GetCallOfDutyPlayerDataEntity(serverID, discordID, gameAbbrev, modeAbbrev);
+            CallOfDutyPlayerDataEntity removeAccount = service.GetCallOfDutyPlayerDataEntity(serverID, discordID, gameAbbrev, modeAbbrev);
 
             if (removeAccount != null)
             {
@@ -79,7 +79,7 @@ namespace StormBot.Modules.CallOfDutyModules
                     return "cancel";
                 }
                 // if same user starts another command while awaiting a response, end this one but don't display request cancelled
-                else if (requestedString.StartsWith(await GetServerPrefix(BaseService._db)))
+                else if (requestedString.StartsWith(GetServerPrefix(BaseService._db)))
                 {
                     return "cancel";
                 }
@@ -139,7 +139,7 @@ namespace StormBot.Modules.CallOfDutyModules
                         return -1;
                     }
                     // if same user starts another command while awaiting a response, end this one but don't display request cancelled
-                    else if (requestedNumber.StartsWith(await GetServerPrefix(BaseService._db)))
+                    else if (requestedNumber.StartsWith(GetServerPrefix(BaseService._db)))
                     {
                         return -1;
                     }
@@ -180,7 +180,7 @@ namespace StormBot.Modules.CallOfDutyModules
             List<ulong> serverIdList = new List<ulong>();
             serverIdList.Add(serverId);
 
-            List<CallOfDutyPlayerDataEntity> participatingAccountsData = await service.GetServersPlayerData(serverIdList, gameAbbrev, modeAbbrev);
+            List<CallOfDutyPlayerDataEntity> participatingAccountsData = service.GetServersPlayerData(serverIdList, gameAbbrev, modeAbbrev);
 
             string gameName = "";
             if (gameAbbrev == "mw" && modeAbbrev == "mp")

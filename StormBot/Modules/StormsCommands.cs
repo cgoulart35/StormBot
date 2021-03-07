@@ -38,7 +38,7 @@ namespace StormBot.Modules
             {
                 _service.purgeCollection.Add(Context.Message);
 
-                if (await _service.GetServerAllowServerPermissionStorms(Context) && await _service.GetServerToggleStorms(Context))
+                if (_service.GetServerAllowServerPermissionStorms(Context) && _service.GetServerToggleStorms(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "umbrella"))
                     {
@@ -64,7 +64,7 @@ namespace StormBot.Modules
             {
                 _service.purgeCollection.Add(Context.Message);
 
-                if (await _service.GetServerAllowServerPermissionStorms(Context) && await _service.GetServerToggleStorms(Context))
+                if (_service.GetServerAllowServerPermissionStorms(Context) && _service.GetServerToggleStorms(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "guess"))
                     {
@@ -105,7 +105,7 @@ namespace StormBot.Modules
             {
                 _service.purgeCollection.Add(Context.Message);
 
-                if (await _service.GetServerAllowServerPermissionStorms(Context) && await _service.GetServerToggleStorms(Context))
+                if (_service.GetServerAllowServerPermissionStorms(Context) && _service.GetServerToggleStorms(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "bet"))
                     {
@@ -158,7 +158,7 @@ namespace StormBot.Modules
             {
                 _service.purgeCollection.Add(Context.Message);
 
-                if (await _service.GetServerAllowServerPermissionStorms(Context) && await _service.GetServerToggleStorms(Context))
+                if (_service.GetServerAllowServerPermissionStorms(Context) && _service.GetServerToggleStorms(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "steal"))
                     {
@@ -182,7 +182,7 @@ namespace StormBot.Modules
             {
                 _service.purgeCollection.Add(Context.Message);
 
-                if (await _service.GetServerAllowServerPermissionStorms(Context) && await _service.GetServerToggleStorms(Context))
+                if (_service.GetServerAllowServerPermissionStorms(Context) && _service.GetServerToggleStorms(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "buy insurance"))
                     {
@@ -201,9 +201,12 @@ namespace StormBot.Modules
                         }
                         else
                         {
-                            playerData.Wallet -= _service.insuranceCost;
-                            playerData.HasInsurance = true;
-                            await BaseService._db.SaveChangesAsync();
+                            lock (BaseService.queryLock)
+                            {
+                                playerData.Wallet -= _service.insuranceCost;
+                                playerData.HasInsurance = true;
+                                BaseService._db.SaveChanges();
+                            }
 
                             _service.purgeCollection.Add(await ReplyAsync($"<@!{discordId}>, you purchased insurance for {_service.insuranceCost} points."));
                         }
@@ -221,7 +224,7 @@ namespace StormBot.Modules
             {
                 _service.purgeCollection.Add(Context.Message);
 
-                if (await _service.GetServerAllowServerPermissionStorms(Context) && await _service.GetServerToggleStorms(Context))
+                if (_service.GetServerAllowServerPermissionStorms(Context) && _service.GetServerToggleStorms(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "wallet"))
                     {
@@ -251,14 +254,14 @@ namespace StormBot.Modules
             {
                 _service.purgeCollection.Add(Context.Message);
 
-                if (await _service.GetServerAllowServerPermissionStorms(Context) && await _service.GetServerToggleStorms(Context))
+                if (_service.GetServerAllowServerPermissionStorms(Context) && _service.GetServerToggleStorms(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "wallets"))
                     {
                         List<string> output = new List<string>();
                         output.Add("```md\nSTORMS WALLET LEADERBOARD\n=========================```");
 
-                        List<StormPlayerDataEntity> playerData = await _service.GetAllStormPlayerDataEntities(Context.Guild.Id);
+                        List<StormPlayerDataEntity> playerData = _service.GetAllStormPlayerDataEntities(Context.Guild.Id);
 
                         // sort list by amounts in players wallets
                         playerData = playerData.OrderByDescending(player => player.Wallet).ToList();
@@ -317,14 +320,14 @@ namespace StormBot.Modules
             {
                 _service.purgeCollection.Add(Context.Message);
 
-                if (await _service.GetServerAllowServerPermissionStorms(Context) && await _service.GetServerToggleStorms(Context))
+                if (_service.GetServerAllowServerPermissionStorms(Context) && _service.GetServerToggleStorms(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "resets"))
                     {
                         List<string> output = new List<string>();
                         output.Add("```md\nSTORMS RESET LEADERBOARD\n========================```");
 
-                        List<StormPlayerDataEntity> playerData = await _service.GetAllStormPlayerDataEntities(Context.Guild.Id);
+                        List<StormPlayerDataEntity> playerData = _service.GetAllStormPlayerDataEntities(Context.Guild.Id);
 
                         // sort list by amounts in players wallets
                         playerData = playerData.OrderByDescending(player => player.ResetCount).ToList();

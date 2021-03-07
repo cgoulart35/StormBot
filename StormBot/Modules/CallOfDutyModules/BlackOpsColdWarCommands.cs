@@ -7,7 +7,6 @@ using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using StormBot.Services;
 using StormBot.Models.CallOfDutyModels;
-using StormBot.Database;
 
 namespace StormBot.Modules.CallOfDutyModules
 {
@@ -37,10 +36,10 @@ namespace StormBot.Modules.CallOfDutyModules
             // if service is running, display updates
             if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent))
             {
-                List<ulong> serverIds = await _service.GetAllValidatedServerIds("cw", "mp");
+                List<ulong> serverIds = _service.GetAllValidatedServerIds("cw", "mp");
                 foreach (ulong serverId in serverIds)
                 {
-                    var channel = await _service.GetServerCallOfDutyNotificationChannel(serverId);
+                    var channel = _service.GetServerCallOfDutyNotificationChannel(serverId);
 
                     if (channel != null)
                     {
@@ -68,10 +67,10 @@ namespace StormBot.Modules.CallOfDutyModules
             // if service is running, display updates
             if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent))
             {
-                List<ulong> serverIds = await _service.GetAllValidatedServerIds("cw", "mp");
+                List<ulong> serverIds = _service.GetAllValidatedServerIds("cw", "mp");
                 foreach (ulong serverId in serverIds)
                 {
-                    var channel = await _service.GetServerCallOfDutyNotificationChannel(serverId);
+                    var channel = _service.GetServerCallOfDutyNotificationChannel(serverId);
 
                     if (channel != null)
                     {
@@ -131,7 +130,7 @@ namespace StormBot.Modules.CallOfDutyModules
                     double topScore = newData[0].Data.Weekly.All.Properties.Kills;
                     List<ulong> topPlayersDiscordIDs = newData.Where(player => player.Data.Weekly.All.Properties?.Kills == topScore).Select(player => player.DiscordID).ToList();
 
-                    ulong roleID = await _service.GetServerBlackOpsColdWarKillsRoleID(guild.Id);
+                    ulong roleID = _service.GetServerBlackOpsColdWarKillsRoleID(guild.Id);
                     string roleStr = "";
                     if (roleID != 0)
                     {
@@ -263,13 +262,13 @@ namespace StormBot.Modules.CallOfDutyModules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && await _service.GetServerToggleBlackOpsColdWarTracking(Context))
+                if (_service.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && _service.GetServerToggleBlackOpsColdWarTracking(Context))
                 {
                     if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent, "bocw weekly kills"))
                     {
                         await Context.Channel.TriggerTypingAsync();
 
-                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                         {
                             await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                         }
@@ -299,13 +298,13 @@ namespace StormBot.Modules.CallOfDutyModules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && await _service.GetServerToggleBlackOpsColdWarTracking(Context))
+                if (_service.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && _service.GetServerToggleBlackOpsColdWarTracking(Context))
                 {
                     if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent, "bocw lifetime kills"))
                     {
                         await Context.Channel.TriggerTypingAsync();
 
-                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                         {
                             await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                         }
@@ -393,13 +392,13 @@ namespace StormBot.Modules.CallOfDutyModules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && await _service.GetServerToggleBlackOpsColdWarTracking(Context))
+                if (_service.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && _service.GetServerToggleBlackOpsColdWarTracking(Context))
                 {
                     if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent, "bocw participants"))
                     {
                         await Context.Channel.TriggerTypingAsync();
 
-                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                         {
                             await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                         }
@@ -424,13 +423,13 @@ namespace StormBot.Modules.CallOfDutyModules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && await _service.GetServerToggleBlackOpsColdWarTracking(Context))
+                if (_service.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && _service.GetServerToggleBlackOpsColdWarTracking(Context))
                 {
                     if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent, "bocw add participant"))
                     {
                         await Context.Channel.TriggerTypingAsync();
 
-                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                         {
                             await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                         }
@@ -467,13 +466,13 @@ namespace StormBot.Modules.CallOfDutyModules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && await _service.GetServerToggleBlackOpsColdWarTracking(Context))
+                if (_service.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && _service.GetServerToggleBlackOpsColdWarTracking(Context))
                 {
                     if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent, "bocw rm participant"))
                     {
                         await Context.Channel.TriggerTypingAsync();
 
-                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(await GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                        if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(GetServerAdminRole(BaseService._db)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
                         {
                             await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
                         }
@@ -507,7 +506,7 @@ namespace StormBot.Modules.CallOfDutyModules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && await _service.GetServerToggleBlackOpsColdWarTracking(Context))
+                if (_service.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && _service.GetServerToggleBlackOpsColdWarTracking(Context))
                 {
                     if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent, "bocw participate"))
                     {
@@ -541,7 +540,7 @@ namespace StormBot.Modules.CallOfDutyModules
         {
             if (!Context.IsPrivate)
             {
-                if (await _service.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && await _service.GetServerToggleBlackOpsColdWarTracking(Context))
+                if (_service.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && _service.GetServerToggleBlackOpsColdWarTracking(Context))
                 {
                     if (DisableIfServiceNotRunning(_service.BlackOpsColdWarComponent, "bocw leave"))
                     {
