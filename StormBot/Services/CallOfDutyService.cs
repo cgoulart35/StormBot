@@ -198,6 +198,15 @@ namespace StormBot.Services
                 {
                     string logStamp = GetLogStamp();
                     Console.WriteLine(logStamp + $"Error getting data for the Call of Duty account: ".PadLeft(100 - logStamp.Length) + storedPlayerData.Username);
+
+                    // TODO: remove after debugging purposes fulfilled; rate limit issue?
+                    Console.WriteLine(newPlayerData.Status);
+                    Console.WriteLine(newPlayerData.DiscordID);
+                    Console.WriteLine(newPlayerData.Data.Username);
+                    Console.WriteLine(newPlayerData.Data.Lifetime.All.Properties.Kills);
+                    Console.WriteLine(newPlayerData.Data.Lifetime.Mode.BattleRoyal.Properties.Wins);
+                    Console.WriteLine(newPlayerData.Data.Weekly.All.Properties.Kills);
+
                     return null;
                 }
 

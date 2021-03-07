@@ -80,14 +80,11 @@ namespace StormBot.Services
         public async Task CommandExecutedAsync(Optional<CommandInfo> command, ICommandContext context, IResult result)
         {
             // if a command isn't found, log that info to console and exit this method
-            if (!command.IsSpecified)
-            {
-                Console.WriteLine($"Command failed to execute for [{context.User.Username}] <-> [{result.ErrorReason}]!");
-                return;
-            }
-
             // if command not given correct amount of arguments, log that info to console and exit this method
-            if (result.Error == CommandError.BadArgCount || result.Error == CommandError.ObjectNotFound)
+            // if command args using backslash and not escaped correctly
+            if (!command.IsSpecified ||
+                result.Error == CommandError.BadArgCount || result.Error == CommandError.ObjectNotFound ||
+                result.Error == CommandError.ParseFailed)
             {
                 Console.WriteLine($"Command failed to execute for [{context.User.Username}] <-> [{result.ErrorReason}]!");
                 return;
@@ -108,6 +105,7 @@ namespace StormBot.Services
                 return;
             }
 
+            // TODO: remove after debugging purposes fulfilled; any existing bugs?
             // failure scenario, let's let the user know
             await context.Channel.SendMessageAsync($"Sorry, {context.User.Username}... something went wrong -> [{result}]!");
         }
