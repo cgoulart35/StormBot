@@ -474,7 +474,6 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 			if (playerData.Wallet >= disasterMark && !hadDisasterMark)
 			{
 				// reset random player's wallet if they are uninsured
-				Random random = new Random();
 				int randomIndex = random.Next(0, allPlayerData.Count);
 
 				string theyYouStr = "";
@@ -498,11 +497,12 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 				{
 					if (!allPlayerData[randomIndex].HasInsurance)
 					{
-						insuredOrNotStr = theyYouStr + " were not insured and" + theirYour + " wallet has been reset!";
-						if (allPlayerData[randomIndex].Wallet <= resetBalance)
+						double previousBalance = allPlayerData[randomIndex].Wallet;
+						if (previousBalance <= resetBalance)
 							allPlayerData[randomIndex].Wallet = 0;
 						else
 							allPlayerData[randomIndex].Wallet = resetBalance;
+						insuredOrNotStr = theyYouStr + " were not insured and" + theirYour + " wallet has been reset from " + previousBalance + " points to " + allPlayerData[randomIndex].Wallet + " points!";
 					}
 					else
 					{
