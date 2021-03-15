@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Discord.Commands;
 using Discord.WebSocket;
 using Discord;
+using StormBot.Database;
 
 namespace StormBot.Services
 {
@@ -36,7 +37,7 @@ namespace StormBot.Services
 
         private async Task HandleCommandAsync(SocketMessage arg)
         {
-            var message = arg as SocketUserMessage;
+			var message = arg as SocketUserMessage;
 
             if (message != null)
             {
@@ -50,9 +51,9 @@ namespace StormBot.Services
                     int argPos = 0;
                     string serverPrefix;
 
-                    lock (BaseService.queryLock)
+                    using (StormBotContext _db = new StormBotContext())
                     {
-                        serverPrefix = BaseService._db.Servers
+                        serverPrefix = _db.Servers
                         .AsQueryable()
                         .Where(s => s.ServerID == context.Guild.Id)
                         .Select(s => s.PrefixUsed)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Linq;
 using Discord;
 using StormBot.Services;
 using StormBot.Database.Entities;
@@ -9,7 +10,7 @@ namespace StormBot.Modules.CallOfDutyModules
 {
 	public class BaseCallOfDutyCommands : BaseCommand
 	{
-        public async Task<bool> AddAParticipant(CallOfDutyService service, ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
+        public async Task<bool> AddAParticipant(ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
         {
             CallOfDutyPlayerDataEntity newAccount = new CallOfDutyPlayerDataEntity();
 
@@ -19,34 +20,34 @@ namespace StormBot.Modules.CallOfDutyModules
             newAccount.ModeAbbrev = modeAbbrev;
 
             await Context.User.SendMessageAsync(string.Format("What is <@!{0}>'s Call of Duty username? Capitalization matters. Do not include the '#number' tag after the name. (on Battle.net, PlayStation, Xbox, Steam, Activision)", discordID));
-            newAccount.Username = await PromptUserForStringForPartcipant(service);
+            newAccount.Username = await PromptUserForStringForPartcipant();
 
             if (newAccount.Username == "cancel")
                 return false;
 
             await Context.User.SendMessageAsync(string.Format("What is <@!{0}>'s Call of Duty username's tag? If there is no tag, say 'none'. Do not include the '#' symbol in your answer. (Example: 1234 in User#1234)", discordID));
-            newAccount.Tag = await PromptUserForStringForPartcipant(service, true);
+            newAccount.Tag = await PromptUserForStringForPartcipant(true);
 
             if (newAccount.Tag == "cancel")
                 return false;
 
-            newAccount.Platform = await AskPlatform(service, discordID);
+            newAccount.Platform = await AskPlatform(discordID);
 
             if (newAccount.Platform == "cancel")
                 return false;
 
-            service.AddParticipantToDatabase(newAccount);
+			CallOfDutyService.AddParticipantToDatabase(newAccount);
             
             return true;
         }
 
-        public async Task<bool> RemoveAParticipant(CallOfDutyService service, ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
+        public async Task<bool> RemoveAParticipant(ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
         {
-            CallOfDutyPlayerDataEntity removeAccount = service.GetCallOfDutyPlayerDataEntity(serverID, discordID, gameAbbrev, modeAbbrev);
+            CallOfDutyPlayerDataEntity removeAccount = CallOfDutyService.GetCallOfDutyPlayerDataEntity(serverID, discordID, gameAbbrev, modeAbbrev);
 
             if (removeAccount != null)
             {
-                service.RemoveParticipantFromDatabase(removeAccount);
+				CallOfDutyService.RemoveParticipantFromDatabase(removeAccount);
 
                 return true;
             }
@@ -57,7 +58,7 @@ namespace StormBot.Modules.CallOfDutyModules
             }
         }
 
-        public async Task<string> PromptUserForStringForPartcipant(CallOfDutyService service, bool forTag = false)
+        public async Task<string> PromptUserForStringForPartcipant(bool forTag = false)
         {
             var userSelectResponse = await NextMessageAsync(true, false, new TimeSpan(0, 1, 0));
 
@@ -79,7 +80,7 @@ namespace StormBot.Modules.CallOfDutyModules
                     return "cancel";
                 }
                 // if same user starts another command while awaiting a response, end this one but don't display request cancelled
-                else if (requestedString.StartsWith(GetServerPrefix(BaseService._db)))
+                else if (requestedString.StartsWith(BaseService.GetServerOrPrivateMessagePrefix(Context)))
                 {
                     return "cancel";
                 }
@@ -94,12 +95,12 @@ namespace StormBot.Modules.CallOfDutyModules
             return requestedString;
         }
 
-        public async Task<string> AskPlatform(CallOfDutyService service, ulong discordID)
+        public async Task<string> AskPlatform(ulong discordID)
         {
             string platforms = "**1.)** Battle.net\n**2.)** PlayStation\n**3.)** Xbox\n**4.)** Steam\n**5.)** Activision\n";
 
             await Context.User.SendMessageAsync(string.Format("What is <@!{0}>'s Call of Duty username's game platform? Please respond with the corresponding number:\n", discordID) + platforms);
-            int selection = await PromptUserForNumber(service, 5);
+            int selection = await PromptUserForNumber(5);
 
             switch (selection)
             {
@@ -118,7 +119,7 @@ namespace StormBot.Modules.CallOfDutyModules
             }
         }
 
-        public async Task<int> PromptUserForNumber(CallOfDutyService service, int maxSelection)
+        public async Task<int> PromptUserForNumber(int maxSelection)
         {
             var userSelectResponse = await NextMessageAsync(true, false, new TimeSpan(0, 1, 0));
 
@@ -139,7 +140,7 @@ namespace StormBot.Modules.CallOfDutyModules
                         return -1;
                     }
                     // if same user starts another command while awaiting a response, end this one but don't display request cancelled
-                    else if (requestedNumber.StartsWith(GetServerPrefix(BaseService._db)))
+                    else if (requestedNumber.StartsWith(BaseService.GetServerOrPrivateMessagePrefix(Context)))
                     {
                         return -1;
                     }
@@ -147,7 +148,7 @@ namespace StormBot.Modules.CallOfDutyModules
                     else
                     {
                         await Context.User.SendMessageAsync($"{username}, your response was invalid. Please answer with a number.");
-                        return await PromptUserForNumber(service, maxSelection);
+                        return await PromptUserForNumber(maxSelection);
                     }
                 }
                 // if response is a number
@@ -163,7 +164,7 @@ namespace StormBot.Modules.CallOfDutyModules
                     else
                     {
                         await Context.User.SendMessageAsync($"{username}, your response was invalid. Please answer a number shown on the list.");
-                        return await PromptUserForNumber(service, maxSelection);
+                        return await PromptUserForNumber(maxSelection);
                     }
                 }
             }
@@ -175,12 +176,12 @@ namespace StormBot.Modules.CallOfDutyModules
             }
         }
 
-        public async Task<List<CallOfDutyPlayerDataEntity>> ListPartcipants(CallOfDutyService service, ulong serverId, string gameAbbrev, string modeAbbrev)
+        public async Task<List<CallOfDutyPlayerDataEntity>> ListPartcipants(ulong serverId, string gameAbbrev, string modeAbbrev)
         {
             List<ulong> serverIdList = new List<ulong>();
             serverIdList.Add(serverId);
 
-            List<CallOfDutyPlayerDataEntity> participatingAccountsData = service.GetServersPlayerData(serverIdList, gameAbbrev, modeAbbrev);
+            List<CallOfDutyPlayerDataEntity> participatingAccountsData = CallOfDutyService.GetServersPlayerData(serverIdList, gameAbbrev, modeAbbrev);
 
             string gameName = "";
             if (gameAbbrev == "mw" && modeAbbrev == "mp")
@@ -192,7 +193,7 @@ namespace StormBot.Modules.CallOfDutyModules
 
             string output = "__**Participants: " + gameName + "**__\n";
 
-            if (participatingAccountsData.Count != 0)
+            if (participatingAccountsData.Any())
             {
                 int accountCount = 1;
                 foreach (CallOfDutyPlayerDataEntity account in participatingAccountsData)

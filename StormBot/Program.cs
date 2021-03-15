@@ -18,11 +18,9 @@ namespace StormBot
 	public class Program
     { 
         private DiscordSocketClient _client;
-        private StormBotContext _db;
         private CommandService _commandService;
         private InteractiveService _interactiveService;
         private CommandHandler _commandHandler;
-        private BaseService _baseService;
         private SoundpadService _soundpadService;
         private StormsService _stormsService;
         private CallOfDutyService _callOfDutyService;
@@ -31,9 +29,9 @@ namespace StormBot
 
         public static ConfigurationSettingsModel configurationSettingsModel;
 
-        public static string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        public static string StormBotAppDataPath = Path.Combine(appDataPath, @"StormBot\");
-        public static string StormBotConfigSettingsPath = Path.Combine(StormBotAppDataPath, @"ConfigurationSettings.json");
+        private static readonly string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        private static readonly string StormBotAppDataPath = Path.Combine(appDataPath, @"StormBot\");
+        private static readonly string StormBotConfigSettingsPath = Path.Combine(StormBotAppDataPath, @"ConfigurationSettings.json");
 
         private static bool isReady = false;
 
@@ -42,8 +40,8 @@ namespace StormBot
 
         public async Task MainAsync()
         {
-            // get the config file settings
-            ConfigureVariables();
+			// get the config file settings
+			ConfigureVariables();
 
             _client = new DiscordSocketClient();
             _client.Log += Log;
@@ -111,7 +109,7 @@ namespace StormBot
 
             // start the announcements service if a call of duty service or the storms service is running
             _announcementsService.DoStart = false;
-            if (_callOfDutyService.isServiceRunning || _stormsService.isServiceRunning)
+            if (_callOfDutyService.IsServiceRunning || _stormsService.IsServiceRunning)
             {
                 _announcementsService.DoStart = true;
             }
@@ -127,7 +125,7 @@ namespace StormBot
             await Task.Delay(-1);
         }
 
-		private void ConfigureVariables()
+		private static void ConfigureVariables()
         {
             // create app data directory if it doesn't exist
             if (!Directory.Exists(StormBotAppDataPath))
@@ -135,13 +133,13 @@ namespace StormBot
                 Console.WriteLine("The project folder %AppData%/Roaming/StormBot does not exist.");
                 Console.WriteLine("Creating the project folder %AppData%/Roaming/StormBot...");
                 Directory.CreateDirectory(StormBotAppDataPath);
-                CreateNewConfigFile();
+				CreateNewConfigFile();
             }
             // create configuration file if it doesn't exist
             else if (!File.Exists(StormBotConfigSettingsPath))
             {
                 Console.WriteLine("The file ConfigurationSettings.json does not exist.");
-                CreateNewConfigFile();
+				CreateNewConfigFile();
             }
             // if it does exist, read in values; if it's corrupt re-create file
             else
@@ -149,7 +147,6 @@ namespace StormBot
                 bool createNewFile = true;
                 try
                 {
-                    configurationSettingsModel = new ConfigurationSettingsModel();
                     configurationSettingsModel = JsonConvert.DeserializeObject<ConfigurationSettingsModel>(File.ReadAllText(StormBotConfigSettingsPath));
 
                     if (configurationSettingsModel.StormBotSoundpadApiHostname == null && configurationSettingsModel.RemoteBootMode)
@@ -193,7 +190,7 @@ namespace StormBot
                     if (createNewFile)
                     {
                         Console.WriteLine("The file ConfigurationSettings.json was corrupt.");
-                        CreateNewConfigFile();
+						CreateNewConfigFile();
                     }
 
                     Console.WriteLine(error);
@@ -203,7 +200,7 @@ namespace StormBot
             }
         }
 
-        private void CreateNewConfigFile()
+        private static void CreateNewConfigFile()
         {
             configurationSettingsModel = new ConfigurationSettingsModel();
 
@@ -229,7 +226,7 @@ namespace StormBot
 
         private async Task AddServerToDatabase(SocketGuild guild)
         {
-            lock (BaseService.queryLock)
+            using (StormBotContext _db = new StormBotContext())
             {
                 ServersEntity newServerData = new ServersEntity()
                 {
@@ -265,7 +262,7 @@ namespace StormBot
 
         private async Task RemoveServerFromDatabase(SocketGuild guild)
         {
-            lock (BaseService.queryLock)
+            using (StormBotContext _db = new StormBotContext())
             {
                 var s = _db.Servers
                 .AsQueryable()
@@ -289,22 +286,18 @@ namespace StormBot
         {
             _services = new ServiceCollection()
                 .AddSingleton(_client)
-                .AddDbContext<StormBotContext>()
                 .AddSingleton<CommandService>()
                 .AddSingleton<InteractiveService>()
                 .AddSingleton<CommandHandler>()
-                .AddSingleton<BaseService>()
                 .AddSingleton<SoundpadService>()
                 .AddSingleton<StormsService>()
                 .AddSingleton<CallOfDutyService>()
                 .AddSingleton<AnnouncementsService>()
                 .BuildServiceProvider();
 
-            _db = _services.GetRequiredService<StormBotContext>();
             _commandService = _services.GetRequiredService<CommandService>();
             _interactiveService = _services.GetRequiredService<InteractiveService>();
             _commandHandler = _services.GetRequiredService<CommandHandler>();
-            _baseService = _services.GetRequiredService<BaseService>();
             _soundpadService = _services.GetRequiredService<SoundpadService>();
             _stormsService = _services.GetRequiredService<StormsService>();
             _callOfDutyService = _services.GetRequiredService<CallOfDutyService>();

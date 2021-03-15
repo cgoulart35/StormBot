@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using RestSharp;
 using StormBot.Models.CallOfDutyModels;
+using StormBot.Database;
 using StormBot.Database.Entities;
 
 namespace StormBot.Services
@@ -24,24 +25,24 @@ namespace StormBot.Services
 
         public BaseService WarzoneComponent { get; set; }
 
-        public CallOfDutyService(IServiceProvider services) : base(services)
+        public CallOfDutyService(IServiceProvider services)
         {
             _client = services.GetRequiredService<DiscordSocketClient>();
 
             Name = "Call Of Duty Service";
-            isServiceRunning = false;
+            IsServiceRunning = false;
 
-            BlackOpsColdWarComponent = new BaseService(services);
+            BlackOpsColdWarComponent = new BaseService();
             BlackOpsColdWarComponent.Name = "Black Ops Cold War Service";
-            BlackOpsColdWarComponent.isServiceRunning = false;
+            BlackOpsColdWarComponent.IsServiceRunning = false;
 
-            ModernWarfareComponent = new BaseService(services);
+            ModernWarfareComponent = new BaseService();
             ModernWarfareComponent.Name = "Modern Warfare Service";
-            ModernWarfareComponent.isServiceRunning = false;
+            ModernWarfareComponent.IsServiceRunning = false;
 
-            WarzoneComponent = new BaseService(services);
+            WarzoneComponent = new BaseService();
             WarzoneComponent.Name = "Warzone Service";
-            WarzoneComponent.isServiceRunning = false;
+            WarzoneComponent.IsServiceRunning = false;
         }
 
         public override async Task StartService()
@@ -52,7 +53,7 @@ namespace StormBot.Services
             {
                 Console.WriteLine(logStamp + "Disabled.".PadLeft(60 - logStamp.Length));
             }
-            else if (isServiceRunning)
+            else if (IsServiceRunning)
             {
                 Console.WriteLine(logStamp + "Service already running.".PadLeft(75 - logStamp.Length));
             }
@@ -60,7 +61,7 @@ namespace StormBot.Services
             {
                 Console.WriteLine(logStamp + "Starting service.".PadLeft(68 - logStamp.Length));
 
-                isServiceRunning = true;
+                IsServiceRunning = true;
 
                 await BlackOpsColdWarComponent.StartService();
                 await ModernWarfareComponent.StartService();
@@ -71,15 +72,15 @@ namespace StormBot.Services
                 {
                     string message = "";
 
-                    if (BlackOpsColdWarComponent.isServiceRunning && server.AllowServerPermissionBlackOpsColdWarTracking && server.ToggleBlackOpsColdWarTracking)
+                    if (BlackOpsColdWarComponent.IsServiceRunning && server.AllowServerPermissionBlackOpsColdWarTracking && server.ToggleBlackOpsColdWarTracking)
                     {
                         message += "_**[    BLACK OPS COLD WAR TRACKING ONLINE.    ]**_\n";
                     }
-                    if (ModernWarfareComponent.isServiceRunning && server.AllowServerPermissionModernWarfareTracking && server.ToggleModernWarfareTracking)
+                    if (ModernWarfareComponent.IsServiceRunning && server.AllowServerPermissionModernWarfareTracking && server.ToggleModernWarfareTracking)
                     {
                         message += "_**[    MODERN WARFARE TRACKING ONLINE.    ]**_\n";
                     }
-                    if (WarzoneComponent.isServiceRunning && server.AllowServerPermissionWarzoneTracking && server.ToggleWarzoneTracking)
+                    if (WarzoneComponent.IsServiceRunning && server.AllowServerPermissionWarzoneTracking && server.ToggleWarzoneTracking)
                     {
                         message += "_**[    WARZONE TRACKING ONLINE.    ]**_";
                     }
@@ -94,26 +95,26 @@ namespace StormBot.Services
         {
             string logStamp = GetLogStamp();
 
-            if (isServiceRunning)
+            if (IsServiceRunning)
             {
                 Console.WriteLine(logStamp + "Stopping service.".PadLeft(68 - logStamp.Length));
 
-                isServiceRunning = false;
+                IsServiceRunning = false;
 
                 List<ServersEntity> servers = GetAllServerEntities();
                 foreach (ServersEntity server in servers)
                 {
                     string message = "";
 
-                    if (BlackOpsColdWarComponent.isServiceRunning && server.AllowServerPermissionBlackOpsColdWarTracking && server.ToggleBlackOpsColdWarTracking)
+                    if (BlackOpsColdWarComponent.IsServiceRunning && server.AllowServerPermissionBlackOpsColdWarTracking && server.ToggleBlackOpsColdWarTracking)
                     {
                         message += "_**[    BLACK OPS COLD WAR TRACKING OFFLINE.    ]**_\n";
                     }
-                    if (ModernWarfareComponent.isServiceRunning && server.AllowServerPermissionModernWarfareTracking && server.ToggleModernWarfareTracking)
+                    if (ModernWarfareComponent.IsServiceRunning && server.AllowServerPermissionModernWarfareTracking && server.ToggleModernWarfareTracking)
                     {
                         message += "_**[    MODERN WARFARE TRACKING OFFLINE.    ]**_\n";
                     }
-                    if (WarzoneComponent.isServiceRunning && server.AllowServerPermissionWarzoneTracking && server.ToggleWarzoneTracking)
+                    if (WarzoneComponent.IsServiceRunning && server.AllowServerPermissionWarzoneTracking && server.ToggleWarzoneTracking)
                     {
                         message += "_**[    WARZONE TRACKING OFFLINE.    ]**_";
                     }
@@ -129,36 +130,36 @@ namespace StormBot.Services
         }
 
 		#region API
-		public async Task<List<CallOfDutyPlayerModel>> GetNewPlayerData(bool storeToDatabase, ulong serverId, string gameAbbrev, string modeAbbrev)
-        {
-            List<ulong> serverIds = new List<ulong>();
-            serverIds.Add(serverId);
+		public List<CallOfDutyPlayerModel> GetNewPlayerData(bool storeToDatabase, ulong serverId, string gameAbbrev, string modeAbbrev)
+		{
+			List<ulong> serverIds = new List<ulong>();
+			serverIds.Add(serverId);
 
-            // get all data of all players in the specified servers for the specified games
-            List<CallOfDutyPlayerDataEntity> allStoredPlayersData = GetServersPlayerData(serverIds, gameAbbrev, modeAbbrev);
+			// get all data of all players in the specified servers for the specified games
+			List<CallOfDutyPlayerDataEntity> allStoredPlayersData = GetServersPlayerData(serverIds, gameAbbrev, modeAbbrev);
 
-            // if no player data is returned, return null
-            if (allStoredPlayersData.Count == 0)
-            {
-                string logStamp = GetLogStamp();
-                Console.WriteLine(logStamp + "Cannot retrieve player data for zero players.".PadLeft(126 - logStamp.Length));
-                return null;
-            }
+			// if no player data is returned, return null
+			if (allStoredPlayersData.Count == 0)
+			{
+				string logStamp = GetLogStamp();
+				Console.WriteLine(logStamp + "Cannot retrieve player data for zero players.".PadLeft(126 - logStamp.Length));
+				return null;
+			}
 
-            CookieContainer cookieJar = new CookieContainer();
-            string XSRFTOKEN = "";
+			CookieContainer cookieJar = new CookieContainer();
+			string XSRFTOKEN = "";
 
-            // make initial request to get the XSRF-TOKEN
-            InitializeAPI(ref cookieJar, ref XSRFTOKEN);
+			// make initial request to get the XSRF-TOKEN
+			InitializeAPI(ref cookieJar, ref XSRFTOKEN);
 
-            // login to the API with credentials and XSRF-TOKEN to generate cookie tokens needed to retrieve player data
-            LoginAPI(ref cookieJar, XSRFTOKEN);
+			// login to the API with credentials and XSRF-TOKEN to generate cookie tokens needed to retrieve player data
+			LoginAPI(ref cookieJar, XSRFTOKEN);
 
-            // retrieve updated data via Call of Duty API for all participating players with cookie tokens obtained from login
-            return GetAllPlayersDataAPI(cookieJar, allStoredPlayersData, storeToDatabase);
-        }
+			// retrieve updated data via Call of Duty API for all participating players with cookie tokens obtained from login
+			return GetAllPlayersDataAPI(cookieJar, allStoredPlayersData, storeToDatabase);
+		}
 
-        private void InitializeAPI(ref CookieContainer cookieJar, ref string XSRFTOKEN)
+		private static void InitializeAPI(ref CookieContainer cookieJar, ref string XSRFTOKEN)
         {
             RestClient client = new RestClient("https://profile.callofduty.com/null/login");
             client.CookieContainer = cookieJar;
@@ -171,7 +172,7 @@ namespace StormBot.Services
             XSRFTOKEN = client.CookieContainer.GetCookies(new Uri("https://profile.callofduty.com/null/login"))["XSRF-TOKEN"].Value;
         }
 
-        private void LoginAPI(ref CookieContainer cookieJar, string XSRFTOKEN)
+        private static void LoginAPI(ref CookieContainer cookieJar, string XSRFTOKEN)
         {
             RestClient client = new RestClient("https://profile.callofduty.com/do_login?new_SiteId=cod");
             client.CookieContainer = cookieJar;
@@ -231,7 +232,7 @@ namespace StormBot.Services
                         storedPlayerData.Date = DateTime.Now;
                     }
 
-                    lock (BaseService.queryLock)
+                    using (StormBotContext _db = new StormBotContext())
                     {
                         _db.SaveChanges();
                     }
@@ -245,7 +246,7 @@ namespace StormBot.Services
             return allNewPlayersData;
         }
 
-        private CallOfDutyPlayerModel GetAPlayersDataAPI(CookieContainer cookieJar, CallOfDutyPlayerDataEntity storedPlayerData)
+        private static CallOfDutyPlayerModel GetAPlayersDataAPI(CookieContainer cookieJar, CallOfDutyPlayerDataEntity storedPlayerData)
         {
             string gameAbbrev = storedPlayerData.GameAbbrev;
             string modeAbbrev = storedPlayerData.ModeAbbrev;
@@ -268,7 +269,7 @@ namespace StormBot.Services
         #endregion
 
         #region QUERIES
-        public async Task<List<CallOfDutyPlayerModel>> GetServersPlayerDataAsPlayerModelList(ulong serverId, string gameAbbrev, string modeAbbrev)
+        public static List<CallOfDutyPlayerModel> GetServersPlayerDataAsPlayerModelList(ulong serverId, string gameAbbrev, string modeAbbrev)
         {
             List<ulong> serverIdList = new List<ulong>();
             serverIdList.Add(serverId);
@@ -304,7 +305,7 @@ namespace StormBot.Services
             return modelData;
         }
 
-        public async Task<bool> MissedLastDataFetch(ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
+        public static bool MissedLastDataFetch(ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
         {
             CallOfDutyPlayerDataEntity data = GetCallOfDutyPlayerDataEntity(serverID, discordID, gameAbbrev, modeAbbrev);
 
@@ -321,27 +322,27 @@ namespace StormBot.Services
                 return true;
         }
 
-        public void AddParticipantToDatabase(CallOfDutyPlayerDataEntity playerData)
+        public static void AddParticipantToDatabase(CallOfDutyPlayerDataEntity playerData)
         {
-            lock (BaseService.queryLock)
+            using (StormBotContext _db = new StormBotContext())
             {
                 _db.CallOfDutyPlayerData.Add(playerData);
                 _db.SaveChanges();
             }
         }
 
-        public void RemoveParticipantFromDatabase(CallOfDutyPlayerDataEntity playerData)
+        public static void RemoveParticipantFromDatabase(CallOfDutyPlayerDataEntity playerData)
         {
-            lock (BaseService.queryLock)
+            using (StormBotContext _db = new StormBotContext())
             {
                 _db.CallOfDutyPlayerData.Remove(playerData);
                 _db.SaveChanges();
             }
         }
 
-        public List<CallOfDutyPlayerDataEntity> GetServersPlayerData(List<ulong> serverIds, string gameAbbrev, string modeAbbrev)
+        public static List<CallOfDutyPlayerDataEntity> GetServersPlayerData(List<ulong> serverIds, string gameAbbrev, string modeAbbrev)
         {
-            lock (BaseService.queryLock)
+            using (StormBotContext _db = new StormBotContext())
             {
                 if (gameAbbrev == null || modeAbbrev == null)
                 {
@@ -362,9 +363,9 @@ namespace StormBot.Services
             }
         }
 
-        public CallOfDutyPlayerDataEntity GetCallOfDutyPlayerDataEntity(ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
+        public static CallOfDutyPlayerDataEntity GetCallOfDutyPlayerDataEntity(ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
         {
-            lock (BaseService.queryLock)
+            using (StormBotContext _db = new StormBotContext())
             {
                 return _db.CallOfDutyPlayerData
                 .AsQueryable()
@@ -373,9 +374,9 @@ namespace StormBot.Services
             }
         }
 
-        public List<ulong> GetAllValidatedServerIds(string gameAbbrev, string modeAbbrev)
+        public static List<ulong> GetAllValidatedServerIds(string gameAbbrev, string modeAbbrev)
         {
-            lock (BaseService.queryLock)
+            using (StormBotContext _db = new StormBotContext())
             {
                 if (gameAbbrev == "mw" && modeAbbrev == "mp")
                 {
@@ -411,7 +412,7 @@ namespace StormBot.Services
 
         public IMessageChannel GetServerCallOfDutyNotificationChannel(ulong serverId)
         {
-            lock (BaseService.queryLock)
+            using (StormBotContext _db = new StormBotContext())
             {
                 var channelId = _db.Servers
                 .AsQueryable()
@@ -426,9 +427,9 @@ namespace StormBot.Services
             }
         }
 
-        public ulong GetServerModernWarfareKillsRoleID(ulong serverId)
+        public static ulong GetServerModernWarfareKillsRoleID(ulong serverId)
         {
-            lock (BaseService.queryLock)
+            using (StormBotContext _db = new StormBotContext())
             {
                 return _db.Servers
                 .AsQueryable()
@@ -438,9 +439,9 @@ namespace StormBot.Services
             }
         }
 
-        public ulong GetServerWarzoneWinsRoleID(ulong serverId)
+        public static ulong GetServerWarzoneWinsRoleID(ulong serverId)
         {
-            lock (BaseService.queryLock)
+            using (StormBotContext _db = new StormBotContext())
             {
                 return _db.Servers
                 .AsQueryable()
@@ -450,9 +451,9 @@ namespace StormBot.Services
             }
         }
 
-        public ulong GetServerWarzoneKillsRoleID(ulong serverId)
+        public static ulong GetServerWarzoneKillsRoleID(ulong serverId)
         {
-            lock (BaseService.queryLock)
+            using (StormBotContext _db = new StormBotContext())
             {
                 return _db.Servers
                 .AsQueryable()
@@ -462,9 +463,9 @@ namespace StormBot.Services
             }
         }
 
-        public ulong GetServerBlackOpsColdWarKillsRoleID(ulong serverId)
+        public static ulong GetServerBlackOpsColdWarKillsRoleID(ulong serverId)
         {
-            lock (BaseService.queryLock)
+            using (StormBotContext _db = new StormBotContext())
             {
                 return _db.Servers
                 .AsQueryable()
@@ -474,9 +475,9 @@ namespace StormBot.Services
             }
         }
 
-        public bool GetServerToggleBlackOpsColdWarTracking(SocketCommandContext context)
+        public static bool GetServerToggleBlackOpsColdWarTracking(SocketCommandContext context)
         {
-            lock (BaseService.queryLock)
+            using (StormBotContext _db = new StormBotContext())
             {
                 if (!context.IsPrivate)
                 {
@@ -487,7 +488,7 @@ namespace StormBot.Services
                         .Single();
 
                     if (!flag)
-                        Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
+                        Console.WriteLine($"Black Ops Cold War commands will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
 
                     return flag;
                 }
@@ -496,9 +497,9 @@ namespace StormBot.Services
             }
         }
 
-        public bool GetServerToggleModernWarfareTracking(SocketCommandContext context)
+        public static bool GetServerToggleModernWarfareTracking(SocketCommandContext context)
         {
-            lock (BaseService.queryLock)
+            using (StormBotContext _db = new StormBotContext())
             {
                 if (!context.IsPrivate)
                 {
@@ -509,7 +510,7 @@ namespace StormBot.Services
                     .Single();
 
                     if (!flag)
-                        Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
+                        Console.WriteLine($"Modern Warfare commands will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
 
                     return flag;
                 }
@@ -518,9 +519,9 @@ namespace StormBot.Services
             }
         }
 
-        public bool GetServerToggleWarzoneTracking(SocketCommandContext context)
+        public static bool GetServerToggleWarzoneTracking(SocketCommandContext context)
         {
-            lock (BaseService.queryLock)
+            using (StormBotContext _db = new StormBotContext())
             {
                 if (!context.IsPrivate)
                 {
@@ -531,7 +532,7 @@ namespace StormBot.Services
                     .Single();
 
                     if (!flag)
-                        Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
+                        Console.WriteLine($"Warzone commands will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
 
                     return flag;
                 }
@@ -540,9 +541,9 @@ namespace StormBot.Services
             }
         }
 
-        public bool GetServerAllowServerPermissionBlackOpsColdWarTracking(SocketCommandContext context)
+        public static bool GetServerAllowServerPermissionBlackOpsColdWarTracking(SocketCommandContext context)
         {
-            lock (BaseService.queryLock)
+            using (StormBotContext _db = new StormBotContext())
             {
                 if (!context.IsPrivate)
                 {
@@ -553,7 +554,7 @@ namespace StormBot.Services
                     .Single();
 
                     if (!flag)
-                        Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
+                        Console.WriteLine($"Black Ops Cold War commands will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
 
                     return flag;
                 }
@@ -562,9 +563,9 @@ namespace StormBot.Services
             }
         }
 
-        public bool GetServerAllowServerPermissionModernWarfareTracking(SocketCommandContext context)
+        public static bool GetServerAllowServerPermissionModernWarfareTracking(SocketCommandContext context)
         {
-            lock (BaseService.queryLock)
+            using (StormBotContext _db = new StormBotContext())
             {
                 if (!context.IsPrivate)
                 {
@@ -575,7 +576,7 @@ namespace StormBot.Services
                     .Single();
 
                     if (!flag)
-                        Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
+                        Console.WriteLine($"Modern Warfare commands will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
 
                     return flag;
                 }
@@ -584,9 +585,9 @@ namespace StormBot.Services
             }
         }
 
-        public bool GetServerAllowServerPermissionWarzoneTracking(SocketCommandContext context)
+        public static bool GetServerAllowServerPermissionWarzoneTracking(SocketCommandContext context)
         {
-            lock (BaseService.queryLock)
+            using (StormBotContext _db = new StormBotContext())
             {
                 if (!context.IsPrivate)
                 {
@@ -597,7 +598,7 @@ namespace StormBot.Services
                     .Single();
 
                     if (!flag)
-                        Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
+                        Console.WriteLine($"Warzone commands will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
 
                     return flag;
                 }

@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using RestSharp;
 using StormBot.Models.SoundpadApiModels;
+using StormBot.Database;
 
 namespace StormBot.Services
 {
@@ -19,20 +20,20 @@ namespace StormBot.Services
     {
         private readonly DiscordSocketClient _client;
 
-        public Soundpad _soundpad;
+        public static Soundpad _soundpad;
 
-        private bool displayedConnectingMessage;
+        private static bool DisplayedConnectingMessage;
 
-        public bool isSoundpadRunning { get; set; }
+        public static bool IsSoundpadRunning { get; set; }
 
-        public SoundpadService(IServiceProvider services) : base(services)
+        public SoundpadService(IServiceProvider services)
         {
             _client = services.GetRequiredService<DiscordSocketClient>();
 
             Name = "Soundpad Service";
-            isServiceRunning = false;
-            isSoundpadRunning = false;
-            displayedConnectingMessage = false;
+            IsServiceRunning = false;
+            IsSoundpadRunning = false;
+            DisplayedConnectingMessage = false;
         }
 
         public override async Task StartService()
@@ -43,7 +44,7 @@ namespace StormBot.Services
             {
                 Console.WriteLine(logStamp + "Disabled.".PadLeft(60 - logStamp.Length));
             }
-            else if (isServiceRunning)
+            else if (IsServiceRunning)
             {
                 Console.WriteLine(logStamp + "Service already running.".PadLeft(75 - logStamp.Length));
             }
@@ -51,7 +52,7 @@ namespace StormBot.Services
             {
                 Console.WriteLine(logStamp + "Starting service.".PadLeft(68 - logStamp.Length));
 
-                isServiceRunning = true;
+                IsServiceRunning = true;
 
                 _soundpad = new Soundpad();
                 _soundpad.StatusChanged += SoundpadOnStatusChangedAsync;
@@ -76,20 +77,20 @@ namespace StormBot.Services
         {
             string logStamp = GetLogStamp();
 
-            if (isServiceRunning)
+            if (IsServiceRunning)
             {
                 Console.WriteLine(logStamp + "Stopping service.".PadLeft(68 - logStamp.Length));
 
-                isServiceRunning = false;
+                IsServiceRunning = false;
 
-                if (isSoundpadRunning)
+                if (IsSoundpadRunning)
                 {
                     string message = "SOUNDBOARD DISCONNECTED.";
                     Console.WriteLine(logStamp + message.PadLeft(75 - logStamp.Length));
 
                     var channels = GetAllServerSoundpadChannels();
                     
-                    if (channels.Count() != 0)
+                    if (channels.Any())
                         channels.ToList().ForEach(channel => channel.SendMessageAsync("_**[    " + message + "    ]**_"));
                 }
             }
@@ -105,35 +106,35 @@ namespace StormBot.Services
             }
             else if (_soundpad.ConnectionStatus == ConnectionStatus.Connected)
             {
-                displayedConnectingMessage = false;
-                isSoundpadRunning = true;
+                DisplayedConnectingMessage = false;
+                IsSoundpadRunning = true;
 
                 string message = "SOUNDBOARD CONNECTED.";
                 Console.WriteLine(logStamp + message.PadLeft(72 - logStamp.Length));
 
                 var channels = GetAllServerSoundpadChannels();
 
-                if (channels.Count() != 0)
+                if (channels.Any())
                     channels.ToList().ForEach(channel => channel.SendMessageAsync("_**[    " + message + "    ]**_"));
             }
-            else if (_soundpad.ConnectionStatus == ConnectionStatus.Disconnected && isSoundpadRunning)
+            else if (_soundpad.ConnectionStatus == ConnectionStatus.Disconnected && IsSoundpadRunning)
             {
-                displayedConnectingMessage = false;
+                DisplayedConnectingMessage = false;
 
                 string message = "SOUNDBOARD DISCONNECTED.";
                 Console.WriteLine(logStamp + message.PadLeft(75 - logStamp.Length));
 
                 var channels = GetAllServerSoundpadChannels();
 
-                if (channels.Count() != 0)
+                if (channels.Any())
                     channels.ToList().ForEach(channel => channel.SendMessageAsync("_**[    " + message + "    ]**_"));
             }
-            else if (_soundpad.ConnectionStatus == ConnectionStatus.Connecting && isSoundpadRunning)
+            else if (_soundpad.ConnectionStatus == ConnectionStatus.Connecting && IsSoundpadRunning)
             {
-                if (!displayedConnectingMessage)
+                if (!DisplayedConnectingMessage)
                 {
-                    displayedConnectingMessage = true;
-                    isSoundpadRunning = false;
+                    DisplayedConnectingMessage = true;
+                    IsSoundpadRunning = false;
 
                     string message = "Listening for the soundboard application...";
                     Console.WriteLine(logStamp + message.PadLeft(94 - logStamp.Length));
@@ -144,7 +145,7 @@ namespace StormBot.Services
         #region API
         private async Task PollSoundpadStatus()
         {
-            while (isServiceRunning)
+            while (IsServiceRunning)
             {
                 ConnectionStatus connectionStatus = GetConnectionStatusAPI();
 
@@ -169,7 +170,7 @@ namespace StormBot.Services
             }
         }
 
-        public ConnectionStatus GetConnectionStatusAPI()
+        public static ConnectionStatus GetConnectionStatusAPI()
         {
             // if the machine hosting the API is offline, catch the exception otherwise polling will stop working
             try
@@ -186,7 +187,7 @@ namespace StormBot.Services
             }
         }
 
-        public CategoryResponse GetCategoryAPI(int index)
+        public static CategoryResponse GetCategoryAPI(int index)
         {
             RestClient client = new RestClient(Program.configurationSettingsModel.StormBotSoundpadApiHostname + "category/" + index);
             RestRequest request = new RestRequest(Method.GET);
@@ -203,7 +204,7 @@ namespace StormBot.Services
             }
         }
 
-        public CategoryListResponse GetCategoriesAPI()
+        public static CategoryListResponse GetCategoriesAPI()
         {
             RestClient client = new RestClient(Program.configurationSettingsModel.StormBotSoundpadApiHostname + "categories");
             RestRequest request = new RestRequest(Method.GET);
@@ -220,7 +221,7 @@ namespace StormBot.Services
             }
         }
 
-        public ApiValidationResponse SaveMP3API(string source, string videoURL, string soundName)
+        public static ApiValidationResponse SaveMP3API(string source, string videoURL, string soundName)
         {
             RestClient client = new RestClient(Program.configurationSettingsModel.StormBotSoundpadApiHostname + "addMp3");
             RestRequest request = new RestRequest(Method.POST);
@@ -254,7 +255,7 @@ namespace StormBot.Services
             }
         }
 
-        public bool AddSoundAPI(string path, int index, int categoryIndex)
+        public static bool AddSoundAPI(string path, int index, int categoryIndex)
         {
             RestClient client = new RestClient(Program.configurationSettingsModel.StormBotSoundpadApiHostname + "addSound");
             RestRequest request = new RestRequest(Method.POST);
@@ -280,7 +281,7 @@ namespace StormBot.Services
             }
         }
 
-        public bool SelectIndexAPI(int index)
+        public static bool SelectIndexAPI(int index)
         {
             RestClient client = new RestClient(Program.configurationSettingsModel.StormBotSoundpadApiHostname + "select/" + index);
             RestRequest request = new RestRequest(Method.GET);
@@ -297,7 +298,7 @@ namespace StormBot.Services
             }
         }
 
-        public bool RemoveSelectedEntriesAPI()
+        public static bool RemoveSelectedEntriesAPI()
         {
             RestClient client = new RestClient(Program.configurationSettingsModel.StormBotSoundpadApiHostname + "removeSelected");
             RestRequest request = new RestRequest(Method.GET);
@@ -314,7 +315,7 @@ namespace StormBot.Services
             }
         }
 
-        public bool PlaySoundAPI(int index)
+        public static bool PlaySoundAPI(int index)
         {
             RestClient client = new RestClient(Program.configurationSettingsModel.StormBotSoundpadApiHostname + "play/" + index);
             RestRequest request = new RestRequest(Method.GET);
@@ -331,7 +332,7 @@ namespace StormBot.Services
             }
         }
 
-        public bool PauseSoundAPI()
+        public static bool PauseSoundAPI()
         {
             RestClient client = new RestClient(Program.configurationSettingsModel.StormBotSoundpadApiHostname + "pause");
             RestRequest request = new RestRequest(Method.GET);
@@ -348,7 +349,7 @@ namespace StormBot.Services
             }
         }
 
-        public bool StopSoundAPI()
+        public static bool StopSoundAPI()
         {
             RestClient client = new RestClient(Program.configurationSettingsModel.StormBotSoundpadApiHostname + "stop");
             RestRequest request = new RestRequest(Method.GET);
@@ -369,7 +370,7 @@ namespace StormBot.Services
         #region QUERIES
         private IEnumerable<IMessageChannel> GetAllServerSoundpadChannels()
         {
-            lock (BaseService.queryLock)
+            using (StormBotContext _db = new StormBotContext())
             {
                 var channelIds = _db.Servers
                 .AsQueryable()
@@ -382,9 +383,9 @@ namespace StormBot.Services
             }
         }
 
-        public bool GetServerToggleSoundpadCommands(SocketCommandContext context)
+        public static bool GetServerToggleSoundpadCommands(SocketCommandContext context)
         {
-            lock (BaseService.queryLock)
+            using (StormBotContext _db = new StormBotContext())
             {
                 if (!context.IsPrivate)
                 {
@@ -395,7 +396,7 @@ namespace StormBot.Services
                     .Single();
 
                     if (!flag)
-                        Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
+                        Console.WriteLine($"Soundpad commands will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
 
                     return flag;
                 }
@@ -404,9 +405,9 @@ namespace StormBot.Services
             }
         }
 
-        public bool GetServerAllowServerPermissionSoundpadCommands(SocketCommandContext context)
+        public static bool GetServerAllowServerPermissionSoundpadCommands(SocketCommandContext context)
         {
-            lock (BaseService.queryLock)
+            using (StormBotContext _db = new StormBotContext())
             {
                 if (!context.IsPrivate)
                 {
@@ -417,7 +418,7 @@ namespace StormBot.Services
                     .Single();
 
                     if (!flag)
-                        Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
+                        Console.WriteLine($"Soundpad commands will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
 
                     return flag;
                 }

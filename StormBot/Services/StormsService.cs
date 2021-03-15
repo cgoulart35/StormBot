@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
 using Discord;
+using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
+using StormBot.Database;
 using StormBot.Database.Entities;
-using Discord.Commands;
 
 namespace StormBot.Services
 {
@@ -14,12 +15,12 @@ namespace StormBot.Services
 	{
 		public readonly DiscordSocketClient _client;
 
-		private Dictionary<ulong, int> OngoingStormsLevel;
-		private Dictionary<ulong, int> OngoingStormsWinningNumber;
-		private Dictionary<ulong, Dictionary<ulong, int>> OngoingStormsUserGuessCount;
-		private Dictionary<ulong, List<ulong>> OngoingStormsUsersWaitingForStealTimeLimit;
+		private readonly Dictionary<ulong, int> OngoingStormsLevel;
+		private readonly Dictionary<ulong, int> OngoingStormsWinningNumber;
+		private readonly Dictionary<ulong, Dictionary<ulong, int>> OngoingStormsUserGuessCount;
+		private readonly Dictionary<ulong, List<ulong>> OngoingStormsUsersWaitingForStealTimeLimit;
 
-		private Random random;
+		private readonly Random random;
 
 		public Emoji cloud_rain;
 		public Emoji thunder_cloud_rain;
@@ -39,12 +40,12 @@ namespace StormBot.Services
 
 		public List<IUserMessage> purgeCollection;
 
-		public StormsService(IServiceProvider services) : base(services)
+		public StormsService(IServiceProvider services)
 		{
 			_client = services.GetRequiredService<DiscordSocketClient>();
 
 			Name = "Storm Service";
-			isServiceRunning = false;
+			IsServiceRunning = false;
 
 			OngoingStormsLevel = new Dictionary<ulong, int>();
 			OngoingStormsWinningNumber = new Dictionary<ulong, int>();
@@ -71,7 +72,7 @@ namespace StormBot.Services
 			{
 				Console.WriteLine(logStamp + "Disabled.".PadLeft(60 - logStamp.Length));
 			}
-			else if (isServiceRunning)
+			else if (IsServiceRunning)
 			{
 				Console.WriteLine(logStamp + "Service already running.".PadLeft(75 - logStamp.Length));
 			}
@@ -79,14 +80,14 @@ namespace StormBot.Services
 			{
 				Console.WriteLine(logStamp + "Starting service.".PadLeft(68 - logStamp.Length));
 
-				isServiceRunning = true;
+				IsServiceRunning = true;
 
 				List<ServersEntity> servers = GetAllServerEntities();
 				foreach (ServersEntity server in servers)
 				{
 					string message = "";
 
-					if (isServiceRunning && server.AllowServerPermissionStorms && server.ToggleStorms)
+					if (IsServiceRunning && server.AllowServerPermissionStorms && server.ToggleStorms)
 					{
 						message += "_**[    STORMS ONLINE.    ]**_\n";
 					}
@@ -101,7 +102,7 @@ namespace StormBot.Services
 		{
 			string logStamp = GetLogStamp();
 
-			if (isServiceRunning)
+			if (IsServiceRunning)
 			{
 				Console.WriteLine(logStamp + "Stopping service.".PadLeft(68 - logStamp.Length));
 
@@ -110,7 +111,7 @@ namespace StormBot.Services
 				{
 					string message = "";
 
-					if (isServiceRunning && server.AllowServerPermissionStorms && server.ToggleStorms)
+					if (IsServiceRunning && server.AllowServerPermissionStorms && server.ToggleStorms)
 					{
 						message += "_**[    STORMS OFFLINE.    ]**_\n";
 					}
@@ -119,7 +120,7 @@ namespace StormBot.Services
 						await ((IMessageChannel)_client.GetChannel(server.StormsNotificationChannelID)).SendMessageAsync(message);
 				}
 
-				isServiceRunning = false;
+				IsServiceRunning = false;
 			}
 		}
 
@@ -216,7 +217,7 @@ First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute 
 					if (actualLevel == 1)
 					{
 						// give user points for level 1
-						lock (BaseService.queryLock)
+						using (StormBotContext _db = new StormBotContext())
 						{
 							playerData.Wallet += levelOneReward;
 							_db.SaveChanges();
@@ -278,7 +279,7 @@ All wallets are reset to {5} points once someone reaches {6} points.", GetServer
 							if (bet != null && bet.Value > levelTwoReward)
 								reward = bet.Value;
 
-							lock (BaseService.queryLock)
+							using (StormBotContext _db = new StormBotContext())
 							{
 								playerData.Wallet += reward * multiplier;
 								_db.SaveChanges();
@@ -304,7 +305,7 @@ All wallets are reset to {5} points once someone reaches {6} points.", GetServer
 
 								// take points from user if they bet
 								double newWallet = playerData.Wallet - bet.Value;
-								lock (BaseService.queryLock)
+								using (StormBotContext _db = new StormBotContext())
 								{
 									if (newWallet < 0)
 										playerData.Wallet = 0;
@@ -356,7 +357,7 @@ All wallets are reset to {5} points once someone reaches {6} points.", GetServer
 					OngoingStormsUsersWaitingForStealTimeLimit[channelId].Add(discordId);
 					StartUsersStealTimeLimitCountdown(channelId, discordId);
 
-					StormPlayerDataEntity playerData = await AddPlayerToDbTableIfNotExist(serverId, discordId);
+					StormPlayerDataEntity playerData = AddPlayerToDbTableIfNotExist(serverId, discordId);
 					bool hadDisasterMark = playerData.Wallet >= disasterMark;
 
 					List<StormPlayerDataEntity> allPlayerData = GetAllStormPlayerDataEntities(serverId);
@@ -370,7 +371,7 @@ All wallets are reset to {5} points once someone reaches {6} points.", GetServer
 						List<StormPlayerDataEntity> topPlayers = allPlayerData.Where(player => player.Wallet == topScore && player.DiscordID != discordId).ToList();
 
 						// do not let users steal from just themselves (when count is zero)
-						if (topPlayers.Count != 0)
+						if (topPlayers.Any())
 						{
 							// set top players' wallets and criminal's wallet
 							foreach (StormPlayerDataEntity topPlayer in topPlayers)
@@ -390,7 +391,7 @@ All wallets are reset to {5} points once someone reaches {6} points.", GetServer
 									diff = stealAmount / topPlayers.Count;
 								}
 
-								lock (BaseService.queryLock)
+								using (StormBotContext _db = new StormBotContext())
 								{
 									playerData.Wallet += diff;
 									_db.SaveChanges();
@@ -423,7 +424,7 @@ All wallets are reset to {5} points once someone reaches {6} points.", GetServer
 
 				// give everyone the base wallet amount and no insurance
 				List<StormPlayerDataEntity> allPlayerData = GetAllStormPlayerDataEntities(serverId);
-				lock (BaseService.queryLock)
+				using (StormBotContext _db = new StormBotContext())
 				{
 					foreach (StormPlayerDataEntity player in allPlayerData)
 					{
@@ -493,7 +494,7 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 				}
 
 				string insuredOrNotStr = "";
-				lock (BaseService.queryLock)
+				using (StormBotContext _db = new StormBotContext())
 				{
 					if (!allPlayerData[randomIndex].HasInsurance)
 					{
@@ -517,11 +518,11 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 		}
 
 		#region QUERIES
-		public async Task<StormPlayerDataEntity> AddPlayerToDbTableIfNotExist(ulong serverID, ulong discordID)
+		public static StormPlayerDataEntity AddPlayerToDbTableIfNotExist(ulong serverID, ulong discordID)
 		{
 			StormPlayerDataEntity playerData = GetStormPlayerDataEntity(serverID, discordID);
 
-			lock (BaseService.queryLock)
+			using (StormBotContext _db = new StormBotContext())
 			{
 				if (playerData == null)
 				{
@@ -544,9 +545,9 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 			}
 		}
 
-		public StormPlayerDataEntity GetStormPlayerDataEntity(ulong serverID, ulong discordID)
+		public static StormPlayerDataEntity GetStormPlayerDataEntity(ulong serverID, ulong discordID)
 		{
-			lock (BaseService.queryLock)
+			using (StormBotContext _db = new StormBotContext())
 			{
 				return _db.StormPlayerData
 				.AsQueryable()
@@ -555,9 +556,9 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 			}
 		}
 
-		public List<StormPlayerDataEntity> GetAllStormPlayerDataEntities(ulong serverID)
+		public static List<StormPlayerDataEntity> GetAllStormPlayerDataEntities(ulong serverID)
 		{
-			lock (BaseService.queryLock)
+			using (StormBotContext _db = new StormBotContext())
 			{
 				return _db.StormPlayerData
 				.AsQueryable()
@@ -567,9 +568,9 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 			}
 		}
 
-		public bool GetServerToggleStorms(SocketCommandContext context)
+		public static bool GetServerToggleStorms(SocketCommandContext context)
 		{
-			lock (BaseService.queryLock)
+			using (StormBotContext _db = new StormBotContext())
 			{
 				if (!context.IsPrivate)
 				{
@@ -580,7 +581,7 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 					.Single();
 
 					if (!flag)
-						Console.WriteLine($"Command will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
+						Console.WriteLine($"Storms commands will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
 
 					return flag;
 				}
@@ -589,9 +590,9 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 			}
 		}
 
-		public bool GetServerAllowServerPermissionStorms(SocketCommandContext context)
+		public static bool GetServerAllowServerPermissionStorms(SocketCommandContext context)
 		{
-			lock (BaseService.queryLock)
+			using (StormBotContext _db = new StormBotContext())
 			{
 				if (!context.IsPrivate)
 				{
@@ -602,7 +603,7 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 					.Single();
 
 					if (!flag)
-						Console.WriteLine($"Command will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
+						Console.WriteLine($"Storms commands will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
 
 					return flag;
 				}
@@ -611,9 +612,9 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 			}
 		}
 
-		public ulong GetStormsMostResetsRoleID(ulong serverId)
+		public static ulong GetStormsMostResetsRoleID(ulong serverId)
 		{
-			lock (BaseService.queryLock)
+			using (StormBotContext _db = new StormBotContext())
 			{
 				return _db.Servers
 				.AsQueryable()
@@ -623,9 +624,9 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 			}
 		}
 
-		public ulong GetStormsMostRecentResetRoleID(ulong serverId)
+		public static ulong GetStormsMostRecentResetRoleID(ulong serverId)
 		{
-			lock (BaseService.queryLock)
+			using (StormBotContext _db = new StormBotContext())
 			{
 				return _db.Servers
 				.AsQueryable()

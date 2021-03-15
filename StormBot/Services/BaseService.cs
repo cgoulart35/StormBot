@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Discord.Commands;
 using Discord.WebSocket;
-using Microsoft.Extensions.DependencyInjection;
 using StormBot.Database;
 using StormBot.Database.Entities;
 
@@ -15,16 +15,7 @@ namespace StormBot.Services
 
 		public bool DoStart { get; set; }
 
-		public bool isServiceRunning { get; set; }
-
-		public static StormBotContext _db;
-
-		public static readonly object queryLock = new object();
-
-		public BaseService(IServiceProvider services)
-		{
-			_db = services.GetRequiredService<StormBotContext>();
-		}
+		public bool IsServiceRunning { get; set; }
 
 		public virtual async Task StartService()
 		{
@@ -34,7 +25,7 @@ namespace StormBot.Services
 			{
 				Console.WriteLine(logStamp + "Disabled.".PadLeft(60 - logStamp.Length));
 			}
-			else if (isServiceRunning)
+			else if (IsServiceRunning)
 			{
 				Console.WriteLine(logStamp + "Service already running.".PadLeft(75 - logStamp.Length));
 			}
@@ -42,7 +33,7 @@ namespace StormBot.Services
 			{
 				Console.WriteLine(logStamp + "Starting service.".PadLeft(68 - logStamp.Length));
 
-				isServiceRunning = true;
+				IsServiceRunning = true;
 			}
 		}
 
@@ -50,11 +41,11 @@ namespace StormBot.Services
 		{
 			string logStamp = GetLogStamp();
 
-			if (isServiceRunning)
+			if (IsServiceRunning)
 			{
 				Console.WriteLine(logStamp + "Stopping service.".PadLeft(68 - logStamp.Length));
 
-				isServiceRunning = false;
+				IsServiceRunning = false;
 			}
 		}
 
@@ -63,7 +54,7 @@ namespace StormBot.Services
 			return DateTime.Now.ToString("HH:mm:ss ") + Name;
 		}
 
-		public async Task UnassignRoleFromAllMembers(ulong roleID, SocketGuild guild)
+		public static async Task UnassignRoleFromAllMembers(ulong roleID, SocketGuild guild)
 		{
 			var role = guild.GetRole(roleID);
 			IEnumerable<SocketGuildUser> roleMembers = guild.GetRole(roleID).Members;
@@ -73,7 +64,7 @@ namespace StormBot.Services
 			}
 		}
 
-		public async Task GiveUsersRole(ulong roleID, List<ulong> discordIDs, SocketGuild guild)
+		public static async Task GiveUsersRole(ulong roleID, List<ulong> discordIDs, SocketGuild guild)
 		{
 			var role = guild.GetRole(roleID);
 
@@ -85,9 +76,9 @@ namespace StormBot.Services
 		}
 
 		#region QUERIES
-		public List<ServersEntity> GetAllServerEntities()
+		public static List<ServersEntity> GetAllServerEntities()
 		{
-			lock (BaseService.queryLock)
+			using (StormBotContext _db = new StormBotContext())
 			{
 				return _db.Servers
 				.AsQueryable()
@@ -96,9 +87,9 @@ namespace StormBot.Services
 			}
 		}
 
-		public ServersEntity GetServerEntity(ulong serverId)
+		public static ServersEntity GetServerEntity(ulong serverId)
 		{
-			lock (BaseService.queryLock)
+			using (StormBotContext _db = new StormBotContext())
 			{
 				return _db.Servers
 				.AsQueryable()
@@ -107,15 +98,46 @@ namespace StormBot.Services
 			}
 		}
 
-		public string GetServerPrefix(ulong serverId)
+		public static ulong GetServerAdminRole(ulong serverId)
 		{
-			lock (BaseService.queryLock)
+			using (StormBotContext _db = new StormBotContext())
+			{
+				return _db.Servers
+				.AsQueryable()
+				.Where(s => s.ServerID == serverId)
+				.Select(s => s.AdminRoleID)
+				.Single();
+			}
+		}
+
+		public static string GetServerPrefix(ulong serverId)
+		{
+			using (StormBotContext _db = new StormBotContext())
 			{
 				return _db.Servers
 				.AsQueryable()
 				.Where(s => s.ServerID == serverId)
 				.Select(s => s.PrefixUsed)
 				.Single();
+			}
+		}
+
+		public static string GetServerOrPrivateMessagePrefix(SocketCommandContext context)
+		{
+			using (StormBotContext _db = new StormBotContext())
+			{
+				if (!context.IsPrivate)
+				{
+					return _db.Servers
+						.AsQueryable()
+						.Where(s => s.ServerID == context.Guild.Id)
+						.Select(s => s.PrefixUsed)
+						.Single();
+				}
+				else
+				{
+					return Program.configurationSettingsModel.PrivateMessagePrefix;
+				}
 			}
 		}
 		#endregion

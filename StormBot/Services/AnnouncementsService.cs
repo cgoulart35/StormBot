@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using StormBot.Database.Entities;
 using System.Collections.Generic;
-using Discord;
 
 namespace StormBot.Services
 {
@@ -22,17 +22,17 @@ namespace StormBot.Services
 
 		private readonly DiscordSocketClient _client;
 
-		private StormsService _stormsService;
-		private CallOfDutyService _callOfDutyService;
+		private readonly StormsService _stormsService;
+		private readonly CallOfDutyService _callOfDutyService;
 
-		public AnnouncementsService(IServiceProvider services) : base(services)
+		public AnnouncementsService(IServiceProvider services)
 		{
 			_client = services.GetRequiredService<DiscordSocketClient>();
 			_stormsService = services.GetRequiredService<StormsService>();
 			_callOfDutyService = services.GetRequiredService<CallOfDutyService>();
 
 			Name = "Announcements Service";
-			isServiceRunning = false;
+			IsServiceRunning = false;
 		}
 
 		public override async Task StartService()
@@ -43,7 +43,7 @@ namespace StormBot.Services
 			{
 				Console.WriteLine(logStamp + "Disabled.".PadLeft(60 - logStamp.Length));
 			}
-			else if (isServiceRunning)
+			else if (IsServiceRunning)
 			{
 				Console.WriteLine(logStamp + "Service already running.".PadLeft(75 - logStamp.Length));
 			}
@@ -51,11 +51,11 @@ namespace StormBot.Services
 			{
 				Console.WriteLine(logStamp + "Starting service.".PadLeft(68 - logStamp.Length));
 
-				isServiceRunning = true;
+				IsServiceRunning = true;
 				weeklySent = false;
 				dailySent = false;
 
-				if (_stormsService.isServiceRunning)
+				if (_stormsService.IsServiceRunning)
 				{
 					List<ServersEntity> servers = GetAllServerEntities();
 					foreach (ServersEntity server in servers)
@@ -64,7 +64,7 @@ namespace StormBot.Services
 					}
 				}
 
-				if (_callOfDutyService.isServiceRunning)
+				if (_callOfDutyService.IsServiceRunning)
 				{
 					StartCallOfDutyWeeklyAnnouncements();
 					StartCallOfDutyDailyAnnouncements();
@@ -77,7 +77,7 @@ namespace StormBot.Services
 			Random random = new Random();
 			ServersEntity server;
 
-			while (isServiceRunning && _stormsService.isServiceRunning)
+			while (IsServiceRunning && _stormsService.IsServiceRunning)
 			{
 				string logStamp = GetLogStamp();
 
@@ -109,7 +109,7 @@ namespace StormBot.Services
 		public async Task StartCallOfDutyWeeklyAnnouncements()
 		{
 			// send out weekly winners announcement at 1:00 AM (EST) on Sunday mornings
-			while (isServiceRunning && _callOfDutyService.isServiceRunning)
+			while (IsServiceRunning && _callOfDutyService.IsServiceRunning)
 			{
 				DateTime currentTime = DateTime.Now;
 				if (!weeklySent && currentTime.DayOfWeek == DayOfWeek.Sunday && currentTime.Hour == 1 && currentTime.Minute == 0 && WeeklyCallOfDutyAnnouncement != null)
@@ -117,9 +117,9 @@ namespace StormBot.Services
 					List<ServersEntity> servers = GetAllServerEntities();
 					foreach (ServersEntity server in servers)
 					{
-						bool coldWarBool = _callOfDutyService.BlackOpsColdWarComponent.isServiceRunning && server.AllowServerPermissionBlackOpsColdWarTracking && server.ToggleBlackOpsColdWarTracking;
-						bool modernWarfareBool = _callOfDutyService.ModernWarfareComponent.isServiceRunning && server.AllowServerPermissionModernWarfareTracking && server.ToggleModernWarfareTracking;
-						bool warzoneBool = _callOfDutyService.WarzoneComponent.isServiceRunning && server.AllowServerPermissionWarzoneTracking && server.ToggleWarzoneTracking;
+						bool coldWarBool = _callOfDutyService.BlackOpsColdWarComponent.IsServiceRunning && server.AllowServerPermissionBlackOpsColdWarTracking && server.ToggleBlackOpsColdWarTracking;
+						bool modernWarfareBool = _callOfDutyService.ModernWarfareComponent.IsServiceRunning && server.AllowServerPermissionModernWarfareTracking && server.ToggleModernWarfareTracking;
+						bool warzoneBool = _callOfDutyService.WarzoneComponent.IsServiceRunning && server.AllowServerPermissionWarzoneTracking && server.ToggleWarzoneTracking;
 
 						if ((coldWarBool || modernWarfareBool || warzoneBool) && server.CallOfDutyNotificationChannelID != 0)
 						{
@@ -141,7 +141,7 @@ namespace StormBot.Services
 		public async Task StartCallOfDutyDailyAnnouncements()
 		{
 			// send out daily updates on current weekly kill counts at 10 PM (EST) everyday
-			while (isServiceRunning && _callOfDutyService.isServiceRunning)
+			while (IsServiceRunning && _callOfDutyService.IsServiceRunning)
 			{
 				DateTime currentTime = DateTime.Now;
 				if (!dailySent && currentTime.Hour == 22 && currentTime.Minute == 0 && DailyCallOfDutyAnnouncement != null)
@@ -149,9 +149,9 @@ namespace StormBot.Services
 					List<ServersEntity> servers = GetAllServerEntities();
 					foreach (ServersEntity server in servers)
 					{
-						bool coldWarBool = _callOfDutyService.BlackOpsColdWarComponent.isServiceRunning && server.AllowServerPermissionBlackOpsColdWarTracking && server.ToggleBlackOpsColdWarTracking;
-						bool modernWarfareBool = _callOfDutyService.ModernWarfareComponent.isServiceRunning && server.AllowServerPermissionModernWarfareTracking && server.ToggleModernWarfareTracking;
-						bool warzoneBool = _callOfDutyService.WarzoneComponent.isServiceRunning && server.AllowServerPermissionWarzoneTracking && server.ToggleWarzoneTracking;
+						bool coldWarBool = _callOfDutyService.BlackOpsColdWarComponent.IsServiceRunning && server.AllowServerPermissionBlackOpsColdWarTracking && server.ToggleBlackOpsColdWarTracking;
+						bool modernWarfareBool = _callOfDutyService.ModernWarfareComponent.IsServiceRunning && server.AllowServerPermissionModernWarfareTracking && server.ToggleModernWarfareTracking;
+						bool warzoneBool = _callOfDutyService.WarzoneComponent.IsServiceRunning && server.AllowServerPermissionWarzoneTracking && server.ToggleWarzoneTracking;
 
 						if ((coldWarBool || modernWarfareBool || warzoneBool) && server.CallOfDutyNotificationChannelID != 0)
 						{

@@ -4,15 +4,14 @@ using System.Linq;
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using StormBot.Services;
-using StormBot.Database;
 
 namespace StormBot.Modules
 {
 	public class BaseCommand : InteractiveBase<SocketCommandContext>
 	{
-        public string GetSingleArg(string[] args)
+        public static string GetSingleArg(string[] args)
 		{
-			return args.Length != 0 ? string.Join(" ", args) : null;
+			return args.Any() ? string.Join(" ", args) : null;
 		}
 
         public ulong GetDiscordID(string input, bool isUser = true, bool isChannel = true)
@@ -58,10 +57,10 @@ namespace StormBot.Modules
             return discordID;
         }
 
-        public bool DisableIfServiceNotRunning(BaseService service, string command = null)
+        public static bool DisableIfServiceNotRunning(BaseService service, string command = null)
         {
             string serviceName = service.Name;
-            bool isRunning = service.isServiceRunning;
+            bool isRunning = service.IsServiceRunning;
             if (isRunning == false)
             {
                 // if the call is being used to disable a command
@@ -94,38 +93,5 @@ namespace StormBot.Modules
                 return ValidateOutputLimit(output, messageToAdd);
             }
         }
-
-		#region QUERIES
-		public string GetServerPrefix(StormBotContext _db)
-        {
-            lock (BaseService.queryLock)
-            {
-                if (!Context.IsPrivate)
-                {
-                    return _db.Servers
-                        .AsQueryable()
-                        .Where(s => s.ServerID == Context.Guild.Id)
-                        .Select(s => s.PrefixUsed)
-                        .Single();
-                }
-                else
-                {
-                    return Program.configurationSettingsModel.PrivateMessagePrefix;
-                }
-            }
-        }
-
-        public ulong GetServerAdminRole(StormBotContext _db)
-        {
-            lock (BaseService.queryLock)
-            {
-                return _db.Servers
-                .AsQueryable()
-                .Where(s => s.ServerID == Context.Guild.Id)
-                .Select(s => s.AdminRoleID)
-                .Single();
-            }
-        }
-		#endregion
 	}
 }

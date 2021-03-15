@@ -6,14 +6,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Discord.Commands;
 using Discord.WebSocket;
 using StormBot.Services;
+using StormBot.Database;
 using StormBot.Database.Entities;
 
 namespace StormBot.Modules
 {
 	public class StormsCommands : BaseCommand
     {
-        private StormsService _service;
-        private AnnouncementsService _announcementsService;
+        private readonly StormsService _service;
+        private readonly AnnouncementsService _announcementsService;
 
         static bool handlersSet = false;
 
@@ -38,7 +39,7 @@ namespace StormBot.Modules
             {
                 _service.purgeCollection.Add(Context.Message);
 
-                if (_service.GetServerAllowServerPermissionStorms(Context) && _service.GetServerToggleStorms(Context))
+                if (StormsService.GetServerAllowServerPermissionStorms(Context) && StormsService.GetServerToggleStorms(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "umbrella"))
                     {
@@ -47,7 +48,7 @@ namespace StormBot.Modules
                         ulong channelId = Context.Channel.Id;
                         ulong discordId = Context.User.Id;
 
-                        await _service.AddPlayerToDbTableIfNotExist(serverId, discordId);
+                        StormsService.AddPlayerToDbTableIfNotExist(serverId, discordId);
 
                         await _service.TryToUpdateOngoingStorm(guild, serverId, discordId, channelId, 1);
                     }
@@ -64,7 +65,7 @@ namespace StormBot.Modules
             {
                 _service.purgeCollection.Add(Context.Message);
 
-                if (_service.GetServerAllowServerPermissionStorms(Context) && _service.GetServerToggleStorms(Context))
+                if (StormsService.GetServerAllowServerPermissionStorms(Context) && StormsService.GetServerToggleStorms(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "guess"))
                     {
@@ -83,7 +84,7 @@ namespace StormBot.Modules
                                 // if number is valid
                                 if (guess >= 1 && guess <= 200)
                                 {
-                                    await _service.AddPlayerToDbTableIfNotExist(serverId, discordId);
+                                    StormsService.AddPlayerToDbTableIfNotExist(serverId, discordId);
 
                                     await _service.TryToUpdateOngoingStorm(guild, serverId, discordId, channelId, 2, guess);
                                 }
@@ -105,7 +106,7 @@ namespace StormBot.Modules
             {
                 _service.purgeCollection.Add(Context.Message);
 
-                if (_service.GetServerAllowServerPermissionStorms(Context) && _service.GetServerToggleStorms(Context))
+                if (StormsService.GetServerAllowServerPermissionStorms(Context) && StormsService.GetServerToggleStorms(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "bet"))
                     {
@@ -125,7 +126,7 @@ namespace StormBot.Modules
                                 // if guess number is valid
                                 if (guess >= 1 && guess <= 200)
                                 {
-                                    StormPlayerDataEntity playerData = await _service.AddPlayerToDbTableIfNotExist(serverId, discordId);
+                                    StormPlayerDataEntity playerData = StormsService.AddPlayerToDbTableIfNotExist(serverId, discordId);
 
                                     if (bet <= 0)
                                     {
@@ -158,7 +159,7 @@ namespace StormBot.Modules
             {
                 _service.purgeCollection.Add(Context.Message);
 
-                if (_service.GetServerAllowServerPermissionStorms(Context) && _service.GetServerToggleStorms(Context))
+                if (StormsService.GetServerAllowServerPermissionStorms(Context) && StormsService.GetServerToggleStorms(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "steal"))
                     {
@@ -182,14 +183,14 @@ namespace StormBot.Modules
             {
                 _service.purgeCollection.Add(Context.Message);
 
-                if (_service.GetServerAllowServerPermissionStorms(Context) && _service.GetServerToggleStorms(Context))
+                if (StormsService.GetServerAllowServerPermissionStorms(Context) && StormsService.GetServerToggleStorms(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "buy insurance"))
                     {
                         ulong serverId = Context.Guild.Id;
                         ulong discordId = Context.User.Id;
 
-                        StormPlayerDataEntity playerData = await _service.AddPlayerToDbTableIfNotExist(serverId, discordId);
+                        StormPlayerDataEntity playerData = StormsService.AddPlayerToDbTableIfNotExist(serverId, discordId);
 
                         if (playerData.Wallet < _service.insuranceCost)
                         {
@@ -201,11 +202,11 @@ namespace StormBot.Modules
                         }
                         else
                         {
-                            lock (BaseService.queryLock)
+                            using (StormBotContext _db = new StormBotContext())
                             {
                                 playerData.Wallet -= _service.insuranceCost;
                                 playerData.HasInsurance = true;
-                                BaseService._db.SaveChanges();
+                                _db.SaveChanges();
                             }
 
                             _service.purgeCollection.Add(await ReplyAsync($"<@!{discordId}>, you purchased insurance for {_service.insuranceCost} points."));
@@ -224,14 +225,14 @@ namespace StormBot.Modules
             {
                 _service.purgeCollection.Add(Context.Message);
 
-                if (_service.GetServerAllowServerPermissionStorms(Context) && _service.GetServerToggleStorms(Context))
+                if (StormsService.GetServerAllowServerPermissionStorms(Context) && StormsService.GetServerToggleStorms(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "wallet"))
                     {
                         ulong serverId = Context.Guild.Id;
                         ulong discordId = Context.User.Id;
 
-                        StormPlayerDataEntity playerData = await _service.AddPlayerToDbTableIfNotExist(serverId, discordId);
+                        StormPlayerDataEntity playerData = StormsService.AddPlayerToDbTableIfNotExist(serverId, discordId);
 
                         string insuranceStr = "";
                         if (playerData.HasInsurance)
@@ -254,14 +255,14 @@ namespace StormBot.Modules
             {
                 _service.purgeCollection.Add(Context.Message);
 
-                if (_service.GetServerAllowServerPermissionStorms(Context) && _service.GetServerToggleStorms(Context))
+                if (StormsService.GetServerAllowServerPermissionStorms(Context) && StormsService.GetServerToggleStorms(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "wallets"))
                     {
                         List<string> output = new List<string>();
                         output.Add("```md\nSTORMS WALLET LEADERBOARD\n=========================```");
 
-                        List<StormPlayerDataEntity> playerData = _service.GetAllStormPlayerDataEntities(Context.Guild.Id);
+                        List<StormPlayerDataEntity> playerData = StormsService.GetAllStormPlayerDataEntities(Context.Guild.Id);
 
                         // sort list by amounts in players wallets
                         playerData = playerData.OrderByDescending(player => player.Wallet).ToList();
@@ -320,14 +321,14 @@ namespace StormBot.Modules
             {
                 _service.purgeCollection.Add(Context.Message);
 
-                if (_service.GetServerAllowServerPermissionStorms(Context) && _service.GetServerToggleStorms(Context))
+                if (StormsService.GetServerAllowServerPermissionStorms(Context) && StormsService.GetServerToggleStorms(Context))
                 {
                     if (DisableIfServiceNotRunning(_service, "resets"))
                     {
                         List<string> output = new List<string>();
                         output.Add("```md\nSTORMS RESET LEADERBOARD\n========================```");
 
-                        List<StormPlayerDataEntity> playerData = _service.GetAllStormPlayerDataEntities(Context.Guild.Id);
+                        List<StormPlayerDataEntity> playerData = StormsService.GetAllStormPlayerDataEntities(Context.Guild.Id);
 
                         // sort list by amounts in players wallets
                         playerData = playerData.OrderByDescending(player => player.ResetCount).ToList();
