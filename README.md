@@ -78,6 +78,9 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
 - **'.wallets'** to show how many points everyone has.
 
 - **'.resets'** to show how many resets everyone has.
+The bot will assign the @__ role for the most recent reset to the player who causes the next reset by reaching x5 points.
+The bot will also assign the @__ role for the most total resets to the players in the lead.
+Wallets are reset to x6 points when a disaster happens to a them once someone reaches x7 points, or if a reset occurs.
 
 ### Help: Soundboard Commands
 

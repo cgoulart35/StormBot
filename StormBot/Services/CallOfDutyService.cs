@@ -156,7 +156,12 @@ namespace StormBot.Services
 			LoginAPI(ref cookieJar, XSRFTOKEN);
 
 			// retrieve updated data via Call of Duty API for all participating players with cookie tokens obtained from login
-			return GetAllPlayersDataAPI(cookieJar, allStoredPlayersData, storeToDatabase);
+			List<CallOfDutyPlayerModel> allNewPlayersData = GetAllPlayersDataAPI(cookieJar, allStoredPlayersData);
+
+            if (storeToDatabase)
+                StoreNewPlayerDataToDatabase(allNewPlayersData, serverId, gameAbbrev, modeAbbrev);
+
+            return allNewPlayersData;
 		}
 
 		private static void InitializeAPI(ref CookieContainer cookieJar, ref string XSRFTOKEN)
@@ -185,7 +190,7 @@ namespace StormBot.Services
             client.Execute(request);
         }
 
-        private List<CallOfDutyPlayerModel> GetAllPlayersDataAPI(CookieContainer cookieJar, List<CallOfDutyPlayerDataEntity> allStoredPlayersData, bool storeToDatabase)
+        private List<CallOfDutyPlayerModel> GetAllPlayersDataAPI(CookieContainer cookieJar, List<CallOfDutyPlayerDataEntity> allStoredPlayersData)
         {
             // empty list of player data
             List<CallOfDutyPlayerModel> allNewPlayersData = new List<CallOfDutyPlayerModel>();
@@ -209,33 +214,6 @@ namespace StormBot.Services
                     Console.WriteLine(newPlayerData.Data.Weekly.All.Properties.Kills);
 
                     return null;
-                }
-
-                if (storeToDatabase)
-                {
-                    if (storedPlayerData.GameAbbrev == "mw" && storedPlayerData.ModeAbbrev == "mp")
-                    {
-                        storedPlayerData.TotalKills = newPlayerData.Data.Lifetime.All.Properties != null ? newPlayerData.Data.Lifetime.All.Properties.Kills : 0;
-                        storedPlayerData.WeeklyKills = newPlayerData.Data.Weekly.All.Properties != null ? newPlayerData.Data.Weekly.All.Properties.Kills : 0;
-                        storedPlayerData.Date = DateTime.Now;
-                    }
-                    else if (storedPlayerData.GameAbbrev == "mw" && storedPlayerData.ModeAbbrev == "wz")
-                    {
-                        storedPlayerData.TotalWins = newPlayerData.Data.Lifetime.Mode.BattleRoyal.Properties != null ? newPlayerData.Data.Lifetime.Mode.BattleRoyal.Properties.Wins : 0;
-                        storedPlayerData.WeeklyKills = newPlayerData.Data.Weekly.All.Properties != null ? newPlayerData.Data.Weekly.All.Properties.Kills : 0;
-                        storedPlayerData.Date = DateTime.Now;
-                    }
-                    else if (storedPlayerData.GameAbbrev == "cw" && storedPlayerData.ModeAbbrev == "mp")
-                    {
-                        storedPlayerData.TotalKills = newPlayerData.Data.Lifetime.All.Properties != null ? newPlayerData.Data.Lifetime.All.Properties.Kills : 0;
-                        storedPlayerData.WeeklyKills = newPlayerData.Data.Weekly.All.Properties != null ? newPlayerData.Data.Weekly.All.Properties.Kills : 0;
-                        storedPlayerData.Date = DateTime.Now;
-                    }
-
-                    using (StormBotContext _db = new StormBotContext())
-                    {
-                        _db.SaveChanges();
-                    }
                 }
 
                 newPlayerData.DiscordID = storedPlayerData.DiscordID;
@@ -269,6 +247,44 @@ namespace StormBot.Services
         #endregion
 
         #region QUERIES
+        private static void StoreNewPlayerDataToDatabase(List<CallOfDutyPlayerModel> allNewPlayersData, ulong serverId, string gameAbbrev, string modeAbbrev)
+        {
+            using (StormBotContext _db = new StormBotContext())
+            {
+                List<CallOfDutyPlayerDataEntity> allStoredPlayersData = _db.CallOfDutyPlayerData
+                    .AsQueryable()
+                    .Where(player => serverId == player.ServerID && player.GameAbbrev == gameAbbrev && player.ModeAbbrev == modeAbbrev)
+                    .AsEnumerable()
+                    .ToList();
+
+                foreach (CallOfDutyPlayerDataEntity storedPlayerData in allStoredPlayersData)
+                {
+                    CallOfDutyPlayerModel newPlayerData = allNewPlayersData.Find(newPlayerData => newPlayerData.DiscordID == storedPlayerData.DiscordID);
+
+                    if (storedPlayerData.GameAbbrev == "mw" && storedPlayerData.ModeAbbrev == "mp")
+                    {
+                        storedPlayerData.TotalKills = newPlayerData.Data.Lifetime.All.Properties != null ? newPlayerData.Data.Lifetime.All.Properties.Kills : 0;
+                        storedPlayerData.WeeklyKills = newPlayerData.Data.Weekly.All.Properties != null ? newPlayerData.Data.Weekly.All.Properties.Kills : 0;
+                        storedPlayerData.Date = DateTime.Now;
+                    }
+                    else if (storedPlayerData.GameAbbrev == "mw" && storedPlayerData.ModeAbbrev == "wz")
+                    {
+                        storedPlayerData.TotalWins = newPlayerData.Data.Lifetime.Mode.BattleRoyal.Properties != null ? newPlayerData.Data.Lifetime.Mode.BattleRoyal.Properties.Wins : 0;
+                        storedPlayerData.WeeklyKills = newPlayerData.Data.Weekly.All.Properties != null ? newPlayerData.Data.Weekly.All.Properties.Kills : 0;
+                        storedPlayerData.Date = DateTime.Now;
+                    }
+                    else if (storedPlayerData.GameAbbrev == "cw" && storedPlayerData.ModeAbbrev == "mp")
+                    {
+                        storedPlayerData.TotalKills = newPlayerData.Data.Lifetime.All.Properties != null ? newPlayerData.Data.Lifetime.All.Properties.Kills : 0;
+                        storedPlayerData.WeeklyKills = newPlayerData.Data.Weekly.All.Properties != null ? newPlayerData.Data.Weekly.All.Properties.Kills : 0;
+                        storedPlayerData.Date = DateTime.Now;
+                    }
+                }
+
+                _db.SaveChanges();
+            }
+        }
+
         public static List<CallOfDutyPlayerModel> GetServersPlayerDataAsPlayerModelList(ulong serverId, string gameAbbrev, string modeAbbrev)
         {
             List<ulong> serverIdList = new List<ulong>();
@@ -331,12 +347,24 @@ namespace StormBot.Services
             }
         }
 
-        public static void RemoveParticipantFromDatabase(CallOfDutyPlayerDataEntity playerData)
+        public static bool RemoveParticipantFromDatabase(ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
         {
             using (StormBotContext _db = new StormBotContext())
             {
-                _db.CallOfDutyPlayerData.Remove(playerData);
-                _db.SaveChanges();
+                CallOfDutyPlayerDataEntity playerData = _db.CallOfDutyPlayerData
+                    .AsQueryable()
+                    .Where(player => player.ServerID == serverID && player.DiscordID == discordID && player.GameAbbrev == gameAbbrev && player.ModeAbbrev == modeAbbrev)
+                    .SingleOrDefault();
+
+                if (playerData != null)
+                {
+                    _db.CallOfDutyPlayerData.Remove(playerData);
+                    _db.SaveChanges();
+
+                    return true;
+                }
+                else
+                    return false;
             }
         }
 
@@ -363,14 +391,14 @@ namespace StormBot.Services
             }
         }
 
-        public static CallOfDutyPlayerDataEntity GetCallOfDutyPlayerDataEntity(ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
+        private static CallOfDutyPlayerDataEntity GetCallOfDutyPlayerDataEntity(ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
         {
             using (StormBotContext _db = new StormBotContext())
             {
                 return _db.CallOfDutyPlayerData
-                .AsQueryable()
-                .Where(player => player.ServerID == serverID && player.DiscordID == discordID && player.GameAbbrev == gameAbbrev && player.ModeAbbrev == modeAbbrev)
-                .SingleOrDefault();
+                    .AsQueryable()
+                    .Where(player => player.ServerID == serverID && player.DiscordID == discordID && player.GameAbbrev == gameAbbrev && player.ModeAbbrev == modeAbbrev)
+                    .SingleOrDefault();
             }
         }
 
@@ -415,10 +443,10 @@ namespace StormBot.Services
             using (StormBotContext _db = new StormBotContext())
             {
                 var channelId = _db.Servers
-                .AsQueryable()
-                .Where(s => s.ServerID == serverId)
-                .Select(s => s.CallOfDutyNotificationChannelID)
-                .SingleOrDefault();
+                    .AsQueryable()
+                    .Where(s => s.ServerID == serverId)
+                    .Select(s => s.CallOfDutyNotificationChannelID)
+                    .SingleOrDefault();
 
                 if (channelId != 0)
                     return _client.GetChannel(channelId) as IMessageChannel;
@@ -432,10 +460,10 @@ namespace StormBot.Services
             using (StormBotContext _db = new StormBotContext())
             {
                 return _db.Servers
-                .AsQueryable()
-                .Where(s => s.ServerID == serverId)
-                .Select(s => s.ModernWarfareKillsRoleID)
-                .SingleOrDefault();
+                    .AsQueryable()
+                    .Where(s => s.ServerID == serverId)
+                    .Select(s => s.ModernWarfareKillsRoleID)
+                    .SingleOrDefault();
             }
         }
 
@@ -444,10 +472,10 @@ namespace StormBot.Services
             using (StormBotContext _db = new StormBotContext())
             {
                 return _db.Servers
-                .AsQueryable()
-                .Where(s => s.ServerID == serverId)
-                .Select(s => s.WarzoneWinsRoleID)
-                .SingleOrDefault();
+                    .AsQueryable()
+                    .Where(s => s.ServerID == serverId)
+                    .Select(s => s.WarzoneWinsRoleID)
+                    .SingleOrDefault();
             }
         }
 
@@ -456,10 +484,10 @@ namespace StormBot.Services
             using (StormBotContext _db = new StormBotContext())
             {
                 return _db.Servers
-                .AsQueryable()
-                .Where(s => s.ServerID == serverId)
-                .Select(s => s.WarzoneKillsRoleID)
-                .SingleOrDefault();
+                    .AsQueryable()
+                    .Where(s => s.ServerID == serverId)
+                    .Select(s => s.WarzoneKillsRoleID)
+                    .SingleOrDefault();
             }
         }
 
@@ -468,10 +496,10 @@ namespace StormBot.Services
             using (StormBotContext _db = new StormBotContext())
             {
                 return _db.Servers
-                .AsQueryable()
-                .Where(s => s.ServerID == serverId)
-                .Select(s => s.BlackOpsColdWarKillsRoleID)
-                .SingleOrDefault();
+                    .AsQueryable()
+                    .Where(s => s.ServerID == serverId)
+                    .Select(s => s.BlackOpsColdWarKillsRoleID)
+                    .SingleOrDefault();
             }
         }
 
@@ -504,10 +532,10 @@ namespace StormBot.Services
                 if (!context.IsPrivate)
                 {
                     bool flag = _db.Servers
-                    .AsQueryable()
-                    .Where(s => s.ServerID == context.Guild.Id)
-                    .Select(s => s.ToggleModernWarfareTracking)
-                    .Single();
+                        .AsQueryable()
+                        .Where(s => s.ServerID == context.Guild.Id)
+                        .Select(s => s.ToggleModernWarfareTracking)
+                        .Single();
 
                     if (!flag)
                         Console.WriteLine($"Modern Warfare commands will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
@@ -526,10 +554,10 @@ namespace StormBot.Services
                 if (!context.IsPrivate)
                 {
                     bool flag = _db.Servers
-                    .AsQueryable()
-                    .Where(s => s.ServerID == context.Guild.Id)
-                    .Select(s => s.ToggleModernWarfareTracking)
-                    .Single();
+                        .AsQueryable()
+                        .Where(s => s.ServerID == context.Guild.Id)
+                        .Select(s => s.ToggleModernWarfareTracking)
+                        .Single();
 
                     if (!flag)
                         Console.WriteLine($"Warzone commands will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
@@ -548,10 +576,10 @@ namespace StormBot.Services
                 if (!context.IsPrivate)
                 {
                     bool flag = _db.Servers
-                    .AsQueryable()
-                    .Where(s => s.ServerID == context.Guild.Id)
-                    .Select(s => s.AllowServerPermissionBlackOpsColdWarTracking)
-                    .Single();
+                        .AsQueryable()
+                        .Where(s => s.ServerID == context.Guild.Id)
+                        .Select(s => s.AllowServerPermissionBlackOpsColdWarTracking)
+                        .Single();
 
                     if (!flag)
                         Console.WriteLine($"Black Ops Cold War commands will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
@@ -570,10 +598,10 @@ namespace StormBot.Services
                 if (!context.IsPrivate)
                 {
                     bool flag = _db.Servers
-                    .AsQueryable()
-                    .Where(s => s.ServerID == context.Guild.Id)
-                    .Select(s => s.AllowServerPermissionModernWarfareTracking)
-                    .Single();
+                        .AsQueryable()
+                        .Where(s => s.ServerID == context.Guild.Id)
+                        .Select(s => s.AllowServerPermissionModernWarfareTracking)
+                        .Single();
 
                     if (!flag)
                         Console.WriteLine($"Modern Warfare commands will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
@@ -592,10 +620,10 @@ namespace StormBot.Services
                 if (!context.IsPrivate)
                 {
                     bool flag = _db.Servers
-                    .AsQueryable()
-                    .Where(s => s.ServerID == context.Guild.Id)
-                    .Select(s => s.AllowServerPermissionWarzoneTracking)
-                    .Single();
+                        .AsQueryable()
+                        .Where(s => s.ServerID == context.Guild.Id)
+                        .Select(s => s.AllowServerPermissionWarzoneTracking)
+                        .Single();
 
                     if (!flag)
                         Console.WriteLine($"Warzone commands will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");

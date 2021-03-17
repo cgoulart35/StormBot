@@ -49,16 +49,7 @@ namespace StormBot.Services
                 if (!context.IsPrivate)
                 {
                     int argPos = 0;
-                    string serverPrefix;
-
-                    using (StormBotContext _db = new StormBotContext())
-                    {
-                        serverPrefix = _db.Servers
-                        .AsQueryable()
-                        .Where(s => s.ServerID == context.Guild.Id)
-                        .Select(s => s.PrefixUsed)
-                        .Single();
-                    }
+                    string serverPrefix = BaseService.GetServerPrefix(context.Guild.Id);
 
                     if (message.HasStringPrefix(serverPrefix, ref argPos))
                     {

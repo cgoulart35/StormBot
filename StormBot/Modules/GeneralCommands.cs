@@ -45,9 +45,9 @@ namespace StormBot.Modules
                     using (StormBotContext _db = new StormBotContext())
                     {
                         ServersEntity serverData = _db.Servers
-                        .AsQueryable()
-                        .Where(s => s.ServerID == Context.Guild.Id)
-                        .Single();
+                            .AsQueryable()
+                            .Where(s => s.ServerID == Context.Guild.Id)
+                            .Single();
 
                         message = string.Format(@"__**Current Configurations:**__
 
@@ -100,9 +100,9 @@ namespace StormBot.Modules
                             using (StormBotContext _db = new StormBotContext())
                             {
                                 ServersEntity serverData = _db.Servers
-                                .AsQueryable()
-                                .Where(s => s.ServerID == Context.Guild.Id)
-                                .Single();
+                                    .AsQueryable()
+                                    .Where(s => s.ServerID == Context.Guild.Id)
+                                    .Single();
 
                                 serverData.PrefixUsed = prefix;
                                 _db.SaveChanges();
@@ -142,9 +142,9 @@ namespace StormBot.Modules
                         using (StormBotContext _db = new StormBotContext())
                         {
                             ServersEntity serverData = _db.Servers
-                            .AsQueryable()
-                            .Where(s => s.ServerID == Context.Guild.Id)
-                            .Single();
+                                .AsQueryable()
+                                .Where(s => s.ServerID == Context.Guild.Id)
+                                .Single();
 
                             flag = serverData.ToggleBlackOpsColdWarTracking;
                             serverData.ToggleBlackOpsColdWarTracking = !flag;
@@ -183,9 +183,9 @@ namespace StormBot.Modules
                         using (StormBotContext _db = new StormBotContext())
                         {
                             ServersEntity serverData = _db.Servers
-                            .AsQueryable()
-                            .Where(s => s.ServerID == Context.Guild.Id)
-                            .Single();
+                                .AsQueryable()
+                                .Where(s => s.ServerID == Context.Guild.Id)
+                                .Single();
 
                             flag = serverData.ToggleModernWarfareTracking;
                             serverData.ToggleModernWarfareTracking = !flag;
@@ -265,9 +265,9 @@ namespace StormBot.Modules
                         using (StormBotContext _db = new StormBotContext())
                         {
                             ServersEntity serverData = _db.Servers
-                            .AsQueryable()
-                            .Where(s => s.ServerID == Context.Guild.Id)
-                            .Single();
+                                .AsQueryable()
+                                .Where(s => s.ServerID == Context.Guild.Id)
+                                .Single();
 
                             flag = serverData.ToggleSoundpadCommands;
                             serverData.ToggleSoundpadCommands = !flag;
@@ -306,9 +306,9 @@ namespace StormBot.Modules
                         using (StormBotContext _db = new StormBotContext())
                         {
                             ServersEntity serverData = _db.Servers
-                            .AsQueryable()
-                            .Where(s => s.ServerID == Context.Guild.Id)
-                            .Single();
+                                .AsQueryable()
+                                .Where(s => s.ServerID == Context.Guild.Id)
+                                .Single();
 
                             flag = serverData.ToggleStorms;
                             serverData.ToggleStorms = !flag;
@@ -352,9 +352,9 @@ namespace StormBot.Modules
                             using (StormBotContext _db = new StormBotContext())
                             {
                                 ServersEntity serverData = _db.Servers
-                                .AsQueryable()
-                                .Where(s => s.ServerID == Context.Guild.Id)
-                                .Single();
+                                    .AsQueryable()
+                                    .Where(s => s.ServerID == Context.Guild.Id)
+                                    .Single();
 
                                 if (serverData.CallOfDutyNotificationChannelID != discordChannelID)
                                 {
@@ -406,9 +406,9 @@ namespace StormBot.Modules
                             using (StormBotContext _db = new StormBotContext())
                             {
                                 ServersEntity serverData = _db.Servers
-                                .AsQueryable()
-                                .Where(s => s.ServerID == Context.Guild.Id)
-                                .Single();
+                                    .AsQueryable()
+                                    .Where(s => s.ServerID == Context.Guild.Id)
+                                    .Single();
 
                                 if (serverData.SoundboardNotificationChannelID != discordChannelID)
                                 {
@@ -460,9 +460,9 @@ namespace StormBot.Modules
                             using (StormBotContext _db = new StormBotContext())
                             {
                                 ServersEntity serverData = _db.Servers
-                                .AsQueryable()
-                                .Where(s => s.ServerID == Context.Guild.Id)
-                                .Single();
+                                    .AsQueryable()
+                                    .Where(s => s.ServerID == Context.Guild.Id)
+                                    .Single();
 
                                 if (serverData.StormsNotificationChannelID != discordChannelID)
                                 {
@@ -512,9 +512,9 @@ namespace StormBot.Modules
                         using (StormBotContext _db = new StormBotContext())
                         {
                             ServersEntity serverData = _db.Servers
-                            .AsQueryable()
-                            .Where(s => s.ServerID == Context.Guild.Id)
-                            .Single();
+                                .AsQueryable()
+                                .Where(s => s.ServerID == Context.Guild.Id)
+                                .Single();
 
                             if (serverData.AdminRoleID != discordRoleID)
                             {
@@ -565,9 +565,9 @@ namespace StormBot.Modules
                             using (StormBotContext _db = new StormBotContext())
                             {
                                 ServersEntity serverData = _db.Servers
-                                .AsQueryable()
-                                .Where(s => s.ServerID == Context.Guild.Id)
-                                .Single();
+                                    .AsQueryable()
+                                    .Where(s => s.ServerID == Context.Guild.Id)
+                                    .Single();
 
                                 if (serverData.BlackOpsColdWarKillsRoleID != discordRoleID)
                                 {
@@ -619,9 +619,9 @@ namespace StormBot.Modules
                             using (StormBotContext _db = new StormBotContext())
                             {
                                 ServersEntity serverData = _db.Servers
-                                .AsQueryable()
-                                .Where(s => s.ServerID == Context.Guild.Id)
-                                .Single();
+                                    .AsQueryable()
+                                    .Where(s => s.ServerID == Context.Guild.Id)
+                                    .Single();
 
                                 if (serverData.ModernWarfareKillsRoleID != discordRoleID)
                                 {
@@ -673,9 +673,9 @@ namespace StormBot.Modules
                             using (StormBotContext _db = new StormBotContext())
                             {
                                 ServersEntity serverData = _db.Servers
-                                .AsQueryable()
-                                .Where(s => s.ServerID == Context.Guild.Id)
-                                .Single();
+                                    .AsQueryable()
+                                    .Where(s => s.ServerID == Context.Guild.Id)
+                                    .Single();
 
                                 if (serverData.WarzoneWinsRoleID != discordRoleID)
                                 {
@@ -727,9 +727,9 @@ namespace StormBot.Modules
                             using (StormBotContext _db = new StormBotContext())
                             {
                                 ServersEntity serverData = _db.Servers
-                                .AsQueryable()
-                                .Where(s => s.ServerID == Context.Guild.Id)
-                                .Single();
+                                    .AsQueryable()
+                                    .Where(s => s.ServerID == Context.Guild.Id)
+                                    .Single();
 
                                 if (serverData.WarzoneKillsRoleID != discordRoleID)
                                 {
@@ -781,9 +781,9 @@ namespace StormBot.Modules
                             using (StormBotContext _db = new StormBotContext())
                             {
                                 ServersEntity serverData = _db.Servers
-                                .AsQueryable()
-                                .Where(s => s.ServerID == Context.Guild.Id)
-                                .Single();
+                                    .AsQueryable()
+                                    .Where(s => s.ServerID == Context.Guild.Id)
+                                    .Single();
 
                                 if (serverData.StormsMostResetsRoleID != discordRoleID)
                                 {
@@ -835,9 +835,9 @@ namespace StormBot.Modules
                             using (StormBotContext _db = new StormBotContext())
                             {
                                 ServersEntity serverData = _db.Servers
-                                .AsQueryable()
-                                .Where(s => s.ServerID == Context.Guild.Id)
-                                .Single();
+                                    .AsQueryable()
+                                    .Where(s => s.ServerID == Context.Guild.Id)
+                                    .Single();
 
                                 if (serverData.StormsMostRecentResetRoleID != discordRoleID)
                                 {
@@ -997,7 +997,7 @@ namespace StormBot.Modules
         }
 		#endregion
 
-		private string HelpHelpCommands(string prefix)
+		private static string HelpHelpCommands(string prefix)
 		{
 			return string.Format("\n\n" + @"__**Help: Help Commands**__
 
@@ -1006,7 +1006,7 @@ namespace StormBot.Modules
 '**{0}subjects**' to display the existing command subjects.", prefix);
 		}
 
-		private string HelpConfigCommands(bool partTwo, string prefix)
+		private static string HelpConfigCommands(bool partTwo, string prefix)
 		{
 			if (!partTwo)
 			{
@@ -1047,6 +1047,18 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
                     if (!notAdmin)
                         await Context.Channel.TriggerTypingAsync();
 
+                    string mostRecentRoleStr = "";
+                    if (!Context.IsPrivate && !notAdmin)
+                    {
+                        mostRecentRoleStr += " <@&" + (StormsService.GetStormsMostRecentResetRoleID(Context.Guild.Id)).ToString() + ">";
+                    }
+
+                    string mostResetsRoleStr = "";
+                    if (!Context.IsPrivate && !notAdmin)
+                    {
+                        mostResetsRoleStr += " <@&" + (StormsService.GetStormsMostResetsRoleID(Context.Guild.Id)).ToString() + ">";
+                    }
+
                     return string.Format("\n\n" + @"__**Help: Storm Commands**__
 
 '**{0}umbrella**' to start the incoming Storm and earn {1} points.
@@ -1056,7 +1068,10 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
 '**{0}buy insurance**' to buy insurance for {4} points to protect your wallet from disasters.
 '**{0}wallet**' to show how many points you have in your wallet.
 '**{0}wallets**' to show how many points everyone has.
-'**{0}resets**' to show how many resets everyone has.", prefix, _stormsService.levelOneReward, _stormsService.levelTwoReward, _stormsService.stealAmount, _stormsService.insuranceCost);
+'**{0}resets**' to show how many resets everyone has.
+The bot will assign the{5} role for the most recent reset to the player who causes the next reset by reaching {6} points.
+The bot will also assign the{7} role for the most total resets to the players in the lead.
+Wallets are reset to {8} points when a disaster happens to a them once someone reaches {9} points, or if a reset occurs.", prefix, StormsService.levelOneReward, StormsService.levelTwoReward, StormsService.stealAmount, StormsService.insuranceCost, mostRecentRoleStr, StormsService.resetMark, mostResetsRoleStr, StormsService.resetBalance, StormsService.disasterMark);
                 }
                 else
                     return null;

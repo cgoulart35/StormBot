@@ -72,7 +72,7 @@ namespace StormBot.Services
 			}
 		}
 
-		public async Task StartStormAnnouncements(ulong serverID)
+		private async Task StartStormAnnouncements(ulong serverID)
 		{
 			Random random = new Random();
 			ServersEntity server;
@@ -106,7 +106,7 @@ namespace StormBot.Services
 			}
 		}
 
-		public async Task StartCallOfDutyWeeklyAnnouncements()
+		private async Task StartCallOfDutyWeeklyAnnouncements()
 		{
 			// send out weekly winners announcement at 1:00 AM (EST) on Sunday mornings
 			while (IsServiceRunning && _callOfDutyService.IsServiceRunning)
@@ -138,7 +138,7 @@ namespace StormBot.Services
 			}
 		}
 
-		public async Task StartCallOfDutyDailyAnnouncements()
+		private async Task StartCallOfDutyDailyAnnouncements()
 		{
 			// send out daily updates on current weekly kill counts at 10 PM (EST) everyday
 			while (IsServiceRunning && _callOfDutyService.IsServiceRunning)

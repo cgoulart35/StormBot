@@ -265,10 +265,10 @@ namespace StormBot
             using (StormBotContext _db = new StormBotContext())
             {
                 var s = _db.Servers
-                .AsQueryable()
-                .Where(s => s.ServerID == guild.Id)
-                .AsEnumerable()
-                .ToList();
+                    .AsQueryable()
+                    .Where(s => s.ServerID == guild.Id)
+                    .AsEnumerable()
+                    .ToList();
 
                 var c = _db.CallOfDutyPlayerData
                     .AsQueryable()

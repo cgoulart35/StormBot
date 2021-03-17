@@ -43,19 +43,12 @@ namespace StormBot.Modules.CallOfDutyModules
 
         public async Task<bool> RemoveAParticipant(ulong serverID, ulong discordID, string gameAbbrev, string modeAbbrev)
         {
-            CallOfDutyPlayerDataEntity removeAccount = CallOfDutyService.GetCallOfDutyPlayerDataEntity(serverID, discordID, gameAbbrev, modeAbbrev);
+            bool removed = CallOfDutyService.RemoveParticipantFromDatabase(serverID, discordID, gameAbbrev, modeAbbrev);
 
-            if (removeAccount != null)
-            {
-				CallOfDutyService.RemoveParticipantFromDatabase(removeAccount);
-
-                return true;
-            }
-            else
-            {
+            if (!removed)
                 await ReplyAsync("This user isn't participating.");
-                return false;
-            }
+
+            return removed;
         }
 
         public async Task<string> PromptUserForStringForPartcipant(bool forTag = false)

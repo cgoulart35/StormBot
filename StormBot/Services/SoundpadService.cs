@@ -170,7 +170,7 @@ namespace StormBot.Services
             }
         }
 
-        public static ConnectionStatus GetConnectionStatusAPI()
+        private static ConnectionStatus GetConnectionStatusAPI()
         {
             // if the machine hosting the API is offline, catch the exception otherwise polling will stop working
             try
@@ -373,11 +373,11 @@ namespace StormBot.Services
             using (StormBotContext _db = new StormBotContext())
             {
                 var channelIds = _db.Servers
-                .AsQueryable()
-                .Where(s => s.SoundboardNotificationChannelID != 0 && s.AllowServerPermissionSoundpadCommands && s.ToggleSoundpadCommands)
-                .Select(s => s.SoundboardNotificationChannelID)
-                .AsEnumerable()
-                .ToList();
+                    .AsQueryable()
+                    .Where(s => s.SoundboardNotificationChannelID != 0 && s.AllowServerPermissionSoundpadCommands && s.ToggleSoundpadCommands)
+                    .Select(s => s.SoundboardNotificationChannelID)
+                    .AsEnumerable()
+                    .ToList();
 
                 return channelIds.Select(channelId => _client.GetChannel(channelId) as IMessageChannel);
             }
@@ -390,10 +390,10 @@ namespace StormBot.Services
                 if (!context.IsPrivate)
                 {
                     bool flag = _db.Servers
-                    .AsQueryable()
-                    .Where(s => s.ServerID == context.Guild.Id)
-                    .Select(s => s.ToggleSoundpadCommands)
-                    .Single();
+                        .AsQueryable()
+                        .Where(s => s.ServerID == context.Guild.Id)
+                        .Select(s => s.ToggleSoundpadCommands)
+                        .Single();
 
                     if (!flag)
                         Console.WriteLine($"Soundpad commands will be ignored: Admin toggled off. Server: {context.Guild.Name} ({context.Guild.Id})");
@@ -412,10 +412,10 @@ namespace StormBot.Services
                 if (!context.IsPrivate)
                 {
                     bool flag = _db.Servers
-                    .AsQueryable()
-                    .Where(s => s.ServerID == context.Guild.Id)
-                    .Select(s => s.AllowServerPermissionSoundpadCommands)
-                    .Single();
+                        .AsQueryable()
+                        .Where(s => s.ServerID == context.Guild.Id)
+                        .Select(s => s.AllowServerPermissionSoundpadCommands)
+                        .Single();
 
                     if (!flag)
                         Console.WriteLine($"Soundpad commands will be ignored: Bot ignoring server. Server: {context.Guild.Name} ({context.Guild.Id})");
