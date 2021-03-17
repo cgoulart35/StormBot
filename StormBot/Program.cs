@@ -50,10 +50,10 @@ namespace StormBot
             _client.Ready += SetAsReady;
 
             // add server data with default values in database when added to server
-            _client.JoinedGuild += AddServerToDatabase;
+            _client.JoinedGuild += BaseService.AddServerToDatabase;
 
             // remove server data in database when added to server
-            _client.LeftGuild += RemoveServerFromDatabase;
+            _client.LeftGuild += BaseService.RemoveServerFromDatabase;
 
             await _client.LoginAsync(TokenType.Bot, configurationSettingsModel.DiscordToken);
             await _client.StartAsync();
@@ -222,64 +222,6 @@ namespace StormBot
         private async Task SetAsReady()
         {
             isReady = true;
-        }
-
-        private async Task AddServerToDatabase(SocketGuild guild)
-        {
-            using (StormBotContext _db = new StormBotContext())
-            {
-                ServersEntity newServerData = new ServersEntity()
-                {
-                    ServerID = guild.Id,
-                    ServerName = guild.Name,
-                    PrefixUsed = configurationSettingsModel.PrivateMessagePrefix,
-                    AllowServerPermissionBlackOpsColdWarTracking = true,
-                    ToggleBlackOpsColdWarTracking = false,
-                    AllowServerPermissionModernWarfareTracking = true,
-                    ToggleModernWarfareTracking = false,
-                    AllowServerPermissionWarzoneTracking = true,
-                    ToggleWarzoneTracking = false,
-                    AllowServerPermissionSoundpadCommands = true,
-                    ToggleSoundpadCommands = false,
-                    AllowServerPermissionStorms = true,
-                    ToggleStorms = false,
-                    CallOfDutyNotificationChannelID = 0,
-                    SoundboardNotificationChannelID = 0,
-                    StormsNotificationChannelID = 0,
-                    AdminRoleID = 0,
-                    WarzoneWinsRoleID = 0,
-                    WarzoneKillsRoleID = 0,
-                    ModernWarfareKillsRoleID = 0,
-                    BlackOpsColdWarKillsRoleID = 0,
-                    StormsMostResetsRoleID = 0,
-                    StormsMostRecentResetRoleID = 0
-                };
-
-                _db.Servers.Add(newServerData);
-                _db.SaveChanges();
-            }
-        }
-
-        private async Task RemoveServerFromDatabase(SocketGuild guild)
-        {
-            using (StormBotContext _db = new StormBotContext())
-            {
-                var s = _db.Servers
-                    .AsQueryable()
-                    .Where(s => s.ServerID == guild.Id)
-                    .AsEnumerable()
-                    .ToList();
-
-                var c = _db.CallOfDutyPlayerData
-                    .AsQueryable()
-                    .Where(c => c.ServerID == guild.Id)
-                    .AsEnumerable()
-                    .ToList();
-
-                _db.RemoveRange(s);
-                _db.RemoveRange(c);
-                _db.SaveChanges();
-            }
         }
 
         private void ConfigureServices()

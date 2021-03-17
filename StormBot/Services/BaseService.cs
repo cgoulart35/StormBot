@@ -6,6 +6,7 @@ using Discord.Commands;
 using Discord.WebSocket;
 using StormBot.Database;
 using StormBot.Database.Entities;
+using StormBot.Models.Enums;
 
 namespace StormBot.Services
 {
@@ -76,14 +77,72 @@ namespace StormBot.Services
 		}
 
 		#region QUERIES
+		public static async Task AddServerToDatabase(SocketGuild guild)
+		{
+			using (StormBotContext _db = new StormBotContext())
+			{
+				ServersEntity newServerData = new ServersEntity()
+				{
+					ServerID = guild.Id,
+					ServerName = guild.Name,
+					PrefixUsed = Program.configurationSettingsModel.PrivateMessagePrefix,
+					AllowServerPermissionBlackOpsColdWarTracking = true,
+					ToggleBlackOpsColdWarTracking = false,
+					AllowServerPermissionModernWarfareTracking = true,
+					ToggleModernWarfareTracking = false,
+					AllowServerPermissionWarzoneTracking = true,
+					ToggleWarzoneTracking = false,
+					AllowServerPermissionSoundpadCommands = true,
+					ToggleSoundpadCommands = false,
+					AllowServerPermissionStorms = true,
+					ToggleStorms = false,
+					CallOfDutyNotificationChannelID = 0,
+					SoundboardNotificationChannelID = 0,
+					StormsNotificationChannelID = 0,
+					AdminRoleID = 0,
+					WarzoneWinsRoleID = 0,
+					WarzoneKillsRoleID = 0,
+					ModernWarfareKillsRoleID = 0,
+					BlackOpsColdWarKillsRoleID = 0,
+					StormsMostResetsRoleID = 0,
+					StormsMostRecentResetRoleID = 0
+				};
+
+				_db.Servers.Add(newServerData);
+				_db.SaveChanges();
+			}
+		}
+
+		public static async Task RemoveServerFromDatabase(SocketGuild guild)
+		{
+			using (StormBotContext _db = new StormBotContext())
+			{
+				var s = _db.Servers
+					.AsQueryable()
+					.Where(s => s.ServerID == guild.Id)
+					.AsEnumerable()
+					.ToList();
+
+				var c = _db.CallOfDutyPlayerData
+					.AsQueryable()
+					.Where(c => c.ServerID == guild.Id)
+					.AsEnumerable()
+					.ToList();
+
+				_db.RemoveRange(s);
+				_db.RemoveRange(c);
+				_db.SaveChanges();
+			}
+		}
+
 		public static List<ServersEntity> GetAllServerEntities()
 		{
 			using (StormBotContext _db = new StormBotContext())
 			{
 				return _db.Servers
-				.AsQueryable()
-				.AsEnumerable()
-				.ToList();
+					.AsQueryable()
+					.AsEnumerable()
+					.ToList();
 			}
 		}
 
@@ -92,9 +151,9 @@ namespace StormBot.Services
 			using (StormBotContext _db = new StormBotContext())
 			{
 				return _db.Servers
-				.AsQueryable()
-				.Where(s => s.ServerID == serverId)
-				.Single();
+					.AsQueryable()
+					.Where(s => s.ServerID == serverId)
+					.Single();
 			}
 		}
 
@@ -103,10 +162,10 @@ namespace StormBot.Services
 			using (StormBotContext _db = new StormBotContext())
 			{
 				return _db.Servers
-				.AsQueryable()
-				.Where(s => s.ServerID == serverId)
-				.Select(s => s.AdminRoleID)
-				.Single();
+					.AsQueryable()
+					.Where(s => s.ServerID == serverId)
+					.Select(s => s.AdminRoleID)
+					.Single();
 			}
 		}
 
@@ -115,10 +174,10 @@ namespace StormBot.Services
 			using (StormBotContext _db = new StormBotContext())
 			{
 				return _db.Servers
-				.AsQueryable()
-				.Where(s => s.ServerID == serverId)
-				.Select(s => s.PrefixUsed)
-				.Single();
+					.AsQueryable()
+					.Where(s => s.ServerID == serverId)
+					.Select(s => s.PrefixUsed)
+					.Single();
 			}
 		}
 
@@ -138,6 +197,182 @@ namespace StormBot.Services
 				{
 					return Program.configurationSettingsModel.PrivateMessagePrefix;
 				}
+			}
+		}
+
+		public static bool SetServerPrefix(ulong serverId, string prefix)
+		{
+			using (StormBotContext _db = new StormBotContext())
+			{
+				ServersEntity serverData = _db.Servers
+					.AsQueryable()
+					.Where(s => s.ServerID == serverId)
+					.Single();
+
+				if (prefix != serverData.PrefixUsed)
+				{
+					serverData.PrefixUsed = prefix;
+					_db.SaveChanges();
+					return true;
+				}
+				else
+					return false;
+			}
+		}
+
+		public static bool SetServerChannel(ulong serverId, ulong channelId, ServerChannels channelType)
+		{
+			using (StormBotContext _db = new StormBotContext())
+			{
+				ServersEntity serverData = _db.Servers
+					.AsQueryable()
+					.Where(s => s.ServerID == serverId)
+					.Single();
+
+				bool changed = false;
+
+				switch (channelType)
+				{
+					case ServerChannels.CallOfDutyNotificationChannel:
+						if (serverData.CallOfDutyNotificationChannelID != channelId)
+						{
+							serverData.CallOfDutyNotificationChannelID = channelId;
+							changed = true;
+						}
+						break;
+					case ServerChannels.SoundboardNotificationChannel:
+						if (serverData.SoundboardNotificationChannelID != channelId)
+						{
+							serverData.SoundboardNotificationChannelID = channelId;
+							changed = true;
+						}
+						break;
+					case ServerChannels.StormsNotificationChannel:
+						if (serverData.StormsNotificationChannelID != channelId)
+						{
+							serverData.StormsNotificationChannelID = channelId;
+							changed = true;
+						}
+						break;
+				}
+
+				if (changed)
+					_db.SaveChanges();
+
+				return changed;
+			}
+		}
+
+		public static bool SetServerRole(ulong serverId, ulong roleId, ServerRoles roleType)
+		{
+			using (StormBotContext _db = new StormBotContext())
+			{
+				ServersEntity serverData = _db.Servers
+					.AsQueryable()
+					.Where(s => s.ServerID == serverId)
+					.Single();
+
+				bool changed = false;
+
+				switch (roleType)
+				{
+					case ServerRoles.AdminRole:
+						if (serverData.AdminRoleID != roleId)
+						{
+							serverData.AdminRoleID = roleId;
+							changed = true;
+						}
+						break;
+					case ServerRoles.WarzoneWinsRole:
+						if (serverData.WarzoneWinsRoleID != roleId)
+						{
+							serverData.WarzoneWinsRoleID = roleId;
+							changed = true;
+						}
+						break;
+					case ServerRoles.WarzoneKillsRole:
+						if (serverData.WarzoneKillsRoleID != roleId)
+						{
+							serverData.WarzoneKillsRoleID = roleId;
+							changed = true;
+						}
+						break;
+					case ServerRoles.ModernWarfareKillsRole:
+						if (serverData.ModernWarfareKillsRoleID != roleId)
+						{
+							serverData.ModernWarfareKillsRoleID = roleId;
+							changed = true;
+						}
+						break;
+					case ServerRoles.BlackOpsColdWarKillsRole:
+						if (serverData.BlackOpsColdWarKillsRoleID != roleId)
+						{
+							serverData.BlackOpsColdWarKillsRoleID = roleId;
+							changed = true;
+						}
+						break;
+					case ServerRoles.StormsMostResetsRole:
+						if (serverData.StormsMostResetsRoleID != roleId)
+						{
+							serverData.StormsMostResetsRoleID = roleId;
+							changed = true;
+						}
+						break;
+					case ServerRoles.StormsMostRecentResetRole:
+						if (serverData.StormsMostRecentResetRoleID != roleId)
+						{
+							serverData.StormsMostRecentResetRoleID = roleId;
+							changed = true;
+						}
+						break;
+				}
+
+				if (changed)
+					_db.SaveChanges();
+
+				return changed;
+			}
+		}
+
+		public static bool? ToggleServerService(ulong serverId, ServerServices serviceType)
+		{
+			using (StormBotContext _db = new StormBotContext())
+			{
+				ServersEntity serverData = _db.Servers
+					.AsQueryable()
+					.Where(s => s.ServerID == serverId)
+					.Single();
+
+				bool? flag = null;
+
+				switch (serviceType)
+				{
+					case ServerServices.BlackOpsColdWarService:
+						flag = serverData.ToggleBlackOpsColdWarTracking;
+						serverData.ToggleBlackOpsColdWarTracking = !flag.Value;
+						break;
+					case ServerServices.ModernWarfareService:
+						flag = serverData.ToggleModernWarfareTracking;
+						serverData.ToggleModernWarfareTracking = !flag.Value;
+						break;
+					case ServerServices.WarzoneService:
+						flag = serverData.ToggleWarzoneTracking;
+						serverData.ToggleWarzoneTracking = !flag.Value;
+						break;
+					case ServerServices.SoundpadService:
+						flag = serverData.ToggleSoundpadCommands;
+						serverData.ToggleSoundpadCommands = !flag.Value;
+						break;
+					case ServerServices.StormsService:
+						flag = serverData.ToggleStorms;
+						serverData.ToggleStorms = !flag.Value;
+						break;
+					default:
+						return flag;
+				}
+
+				_db.SaveChanges();
+				return !flag.Value;
 			}
 		}
 		#endregion

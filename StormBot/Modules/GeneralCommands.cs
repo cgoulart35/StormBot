@@ -7,8 +7,8 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using StormBot.Services;
-using StormBot.Database;
 using StormBot.Database.Entities;
+using StormBot.Models.Enums;
 
 namespace StormBot.Modules
 {
@@ -42,14 +42,9 @@ namespace StormBot.Modules
                 {
                     string message;
 
-                    using (StormBotContext _db = new StormBotContext())
-                    {
-                        ServersEntity serverData = _db.Servers
-                            .AsQueryable()
-                            .Where(s => s.ServerID == Context.Guild.Id)
-                            .Single();
+                    ServersEntity serverData = BaseService.GetServerEntity(Context.Guild.Id);
 
-                        message = string.Format(@"__**Current Configurations:**__
+                    message = string.Format(@"__**Current Configurations:**__
 
 **Prefix:** {0}
 **Black Ops Cold War Tracking Feature:** {1}
@@ -67,7 +62,6 @@ namespace StormBot.Modules
 **Warzone kills role:** <@&{13}>
 **Most Storm resets role:** <@&{14}>
 **Latest Storm reset role:** <@&{15}>", serverData.PrefixUsed, serverData.ToggleBlackOpsColdWarTracking ? "On" : "Off", serverData.ToggleModernWarfareTracking ? "On" : "Off", serverData.ToggleWarzoneTracking ? "On" : "Off", serverData.ToggleSoundpadCommands ? "On" : "Off", serverData.ToggleStorms ? "On" : "Off", serverData.CallOfDutyNotificationChannelID, serverData.SoundboardNotificationChannelID, serverData.StormsNotificationChannelID, serverData.AdminRoleID, serverData.BlackOpsColdWarKillsRoleID, serverData.ModernWarfareKillsRoleID, serverData.WarzoneWinsRoleID, serverData.WarzoneKillsRoleID, serverData.StormsMostResetsRoleID, serverData.StormsMostRecentResetRoleID);
-                    }
 
                     await ReplyAsync(message);
                 }
@@ -94,22 +88,8 @@ namespace StormBot.Modules
                     {
                         string prefix = GetSingleArg(args);
 
-                        string currentPrefix = BaseService.GetServerOrPrivateMessagePrefix(Context);
-                        if (prefix != currentPrefix)
-                        {
-                            using (StormBotContext _db = new StormBotContext())
-                            {
-                                ServersEntity serverData = _db.Servers
-                                    .AsQueryable()
-                                    .Where(s => s.ServerID == Context.Guild.Id)
-                                    .Single();
-
-                                serverData.PrefixUsed = prefix;
-                                _db.SaveChanges();
-                            }
-
+                        if (BaseService.SetServerPrefix(Context.Guild.Id, prefix))
                             await ReplyAsync("The server prefix was set to: " + BaseService.GetServerOrPrivateMessagePrefix(Context));
-                        }
                         else
                             await ReplyAsync("The server is already using this prefix.");
                     }
@@ -137,24 +117,15 @@ namespace StormBot.Modules
                     }
                     else
                     {
-                        bool flag;
+                        bool? flag = BaseService.ToggleServerService(Context.Guild.Id, ServerServices.BlackOpsColdWarService);
 
-                        using (StormBotContext _db = new StormBotContext())
+                        if (flag.HasValue)
                         {
-                            ServersEntity serverData = _db.Servers
-                                .AsQueryable()
-                                .Where(s => s.ServerID == Context.Guild.Id)
-                                .Single();
-
-                            flag = serverData.ToggleBlackOpsColdWarTracking;
-                            serverData.ToggleBlackOpsColdWarTracking = !flag;
-                            _db.SaveChanges();
+                            if (flag.Value)
+                                await ReplyAsync("Black Ops Cold War tracking was enabled.");
+                            else
+                                await ReplyAsync("Black Ops Cold War tracking was disabled.");
                         }
-
-                        if (!flag)
-                            await ReplyAsync("Black Ops Cold War tracking was enabled.");
-                        else
-                            await ReplyAsync("Black Ops Cold War tracking was disabled.");
                     }
                 }
             }
@@ -178,24 +149,15 @@ namespace StormBot.Modules
                     }
                     else
                     {
-                        bool flag;
+                        bool? flag = BaseService.ToggleServerService(Context.Guild.Id, ServerServices.ModernWarfareService);
 
-                        using (StormBotContext _db = new StormBotContext())
+                        if (flag.HasValue)
                         {
-                            ServersEntity serverData = _db.Servers
-                                .AsQueryable()
-                                .Where(s => s.ServerID == Context.Guild.Id)
-                                .Single();
-
-                            flag = serverData.ToggleModernWarfareTracking;
-                            serverData.ToggleModernWarfareTracking = !flag;
-                            _db.SaveChanges();
+                            if (flag.Value)
+                                await ReplyAsync("Modern Warfare tracking was enabled.");
+                            else
+                                await ReplyAsync("Modern Warfare tracking was disabled.");
                         }
-
-                        if (!flag)
-                            await ReplyAsync("Modern Warfare tracking was enabled.");
-                        else
-                            await ReplyAsync("Modern Warfare tracking was disabled.");
                     }
                 }
             }
@@ -219,24 +181,15 @@ namespace StormBot.Modules
                     }
                     else
                     {
-                        bool flag;
+                        bool? flag = BaseService.ToggleServerService(Context.Guild.Id, ServerServices.WarzoneService);
 
-                        using (StormBotContext _db = new StormBotContext())
+                        if (flag.HasValue)
                         {
-                            ServersEntity serverData = _db.Servers
-                                .AsQueryable()
-                                .Where(s => s.ServerID == Context.Guild.Id)
-                                .Single();
-
-                            flag = serverData.ToggleWarzoneTracking;
-                            serverData.ToggleWarzoneTracking = !flag;
-                            _db.SaveChanges();
+                            if (flag.Value)
+                                await ReplyAsync("Warzone tracking was enabled.");
+                            else
+                                await ReplyAsync("Warzone tracking was disabled.");
                         }
-
-                        if (!flag)
-                            await ReplyAsync("Warzone tracking was enabled.");
-                        else
-                            await ReplyAsync("Warzone tracking was disabled.");
                     }
                 }
             }
@@ -260,24 +213,15 @@ namespace StormBot.Modules
                     }
                     else
                     {
-                        bool flag;
+                        bool? flag = BaseService.ToggleServerService(Context.Guild.Id, ServerServices.SoundpadService);
 
-                        using (StormBotContext _db = new StormBotContext())
+                        if (flag.HasValue)
                         {
-                            ServersEntity serverData = _db.Servers
-                                .AsQueryable()
-                                .Where(s => s.ServerID == Context.Guild.Id)
-                                .Single();
-
-                            flag = serverData.ToggleSoundpadCommands;
-                            serverData.ToggleSoundpadCommands = !flag;
-                            _db.SaveChanges();
+                            if (flag.Value)
+                                await ReplyAsync("Soundboard commands were enabled.");
+                            else
+                                await ReplyAsync("Soundboard commands were disabled.");
                         }
-
-                        if (!flag)
-                            await ReplyAsync("Soundboard commands were enabled.");
-                        else
-                            await ReplyAsync("Soundboard commands were disabled.");
                     }
                 }
             }
@@ -301,24 +245,15 @@ namespace StormBot.Modules
                     }
                     else
                     {
-                        bool flag;
+                        bool? flag = BaseService.ToggleServerService(Context.Guild.Id, ServerServices.StormsService);
 
-                        using (StormBotContext _db = new StormBotContext())
+                        if (flag.HasValue)
                         {
-                            ServersEntity serverData = _db.Servers
-                                .AsQueryable()
-                                .Where(s => s.ServerID == Context.Guild.Id)
-                                .Single();
-
-                            flag = serverData.ToggleStorms;
-                            serverData.ToggleStorms = !flag;
-                            _db.SaveChanges();
+                            if (flag.Value)
+                                await ReplyAsync("Storms were enabled.");
+                            else
+                                await ReplyAsync("Storms were disabled.");
                         }
-
-                        if (!flag)
-                            await ReplyAsync("Storms were enabled.");
-                        else
-                            await ReplyAsync("Storms were disabled.");
                     }
                 }
             }
@@ -347,22 +282,7 @@ namespace StormBot.Modules
                             string input = GetSingleArg(args);
                             ulong discordChannelID = GetDiscordID(input, false);
 
-                            bool changed = false;
-
-                            using (StormBotContext _db = new StormBotContext())
-                            {
-                                ServersEntity serverData = _db.Servers
-                                    .AsQueryable()
-                                    .Where(s => s.ServerID == Context.Guild.Id)
-                                    .Single();
-
-                                if (serverData.CallOfDutyNotificationChannelID != discordChannelID)
-                                {
-                                    serverData.CallOfDutyNotificationChannelID = discordChannelID;
-                                    _db.SaveChanges();
-                                    changed = true;
-                                }
-                            }
+                            bool changed = BaseService.SetServerChannel(Context.Guild.Id, discordChannelID, ServerChannels.CallOfDutyNotificationChannel);
 
                             if (changed)
                                 await ReplyAsync($"The Call of Duty notification channel has been set to: <#{discordChannelID}>");
@@ -401,22 +321,7 @@ namespace StormBot.Modules
                             string input = GetSingleArg(args);
                             ulong discordChannelID = GetDiscordID(input, false);
 
-                            bool changed = false;
-
-                            using (StormBotContext _db = new StormBotContext())
-                            {
-                                ServersEntity serverData = _db.Servers
-                                    .AsQueryable()
-                                    .Where(s => s.ServerID == Context.Guild.Id)
-                                    .Single();
-
-                                if (serverData.SoundboardNotificationChannelID != discordChannelID)
-                                {
-                                    serverData.SoundboardNotificationChannelID = discordChannelID;
-                                    _db.SaveChanges();
-                                    changed = true;
-                                }
-                            }
+                            bool changed = BaseService.SetServerChannel(Context.Guild.Id, discordChannelID, ServerChannels.SoundboardNotificationChannel);
 
                             if (changed)
                                 await ReplyAsync($"The Soundboard notification channel has been set to: <#{discordChannelID}>");
@@ -455,22 +360,7 @@ namespace StormBot.Modules
                             string input = GetSingleArg(args);
                             ulong discordChannelID = GetDiscordID(input, false);
 
-                            bool changed = false;
-
-                            using (StormBotContext _db = new StormBotContext())
-                            {
-                                ServersEntity serverData = _db.Servers
-                                    .AsQueryable()
-                                    .Where(s => s.ServerID == Context.Guild.Id)
-                                    .Single();
-
-                                if (serverData.StormsNotificationChannelID != discordChannelID)
-                                {
-                                    serverData.StormsNotificationChannelID = discordChannelID;
-                                    _db.SaveChanges();
-                                    changed = true;
-                                }
-                            }
+                            bool changed = BaseService.SetServerChannel(Context.Guild.Id, discordChannelID, ServerChannels.StormsNotificationChannel);
 
                             if (changed)
                                 await ReplyAsync($"The Storm notification channel has been set to: <#{discordChannelID}>");
@@ -507,22 +397,7 @@ namespace StormBot.Modules
                         string input = GetSingleArg(args);
                         ulong discordRoleID = GetDiscordID(input, false, false);
 
-                        bool changed = false;
-
-                        using (StormBotContext _db = new StormBotContext())
-                        {
-                            ServersEntity serverData = _db.Servers
-                                .AsQueryable()
-                                .Where(s => s.ServerID == Context.Guild.Id)
-                                .Single();
-
-                            if (serverData.AdminRoleID != discordRoleID)
-                            {
-                                serverData.AdminRoleID = discordRoleID;
-                                _db.SaveChanges();
-                                changed = true;
-                            }
-                        }
+                        bool changed = BaseService.SetServerRole(Context.Guild.Id, discordRoleID, ServerRoles.AdminRole);
 
                         if (changed)
                             await ReplyAsync($"The admin role has been set to: <@&{discordRoleID}>");
@@ -560,22 +435,7 @@ namespace StormBot.Modules
                             string input = GetSingleArg(args);
                             ulong discordRoleID = GetDiscordID(input, false, false);
 
-                            bool changed = false;
-
-                            using (StormBotContext _db = new StormBotContext())
-                            {
-                                ServersEntity serverData = _db.Servers
-                                    .AsQueryable()
-                                    .Where(s => s.ServerID == Context.Guild.Id)
-                                    .Single();
-
-                                if (serverData.BlackOpsColdWarKillsRoleID != discordRoleID)
-                                {
-                                    serverData.BlackOpsColdWarKillsRoleID = discordRoleID;
-                                    _db.SaveChanges();
-                                    changed = true;
-                                }
-                            }
+                            bool changed = BaseService.SetServerRole(Context.Guild.Id, discordRoleID, ServerRoles.BlackOpsColdWarKillsRole);
 
                             if (changed)
                                 await ReplyAsync($"The Black Ops Cold War kills role has been set to: <@&{discordRoleID}>");
@@ -614,22 +474,7 @@ namespace StormBot.Modules
                             string input = GetSingleArg(args);
                             ulong discordRoleID = GetDiscordID(input, false, false);
 
-                            bool changed = false;
-
-                            using (StormBotContext _db = new StormBotContext())
-                            {
-                                ServersEntity serverData = _db.Servers
-                                    .AsQueryable()
-                                    .Where(s => s.ServerID == Context.Guild.Id)
-                                    .Single();
-
-                                if (serverData.ModernWarfareKillsRoleID != discordRoleID)
-                                {
-                                    serverData.ModernWarfareKillsRoleID = discordRoleID;
-                                    _db.SaveChanges();
-                                    changed = true;
-                                }
-                            }
+                            bool changed = BaseService.SetServerRole(Context.Guild.Id, discordRoleID, ServerRoles.ModernWarfareKillsRole);
 
                             if (changed)
                                 await ReplyAsync($"The Modern Warfare kills role has been set to: <@&{discordRoleID}>");
@@ -668,22 +513,7 @@ namespace StormBot.Modules
                             string input = GetSingleArg(args);
                             ulong discordRoleID = GetDiscordID(input, false, false);
 
-                            bool changed = false;
-
-                            using (StormBotContext _db = new StormBotContext())
-                            {
-                                ServersEntity serverData = _db.Servers
-                                    .AsQueryable()
-                                    .Where(s => s.ServerID == Context.Guild.Id)
-                                    .Single();
-
-                                if (serverData.WarzoneWinsRoleID != discordRoleID)
-                                {
-                                    serverData.WarzoneWinsRoleID = discordRoleID;
-                                    _db.SaveChanges();
-                                    changed = true;
-                                }
-                            }
+                            bool changed = BaseService.SetServerRole(Context.Guild.Id, discordRoleID, ServerRoles.WarzoneWinsRole);
 
                             if (changed)
                                 await ReplyAsync($"The Warzone wins role has been set to: <@&{discordRoleID}>");
@@ -722,22 +552,7 @@ namespace StormBot.Modules
                             string input = GetSingleArg(args);
                             ulong discordRoleID = GetDiscordID(input, false, false);
 
-                            bool changed = false;
-
-                            using (StormBotContext _db = new StormBotContext())
-                            {
-                                ServersEntity serverData = _db.Servers
-                                    .AsQueryable()
-                                    .Where(s => s.ServerID == Context.Guild.Id)
-                                    .Single();
-
-                                if (serverData.WarzoneKillsRoleID != discordRoleID)
-                                {
-                                    serverData.WarzoneKillsRoleID = discordRoleID;
-                                    _db.SaveChanges();
-                                    changed = true;
-                                }
-                            }
+                            bool changed = BaseService.SetServerRole(Context.Guild.Id, discordRoleID, ServerRoles.WarzoneKillsRole);
 
                             if (changed)
                                 await ReplyAsync($"The Warzone kills role has been set to: <@&{discordRoleID}>");
@@ -776,22 +591,7 @@ namespace StormBot.Modules
                             string input = GetSingleArg(args);
                             ulong discordRoleID = GetDiscordID(input, false, false);
 
-                            bool changed = false;
-
-                            using (StormBotContext _db = new StormBotContext())
-                            {
-                                ServersEntity serverData = _db.Servers
-                                    .AsQueryable()
-                                    .Where(s => s.ServerID == Context.Guild.Id)
-                                    .Single();
-
-                                if (serverData.StormsMostResetsRoleID != discordRoleID)
-                                {
-                                    serverData.StormsMostResetsRoleID = discordRoleID;
-                                    _db.SaveChanges();
-                                    changed = true;
-                                }
-                            }
+                            bool changed = BaseService.SetServerRole(Context.Guild.Id, discordRoleID, ServerRoles.StormsMostResetsRole);
 
                             if (changed)
                                 await ReplyAsync($"The Storms role for the most resets has been set to: <@&{discordRoleID}>");
@@ -830,22 +630,7 @@ namespace StormBot.Modules
                             string input = GetSingleArg(args);
                             ulong discordRoleID = GetDiscordID(input, false, false);
 
-                            bool changed = false;
-
-                            using (StormBotContext _db = new StormBotContext())
-                            {
-                                ServersEntity serverData = _db.Servers
-                                    .AsQueryable()
-                                    .Where(s => s.ServerID == Context.Guild.Id)
-                                    .Single();
-
-                                if (serverData.StormsMostRecentResetRoleID != discordRoleID)
-                                {
-                                    serverData.StormsMostRecentResetRoleID = discordRoleID;
-                                    _db.SaveChanges();
-                                    changed = true;
-                                }
-                            }
+                            bool changed = BaseService.SetServerRole(Context.Guild.Id, discordRoleID, ServerRoles.StormsMostRecentResetRole);
 
                             if (changed)
                                 await ReplyAsync($"The Storms role for the most recent reset has been set to: <@&{discordRoleID}>");

@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Reflection;
 using System.Threading.Tasks;
-using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Discord.Commands;
 using Discord.WebSocket;
 using Discord;
-using StormBot.Database;
 
 namespace StormBot.Services
 {
