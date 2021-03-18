@@ -78,8 +78,11 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
 - **'.wallets'** to show how many points everyone has.
 
 - **'.resets'** to show how many resets everyone has.
+
 The bot will assign the @__ role for the most recent reset to the player who causes the next reset by reaching x5 points.
+
 The bot will also assign the @__ role for the most total resets to the players in the lead.
+
 Wallets are reset to x6 points when a disaster happens to a them once someone reaches x7 points, or if a reset occurs.
 
 ### Help: Soundboard Commands
@@ -124,6 +127,7 @@ The bot will then ask you to enter the account name, tag, and platform.
 - **'.mw wz lifetime kills'** to display the lifetime total game kills (Modern Warfare + Warzone) of all participating Modern Warfare players from highest to lowest if you are a StormBot administrator.
 
 - **'.mw wz weekly kills'** to display the total game kills (Modern Warfare + Warzone) so far this week of all participating Modern Warfare players from highest to lowest if you are a StormBot administrator.
+
 The bot will only assign the @__ role for Modern Warfare kills to the player in first place at the end of the week with the most multiplayer kills (not Warzone).
 
 ### Help: Warzone Commands
@@ -143,7 +147,9 @@ The bot will then ask you to enter the account name, tag, and platform.
 - **'.wz lifetime wins'** to display the lifetime total Warzone wins of all participating players from highest to lowest if you are a StormBot administrator.
 
 - **'.wz weekly wins'** to display the total Warzone wins so far this week of all participating players from highest to lowest if you are a StormBot administrator.
+
 The bot will only assign the @__ role for Warzone wins to the player in first place at the end of the week with the most Warzone wins.
+
 The bot will only assign the @__ role for Warzone kills to the player in first place at the end of the week with the most Warzone kills (not multiplayer).
 
 ### Help: Black Ops Cold War Commands
@@ -163,4 +169,5 @@ The bot will then ask you to enter the account name, tag, and platform.
 - **'.bocw lifetime kills'** to display the lifetime total game kills of all participating Black Ops Cold War players from highest to lowest if you are a StormBot administrator.
 
 - **'.bocw weekly kills'** to display the total game kills so far this week of all participating Black Ops Cold War players from highest to lowest if you are a StormBot administrator.
+
 The bot will only assign the @__ role to the player in first place at the end of the week.

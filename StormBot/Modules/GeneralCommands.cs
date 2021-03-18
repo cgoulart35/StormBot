@@ -888,6 +888,7 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
 '**{0}wallet**' to show how many points you have in your wallet.
 '**{0}wallets**' to show how many points everyone has.
 '**{0}resets**' to show how many resets everyone has.
+
 The bot will assign the{5} role for the most recent reset to the player who causes the next reset by reaching {6} points.
 The bot will also assign the{7} role for the most total resets to the players in the lead.
 Wallets are reset to {8} points when a disaster happens to a them once someone reaches {9} points, or if a reset occurs.", prefix, StormsService.levelOneReward, StormsService.levelTwoReward, StormsService.stealAmount, StormsService.insuranceCost, mostRecentRoleStr, StormsService.resetMark, mostResetsRoleStr, StormsService.resetBalance, StormsService.disasterMark);
@@ -957,6 +958,7 @@ The bot will then ask you to enter the account name, tag, and platform.
 '**{0}bocw rm participant [user]**' to remove an account from the list of Call of Duty accounts participating in the Black Ops Cold War services __if you are a StormBot administrator__.
 '**{0}bocw lifetime kills**' to display the lifetime total game kills of all participating Black Ops Cold War players from highest to lowest __if you are a StormBot administrator__.
 '**{0}bocw weekly kills**' to display the total game kills so far this week of all participating Black Ops Cold War players from highest to lowest __if you are a StormBot administrator__.
+
 The bot will only assign the{1} role for Black Ops Cold War kills to the player in first place at the end of the week.", prefix, roleStr);
                 }
                 else
@@ -992,6 +994,7 @@ The bot will then ask you to enter the account name, tag, and platform.
 '**{0}mw rm participant [user]**' to remove an account from the list of Call of Duty accounts participating in the Modern Warfare services __if you are a StormBot administrator__.
 '**{0}mw wz lifetime kills**' to display the lifetime total game kills (Modern Warfare + Warzone) of all participating Modern Warfare players from highest to lowest __if you are a StormBot administrator__.
 '**{0}mw wz weekly kills**' to display the total game kills (Modern Warfare + Warzone) so far this week of all participating Modern Warfare players from highest to lowest __if you are a StormBot administrator__.
+
 The bot will only assign the{1} role for Modern Warfare kills to the player in first place at the end of the week with the most multiplayer kills (not Warzone).", prefix, roleStr);
                 }
                 else
@@ -1033,6 +1036,7 @@ The bot will then ask you to enter the account name, tag, and platform.
 '**{0}wz rm participant [user]**' to remove an account from the list of Call of Duty accounts participating in the Warzone services __if you are a StormBot administrator__.
 '**{0}wz lifetime wins**' to display the lifetime total Warzone wins of all participating players from highest to lowest __if you are a StormBot administrator__.
 '**{0}wz weekly wins**' to display the total Warzone wins so far this week of all participating players from highest to lowest __if you are a StormBot administrator__.
+
 The bot will only assign the{1} role for Warzone wins to the player in first place at the end of the week with the most Warzone wins.
 The bot will only assign the{2} role for Warzone kills to the player in first place at the end of the week with the most Warzone kills (not multiplayer).", prefix, winsRoleStr, killsRoleStr);
                 }
