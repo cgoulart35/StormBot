@@ -3,10 +3,10 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
+using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using StormBot.Services;
-using StormBot.Database;
 using StormBot.Database.Entities;
 
 namespace StormBot.Modules
@@ -37,7 +37,9 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                StormsService.purgeCollection.Add(Context.Message);
+                ulong channelId = Context.Channel.Id;
+                if (StormsService.PurgeCollection.ContainsKey(channelId))
+                    StormsService.PurgeCollection[channelId].Add(Context.Message);
 
                 if (StormsService.GetServerAllowServerPermissionStorms(Context) && StormsService.GetServerToggleStorms(Context))
                 {
@@ -45,12 +47,11 @@ namespace StormBot.Modules
                     {
                         SocketGuild guild = Context.Guild;
                         ulong serverId = Context.Guild.Id;
-                        ulong channelId = Context.Channel.Id;
                         ulong discordId = Context.User.Id;
 
                         StormsService.AddPlayerToDbTableIfNotExist(serverId, discordId);
 
-                        await _service.TryToUpdateOngoingStorm(guild, serverId, discordId, channelId, 1);
+                        await StormsService.TryToUpdateOngoingStorm(guild, serverId, discordId, channelId, 1);
                     }
                 }
             }
@@ -63,7 +64,9 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                StormsService.purgeCollection.Add(Context.Message);
+                ulong channelId = Context.Channel.Id;
+                if (StormsService.PurgeCollection.ContainsKey(channelId))
+                    StormsService.PurgeCollection[channelId].Add(Context.Message);
 
                 if (StormsService.GetServerAllowServerPermissionStorms(Context) && StormsService.GetServerToggleStorms(Context))
                 {
@@ -73,7 +76,6 @@ namespace StormBot.Modules
                         {
                             SocketGuild guild = Context.Guild;
                             ulong serverId = Context.Guild.Id;
-                            ulong channelId = Context.Channel.Id;
                             ulong discordId = Context.User.Id;
 
                             string guessStr = GetSingleArg(args);
@@ -86,10 +88,14 @@ namespace StormBot.Modules
                                 {
                                     StormsService.AddPlayerToDbTableIfNotExist(serverId, discordId);
 
-                                    await _service.TryToUpdateOngoingStorm(guild, serverId, discordId, channelId, 2, guess);
+                                    await StormsService.TryToUpdateOngoingStorm(guild, serverId, discordId, channelId, 2, guess);
                                 }
                                 else
-                                    StormsService.purgeCollection.Add(await ReplyAsync($"<@!{discordId}>, please provide a guess between 1 and 200."));
+                                {
+                                    IUserMessage message = await ReplyAsync($"<@!{discordId}>, please provide a guess between 1 and 200.");
+                                    if (StormsService.PurgeCollection.ContainsKey(channelId))
+                                        StormsService.PurgeCollection[channelId].Add(message);
+                                }
                             }
                         }
                     }
@@ -104,7 +110,9 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                StormsService.purgeCollection.Add(Context.Message);
+                ulong channelId = Context.Channel.Id;
+                if (StormsService.PurgeCollection.ContainsKey(channelId))
+                    StormsService.PurgeCollection[channelId].Add(Context.Message);
 
                 if (StormsService.GetServerAllowServerPermissionStorms(Context) && StormsService.GetServerToggleStorms(Context))
                 {
@@ -114,7 +122,6 @@ namespace StormBot.Modules
                         {
                             SocketGuild guild = Context.Guild;
                             ulong serverId = Context.Guild.Id;
-                            ulong channelId = Context.Channel.Id;
                             ulong discordId = Context.User.Id;
 
                             string betStr = args[0];
@@ -130,19 +137,27 @@ namespace StormBot.Modules
 
                                     if (bet <= 0)
                                     {
-                                        StormsService.purgeCollection.Add(await ReplyAsync($"<@!{discordId}>, please bet an amount above zero."));
+                                        IUserMessage message = await ReplyAsync($"<@!{discordId}>, please bet an amount above zero.");
+                                        if (StormsService.PurgeCollection.ContainsKey(channelId))
+                                            StormsService.PurgeCollection[channelId].Add(message);
                                     }
                                     else if (bet > StormsService.GetPlayerWallet(serverId, discordId))
                                     {
-                                        StormsService.purgeCollection.Add(await ReplyAsync($"<@!{discordId}>, you have insufficient funds."));
+                                        IUserMessage message = await ReplyAsync($"<@!{discordId}>, you have insufficient funds.");
+                                        if (StormsService.PurgeCollection.ContainsKey(channelId))
+                                            StormsService.PurgeCollection[channelId].Add(message);
                                     }
                                     else
                                     {
-                                        await _service.TryToUpdateOngoingStorm(guild, serverId, discordId, channelId, 2, guess, bet);
+                                        await StormsService.TryToUpdateOngoingStorm(guild, serverId, discordId, channelId, 2, guess, bet);
                                     }
                                 }
                                 else
-                                    StormsService.purgeCollection.Add(await ReplyAsync($"<@!{discordId}>, please provide a guess between 1 and 200."));
+                                {
+                                    IUserMessage message = await ReplyAsync($"<@!{discordId}>, please provide a guess between 1 and 200.");
+                                    if (StormsService.PurgeCollection.ContainsKey(channelId))
+                                        StormsService.PurgeCollection[channelId].Add(message);
+                                }
                             }
                         }
                     }
@@ -157,7 +172,9 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                StormsService.purgeCollection.Add(Context.Message);
+                ulong channelId = Context.Channel.Id;
+                if (StormsService.PurgeCollection.ContainsKey(channelId))
+                    StormsService.PurgeCollection[channelId].Add(Context.Message);
 
                 if (StormsService.GetServerAllowServerPermissionStorms(Context) && StormsService.GetServerToggleStorms(Context))
                 {
@@ -165,10 +182,9 @@ namespace StormBot.Modules
                     {
                         SocketGuild guild = Context.Guild;
                         ulong serverId = Context.Guild.Id;
-                        ulong channelId = Context.Channel.Id;
                         ulong discordId = Context.User.Id;
 
-                        await _service.TryToSteal(guild, serverId, discordId, channelId);
+                        await StormsService.TryToSteal(guild, serverId, discordId, channelId);
                     }
                 }
             }
@@ -181,7 +197,9 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                StormsService.purgeCollection.Add(Context.Message);
+                ulong channelId = Context.Channel.Id;
+                if (StormsService.PurgeCollection.ContainsKey(channelId))
+                    StormsService.PurgeCollection[channelId].Add(Context.Message);
 
                 if (StormsService.GetServerAllowServerPermissionStorms(Context) && StormsService.GetServerToggleStorms(Context))
                 {
@@ -194,16 +212,23 @@ namespace StormBot.Modules
 
                         if (StormsService.GetPlayerWallet(serverId, discordId) < StormsService.insuranceCost)
                         {
-                            StormsService.purgeCollection.Add(await ReplyAsync($"<@!{discordId}>, you have insufficient funds."));
+                            IUserMessage message = await ReplyAsync($"<@!{discordId}>, you have insufficient funds.");
+                            if (StormsService.PurgeCollection.ContainsKey(channelId))
+                                StormsService.PurgeCollection[channelId].Add(message);
                         }
                         else if (StormsService.GetPlayerInsurance(serverId, discordId))
                         {
-                            StormsService.purgeCollection.Add(await ReplyAsync($"<@!{discordId}>, you are already insured."));
+                            IUserMessage message = await ReplyAsync($"<@!{discordId}>, you are already insured.");
+                            if (StormsService.PurgeCollection.ContainsKey(channelId))
+                                StormsService.PurgeCollection[channelId].Add(message);
                         }
                         else
                         {
                             StormsService.AddInsuranceForPlayer(serverId, discordId);
-                            StormsService.purgeCollection.Add(await ReplyAsync($"<@!{discordId}>, you purchased insurance for {StormsService.insuranceCost} points."));
+
+                            IUserMessage message = await ReplyAsync($"<@!{discordId}>, you purchased insurance for {StormsService.insuranceCost} points.");
+                            if (StormsService.PurgeCollection.ContainsKey(channelId))
+                                StormsService.PurgeCollection[channelId].Add(message);
                         }
                     }
                 }
@@ -217,7 +242,9 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                StormsService.purgeCollection.Add(Context.Message);
+                ulong channelId = Context.Channel.Id;
+                if (StormsService.PurgeCollection.ContainsKey(channelId))
+                    StormsService.PurgeCollection[channelId].Add(Context.Message);
 
                 if (StormsService.GetServerAllowServerPermissionStorms(Context) && StormsService.GetServerToggleStorms(Context))
                 {
@@ -234,7 +261,9 @@ namespace StormBot.Modules
                         else
                             insuranceStr = "**UNINSURED**";
 
-                        StormsService.purgeCollection.Add(await ReplyAsync($"<@!{discordId}>, you have {StormsService.GetPlayerWallet(serverId, discordId)} points in your wallet. " + insuranceStr));
+                        IUserMessage message = await ReplyAsync($"<@!{discordId}>, you have {StormsService.GetPlayerWallet(serverId, discordId)} points in your wallet. " + insuranceStr);
+                        if (StormsService.PurgeCollection.ContainsKey(channelId))
+                            StormsService.PurgeCollection[channelId].Add(message);
                     }
                 }
             }
@@ -247,7 +276,9 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                StormsService.purgeCollection.Add(Context.Message);
+                ulong channelId = Context.Channel.Id;
+                if (StormsService.PurgeCollection.ContainsKey(channelId))
+                    StormsService.PurgeCollection[channelId].Add(Context.Message);
 
                 if (StormsService.GetServerAllowServerPermissionStorms(Context) && StormsService.GetServerToggleStorms(Context))
                 {
@@ -298,7 +329,9 @@ namespace StormBot.Modules
                         {
                             foreach (string chunk in output)
                             {
-                                StormsService.purgeCollection.Add(await ReplyAsync(chunk));
+                                IUserMessage message = await ReplyAsync(chunk);
+                                if (StormsService.PurgeCollection.ContainsKey(channelId))
+                                    StormsService.PurgeCollection[channelId].Add(message);
                             }
                         }
                     }
@@ -313,7 +346,9 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                StormsService.purgeCollection.Add(Context.Message);
+                ulong channelId = Context.Channel.Id;
+                if (StormsService.PurgeCollection.ContainsKey(channelId))
+                    StormsService.PurgeCollection[channelId].Add(Context.Message);
 
                 if (StormsService.GetServerAllowServerPermissionStorms(Context) && StormsService.GetServerToggleStorms(Context))
                 {
@@ -358,7 +393,9 @@ namespace StormBot.Modules
                         {
                             foreach (string chunk in output)
                             {
-                                StormsService.purgeCollection.Add(await ReplyAsync(chunk));
+                                IUserMessage message = await ReplyAsync(chunk);
+                                if (StormsService.PurgeCollection.ContainsKey(channelId))
+                                    StormsService.PurgeCollection[channelId].Add(message);
                             }
                         }
                     }

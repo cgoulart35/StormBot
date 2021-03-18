@@ -18,7 +18,7 @@ namespace StormBot.Services
 {
     class SoundpadService : BaseService
     {
-        private readonly DiscordSocketClient _client;
+        private static DiscordSocketClient _client;
 
         public static Soundpad _soundpad;
 
@@ -368,7 +368,7 @@ namespace StormBot.Services
         #endregion
 
         #region QUERIES
-        private IEnumerable<IMessageChannel> GetAllServerSoundpadChannels()
+        private static IEnumerable<IMessageChannel> GetAllServerSoundpadChannels()
         {
             using (StormBotContext _db = new StormBotContext())
             {

@@ -79,7 +79,7 @@ namespace StormBot.Modules
             }
         }
 
-        public List<string> ValidateOutputLimit(List<string> output, string messageToAdd)
+        public static List<string> ValidateOutputLimit(List<string> output, string messageToAdd)
         {
             string temp = output[output.Count - 1] + messageToAdd;
             if (temp.Length <= 2000)

@@ -39,7 +39,7 @@ namespace StormBot.Modules.CallOfDutyModules
                 List<ulong> serverIds = CallOfDutyService.GetAllValidatedServerIds("mw", "wz");
                 foreach (ulong serverId in serverIds)
                 {
-                    var channel = _service.GetServerCallOfDutyNotificationChannel(serverId);
+                    var channel = CallOfDutyService.GetServerCallOfDutyNotificationChannel(serverId);
 
                     if (channel != null)
                     {
@@ -49,7 +49,7 @@ namespace StormBot.Modules.CallOfDutyModules
                         // pass true to keep track of lifetime total kills every week
                         List<CallOfDutyPlayerModel> newData = _service.GetNewPlayerData(true, serverId, "mw", "wz");
 
-                        SocketGuild guild = _service._client.GetGuild(serverId);
+                        SocketGuild guild = CallOfDutyService._client.GetGuild(serverId);
 
                         List<string> output = new List<string>();
                         output.AddRange(await GetLast7DaysKills(newData, guild));
@@ -75,13 +75,13 @@ namespace StormBot.Modules.CallOfDutyModules
                 List<ulong> serverIds = CallOfDutyService.GetAllValidatedServerIds("mw", "wz");
                 foreach (ulong serverId in serverIds)
                 {
-                    var channel = _service.GetServerCallOfDutyNotificationChannel(serverId);
+                    var channel = CallOfDutyService.GetServerCallOfDutyNotificationChannel(serverId);
 
                     if (channel != null)
                     {
                         List<CallOfDutyPlayerModel> newData = _service.GetNewPlayerData(false, serverId, "mw", "wz");
 
-                        SocketGuild guild = _service._client.GetGuild(serverId);
+                        SocketGuild guild = CallOfDutyService._client.GetGuild(serverId);
 
                         List<string> output = await GetWeeklyWins(newData, guild);
 

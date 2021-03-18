@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using StormBot.Database;
@@ -220,7 +221,7 @@ namespace StormBot.Services
 			}
 		}
 
-		public static bool SetServerChannel(ulong serverId, ulong channelId, ServerChannels channelType)
+		public static async Task<bool> SetServerChannel(ulong serverId, ulong channelId, ServerChannels channelType)
 		{
 			using (StormBotContext _db = new StormBotContext())
 			{
@@ -234,22 +235,42 @@ namespace StormBot.Services
 				switch (channelType)
 				{
 					case ServerChannels.CallOfDutyNotificationChannel:
-						if (serverData.CallOfDutyNotificationChannelID != channelId)
+						if (serverData.CallOfDutyNotificationChannelID != channelId && channelId != 0)
 						{
 							serverData.CallOfDutyNotificationChannelID = channelId;
 							changed = true;
 						}
 						break;
 					case ServerChannels.SoundboardNotificationChannel:
-						if (serverData.SoundboardNotificationChannelID != channelId)
+						if (serverData.SoundboardNotificationChannelID != channelId && channelId != 0)
 						{
 							serverData.SoundboardNotificationChannelID = channelId;
 							changed = true;
 						}
 						break;
 					case ServerChannels.StormsNotificationChannel:
-						if (serverData.StormsNotificationChannelID != channelId)
+						if (serverData.StormsNotificationChannelID != channelId && channelId != 0)
 						{
+							if (serverData.StormsNotificationChannelID != 0)
+							{
+								int actualLevel;
+
+								// if there is an ongoing storm, end it
+								if (StormsService.OngoingStormsLevel.TryGetValue(serverData.StormsNotificationChannelID, out actualLevel))
+									await StormsService.EndStorm(serverData.StormsNotificationChannelID);
+
+								if (StormsService.PurgeCollection.ContainsKey(serverData.StormsNotificationChannelID))
+								{
+									// delete all messages added to purge collection and remove channel
+									await ((ITextChannel)StormsService._client.GetChannel(serverData.StormsNotificationChannelID)).DeleteMessagesAsync(StormsService.PurgeCollection[serverData.StormsNotificationChannelID]);
+									StormsService.PurgeCollection.Remove(serverData.StormsNotificationChannelID);
+								}
+							}
+
+							// add new channel to purge collection
+							if (!StormsService.PurgeCollection.ContainsKey(serverData.StormsNotificationChannelID))
+								StormsService.PurgeCollection.Add(channelId, new List<IUserMessage>());
+
 							serverData.StormsNotificationChannelID = channelId;
 							changed = true;
 						}
@@ -277,49 +298,49 @@ namespace StormBot.Services
 				switch (roleType)
 				{
 					case ServerRoles.AdminRole:
-						if (serverData.AdminRoleID != roleId)
+						if (serverData.AdminRoleID != roleId && roleId != 0)
 						{
 							serverData.AdminRoleID = roleId;
 							changed = true;
 						}
 						break;
 					case ServerRoles.WarzoneWinsRole:
-						if (serverData.WarzoneWinsRoleID != roleId)
+						if (serverData.WarzoneWinsRoleID != roleId && roleId != 0)
 						{
 							serverData.WarzoneWinsRoleID = roleId;
 							changed = true;
 						}
 						break;
 					case ServerRoles.WarzoneKillsRole:
-						if (serverData.WarzoneKillsRoleID != roleId)
+						if (serverData.WarzoneKillsRoleID != roleId && roleId != 0)
 						{
 							serverData.WarzoneKillsRoleID = roleId;
 							changed = true;
 						}
 						break;
 					case ServerRoles.ModernWarfareKillsRole:
-						if (serverData.ModernWarfareKillsRoleID != roleId)
+						if (serverData.ModernWarfareKillsRoleID != roleId && roleId != 0)
 						{
 							serverData.ModernWarfareKillsRoleID = roleId;
 							changed = true;
 						}
 						break;
 					case ServerRoles.BlackOpsColdWarKillsRole:
-						if (serverData.BlackOpsColdWarKillsRoleID != roleId)
+						if (serverData.BlackOpsColdWarKillsRoleID != roleId && roleId != 0)
 						{
 							serverData.BlackOpsColdWarKillsRoleID = roleId;
 							changed = true;
 						}
 						break;
 					case ServerRoles.StormsMostResetsRole:
-						if (serverData.StormsMostResetsRoleID != roleId)
+						if (serverData.StormsMostResetsRoleID != roleId && roleId != 0)
 						{
 							serverData.StormsMostResetsRoleID = roleId;
 							changed = true;
 						}
 						break;
 					case ServerRoles.StormsMostRecentResetRole:
-						if (serverData.StormsMostRecentResetRoleID != roleId)
+						if (serverData.StormsMostRecentResetRoleID != roleId && roleId != 0)
 						{
 							serverData.StormsMostRecentResetRoleID = roleId;
 							changed = true;
@@ -334,7 +355,7 @@ namespace StormBot.Services
 			}
 		}
 
-		public static bool? ToggleServerService(ulong serverId, ServerServices serviceType)
+		public static async Task<bool?> ToggleServerService(ulong serverId, ServerServices serviceType)
 		{
 			using (StormBotContext _db = new StormBotContext())
 			{
@@ -343,36 +364,149 @@ namespace StormBot.Services
 					.Where(s => s.ServerID == serverId)
 					.Single();
 
-				bool? flag = null;
+				bool flag;
 
 				switch (serviceType)
 				{
 					case ServerServices.BlackOpsColdWarService:
-						flag = serverData.ToggleBlackOpsColdWarTracking;
-						serverData.ToggleBlackOpsColdWarTracking = !flag.Value;
-						break;
-					case ServerServices.ModernWarfareService:
-						flag = serverData.ToggleModernWarfareTracking;
-						serverData.ToggleModernWarfareTracking = !flag.Value;
-						break;
-					case ServerServices.WarzoneService:
-						flag = serverData.ToggleWarzoneTracking;
-						serverData.ToggleWarzoneTracking = !flag.Value;
-						break;
-					case ServerServices.SoundpadService:
-						flag = serverData.ToggleSoundpadCommands;
-						serverData.ToggleSoundpadCommands = !flag.Value;
-						break;
-					case ServerServices.StormsService:
-						flag = serverData.ToggleStorms;
-						serverData.ToggleStorms = !flag.Value;
-						break;
-					default:
-						return flag;
-				}
 
-				_db.SaveChanges();
-				return !flag.Value;
+						flag = serverData.ToggleBlackOpsColdWarTracking;
+
+						if (!flag)
+						{
+							if (serverData.CallOfDutyNotificationChannelID != 0 && serverData.BlackOpsColdWarKillsRoleID != 0)
+							{
+								serverData.ToggleBlackOpsColdWarTracking = !flag;
+								_db.SaveChanges();
+
+								return serverData.ToggleBlackOpsColdWarTracking;
+							}
+							else
+								return null;
+						}
+						else
+						{
+							serverData.ToggleBlackOpsColdWarTracking = !flag;
+							_db.SaveChanges();
+
+							return serverData.ToggleBlackOpsColdWarTracking;
+						}
+
+					case ServerServices.ModernWarfareService:
+
+						flag = serverData.ToggleModernWarfareTracking;
+
+						if (!flag)
+						{
+							if (serverData.CallOfDutyNotificationChannelID != 0 && serverData.ModernWarfareKillsRoleID != 0)
+							{
+								serverData.ToggleModernWarfareTracking = !flag;
+								_db.SaveChanges();
+
+								return serverData.ToggleModernWarfareTracking;
+							}
+							else
+								return null;
+						}
+						else
+						{
+							serverData.ToggleModernWarfareTracking = !flag;
+							_db.SaveChanges();
+
+							return serverData.ToggleModernWarfareTracking;
+						}
+
+					case ServerServices.WarzoneService:
+
+						flag = serverData.ToggleWarzoneTracking;
+
+						if (!flag)
+						{
+							if (serverData.CallOfDutyNotificationChannelID != 0 && serverData.WarzoneKillsRoleID != 0 && serverData.WarzoneWinsRoleID != 0)
+							{
+								serverData.ToggleWarzoneTracking = !flag;
+								_db.SaveChanges();
+
+								return serverData.ToggleWarzoneTracking;
+							}
+							else
+								return null;
+						}
+						else
+						{
+							serverData.ToggleWarzoneTracking = !flag;
+							_db.SaveChanges();
+
+							return serverData.ToggleWarzoneTracking;
+						}
+
+					case ServerServices.SoundpadService:
+
+						flag = serverData.ToggleSoundpadCommands;
+
+						if (!flag)
+						{
+							if (serverData.SoundboardNotificationChannelID != 0)
+							{
+								serverData.ToggleSoundpadCommands = !flag;
+								_db.SaveChanges();
+
+								return serverData.ToggleSoundpadCommands;
+							}
+							else
+								return null;
+						}
+						else
+						{
+							serverData.ToggleStorms = !flag;
+							_db.SaveChanges();
+
+							return serverData.ToggleStorms;
+						}
+
+					case ServerServices.StormsService:
+
+						flag = serverData.ToggleStorms;
+
+						if (!flag)
+						{
+							if (serverData.StormsNotificationChannelID != 0 && serverData.StormsMostRecentResetRoleID != 0 && serverData.StormsMostResetsRoleID != 0)
+							{
+								if (!StormsService.PurgeCollection.ContainsKey(serverData.StormsNotificationChannelID))
+									StormsService.PurgeCollection.Add(serverData.StormsNotificationChannelID, new List<IUserMessage>());
+								
+								serverData.ToggleStorms = !flag;
+								_db.SaveChanges();
+
+								return serverData.ToggleStorms;
+							}
+							else
+								return null;
+						}
+						else
+						{
+							int actualLevel;
+
+							// if there is an ongoing storm, end it
+							if (StormsService.OngoingStormsLevel.TryGetValue(serverData.StormsNotificationChannelID, out actualLevel))
+								await StormsService.EndStorm(serverData.StormsNotificationChannelID);
+
+							if (StormsService.PurgeCollection.ContainsKey(serverData.StormsNotificationChannelID))
+							{
+								// delete all messages added to purge collection and remove channel
+								await((ITextChannel)StormsService._client.GetChannel(serverData.StormsNotificationChannelID)).DeleteMessagesAsync(StormsService.PurgeCollection[serverData.StormsNotificationChannelID]);
+								StormsService.PurgeCollection.Remove(serverData.StormsNotificationChannelID);
+							}
+
+							serverData.ToggleStorms = !flag;
+							_db.SaveChanges();
+
+							return serverData.ToggleStorms;
+						}
+
+					default:
+						return null;
+				}
 			}
 		}
 		#endregion

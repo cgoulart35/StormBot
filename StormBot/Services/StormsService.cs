@@ -13,14 +13,16 @@ namespace StormBot.Services
 {
 	public class StormsService : BaseService
 	{
-		public readonly DiscordSocketClient _client;
+		public static DiscordSocketClient _client;
 
-		private readonly Dictionary<ulong, int> OngoingStormsLevel;
-		private readonly Dictionary<ulong, int> OngoingStormsWinningNumber;
-		private readonly Dictionary<ulong, Dictionary<ulong, int>> OngoingStormsUserGuessCount;
-		private readonly Dictionary<ulong, List<ulong>> OngoingStormsUsersWaitingForStealTimeLimit;
+		public static Dictionary<ulong, int> OngoingStormsLevel;
+		private static Dictionary<ulong, int> OngoingStormsWinningNumber;
+		private static Dictionary<ulong, Dictionary<ulong, int>> OngoingStormsUserGuessCount;
+		private static Dictionary<ulong, List<ulong>> OngoingStormsUsersWaitingForStealTimeLimit;
 
-		private readonly Random random;
+		public static Dictionary<ulong, List<IUserMessage>> PurgeCollection;
+
+		private static Random random;
 
 		public static Emoji cloud_rain;
 		public static Emoji thunder_cloud_rain;
@@ -38,8 +40,6 @@ namespace StormBot.Services
 		public static double stealAmount = 5;
 		public static int stealTimeLimitInSeconds = 10;
 
-		public static List<IUserMessage> purgeCollection;
-
 		public StormsService(IServiceProvider services)
 		{
 			_client = services.GetRequiredService<DiscordSocketClient>();
@@ -52,6 +52,14 @@ namespace StormBot.Services
 			OngoingStormsUserGuessCount = new Dictionary<ulong, Dictionary<ulong, int>>();
 			OngoingStormsUsersWaitingForStealTimeLimit = new Dictionary<ulong, List<ulong>>();
 
+			PurgeCollection = new Dictionary<ulong, List<IUserMessage>>();
+			List<ServersEntity> servers = GetAllServerEntities();
+			foreach (ServersEntity server in servers)
+			{
+				if (server.AllowServerPermissionStorms && server.ToggleStorms && server.StormsNotificationChannelID != 0)
+					PurgeCollection.Add(server.StormsNotificationChannelID, new List<IUserMessage>());
+			}
+
 			random = new Random();
 
 			cloud_rain = new Emoji("🌧️");
@@ -60,8 +68,6 @@ namespace StormBot.Services
 			white_sun_rain_cloud = new Emoji("🌦️");
 			sun_with_face = new Emoji("🌞");
 			rotating_light = new Emoji("🚨");
-
-			purgeCollection = new List<IUserMessage>();
 	}
 
 		public override async Task StartService()
@@ -140,14 +146,17 @@ namespace StormBot.Services
 			List<ulong> UsersWaitingInServerForSteal = new List<ulong>();
 			OngoingStormsUsersWaitingForStealTimeLimit.Add(channelId, UsersWaitingInServerForSteal);
 
-			purgeCollection.Add(await((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(cloud_rain.ToString() + thunder_cloud_rain.ToString() + umbrella2.ToString() + " __**STORM INCOMING**__ " + umbrella2.ToString() + thunder_cloud_rain.ToString() + cloud_rain.ToString() + string.Format(@"
+			IUserMessage message = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(cloud_rain.ToString() + thunder_cloud_rain.ToString() + umbrella2.ToString() + " __**STORM INCOMING**__ " + umbrella2.ToString() + thunder_cloud_rain.ToString() + cloud_rain.ToString() + string.Format(@"
 
-First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute countdown starting now!", GetServerPrefix(serverId), levelOneReward)));
+First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute countdown starting now!", GetServerPrefix(serverId), levelOneReward));
 
-			StartStormCountdown(channelId);
+			if (PurgeCollection.ContainsKey(channelId))
+				PurgeCollection[channelId].Add(message);
+
+				StartStormCountdown(channelId);
 		}
 
-		public async Task EndStorm(ulong channelId)
+		public static async Task EndStorm(ulong channelId)
 		{
 			bool wasRemoved = OngoingStormsLevel.Remove(channelId);
 			OngoingStormsWinningNumber.Remove(channelId);
@@ -156,17 +165,20 @@ First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute 
 
 			if (wasRemoved)
 			{
-				purgeCollection.Add(await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(sun_with_face.ToString() + sun_with_face.ToString() + sun_with_face.ToString() + " __**STORM OVER**__ " + sun_with_face.ToString() + sun_with_face.ToString() + sun_with_face.ToString()));
+				IUserMessage message = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(sun_with_face.ToString() + sun_with_face.ToString() + sun_with_face.ToString() + " __**STORM OVER**__ " + sun_with_face.ToString() + sun_with_face.ToString() + sun_with_face.ToString());
+				if (PurgeCollection.ContainsKey(channelId))
+					PurgeCollection[channelId].Add(message);
 
 				// wait 1 minute
 				await Task.Delay(60 * 1000);
 
 				// delete all messages added to purge collection
-				await ((ITextChannel)_client.GetChannel(channelId)).DeleteMessagesAsync(purgeCollection);
+				if (PurgeCollection.ContainsKey(channelId))
+					await ((ITextChannel)_client.GetChannel(channelId)).DeleteMessagesAsync(PurgeCollection[channelId]);
 			}
 		}
 
-		public async Task StartStormCountdown(ulong channelId)
+		public static async Task StartStormCountdown(ulong channelId)
 		{
 			int actualLevel;
 
@@ -177,15 +189,22 @@ First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute 
 
 			// announce 5 minutes left if still ongoing
 			if (OngoingStormsLevel.TryGetValue(channelId, out actualLevel))
-				purgeCollection.Add(await((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString() + " __**5 MINUTES REMAINING!**__ " + white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString()));
+			{
+				IUserMessage userMessage = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString() + " __**5 MINUTES REMAINING!**__ " + white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString());
+				if (PurgeCollection.ContainsKey(channelId))
+					PurgeCollection[channelId].Add(userMessage);
+			}
 
 			// wait 4 minutes
 			await Task.Delay(240 * 1000);
 
 			// announce 1 minute left if still ongoing
 			if (OngoingStormsLevel.TryGetValue(channelId, out actualLevel))
-				purgeCollection.Add(await((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString() + " __**1 MINUTE REMAINING!**__ " + white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString()));
-
+			{
+				IUserMessage userMessage = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString() + " __**1 MINUTE REMAINING!**__ " + white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString());
+				if (PurgeCollection.ContainsKey(channelId))
+					PurgeCollection[channelId].Add(userMessage);
+			}
 			// wait 1 minute
 			await Task.Delay(60 * 1000);
 
@@ -193,7 +212,7 @@ First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute 
 				await EndStorm(channelId);
 		}
 
-		public async Task StartUsersStealTimeLimitCountdown(ulong channelId, ulong discordId)
+		public static async Task StartUsersStealTimeLimitCountdown(ulong channelId, ulong discordId)
 		{
 			// wait x seconds before removal from waitlist
 			await Task.Delay(stealTimeLimitInSeconds * 1000);
@@ -201,7 +220,7 @@ First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute 
 			OngoingStormsUsersWaitingForStealTimeLimit[channelId].Remove(discordId);
 		}
 
-		public async Task TryToUpdateOngoingStorm(SocketGuild guild, ulong serverId, ulong discordId, ulong channelId, int inputLevel, int? guess = null, double? bet = null)
+		public static async Task TryToUpdateOngoingStorm(SocketGuild guild, ulong serverId, ulong discordId, ulong channelId, int inputLevel, int? guess = null, double? bet = null)
 		{
 			int actualLevel;
 
@@ -218,7 +237,7 @@ First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute 
 						// give user points for level 1
 						AddPointsToPlayersWallet(serverId, discordId, levelOneReward);
 
-						purgeCollection.Add(await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you put up your umbrella first and earned {levelOneReward} points!" + string.Format(@"
+						IUserMessage userMessage1 = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you put up your umbrella first and earned {levelOneReward} points!" + string.Format(@"
 
 __**First to guess the winning number correctly between 1 and 200 earns points!**__
 Use '**{0}guess [number]**' to make a guess with a winning reward of {1} points!
@@ -232,7 +251,10 @@ Use '**{0}resets**' to show how many resets everyone has.
 
 Points earned are multiplied if you guess within 4 guesses!
 When anyone reaches {4} points, a disaster will occur for a random player. Their wallet will be reset to {5} points if they are not insured.
-All wallets are reset to {5} points once someone reaches {6} points.", GetServerPrefix(serverId), levelTwoReward, stealAmount, insuranceCost, disasterMark, resetBalance, resetMark)));
+All wallets are reset to {5} points once someone reaches {6} points.", GetServerPrefix(serverId), levelTwoReward, stealAmount, insuranceCost, disasterMark, resetBalance, resetMark));
+
+						if (PurgeCollection.ContainsKey(channelId))
+							PurgeCollection[channelId].Add(userMessage1);
 
 						// update storm to level 2
 						OngoingStormsLevel[channelId] = 2;
@@ -280,7 +302,9 @@ All wallets are reset to {5} points once someone reaches {6} points.", GetServer
 							if (multiplier > 1)
 								multiplierStr = $" ( **{guessCount} GUESSES:** {reward} points x{multiplier} multiplier )";
 
-							purgeCollection.Add(await((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you guessed correctly and earned {reward * multiplier} points!" + multiplierStr));
+							IUserMessage userMessage2 = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you guessed correctly and earned {reward * multiplier} points!" + multiplierStr);
+							if (PurgeCollection.ContainsKey(channelId))
+								PurgeCollection[channelId].Add(userMessage2);
 
 							// end storm at level 3
 							OngoingStormsLevel[channelId] = 3;
@@ -315,7 +339,9 @@ All wallets are reset to {5} points once someone reaches {6} points.", GetServer
 
 							message += guess + ".";
 
-							purgeCollection.Add(await((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(message));
+							IUserMessage userMessage3 = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(message);
+							if (PurgeCollection.ContainsKey(channelId))
+								PurgeCollection[channelId].Add(userMessage3);
 						}
 					}
 
@@ -325,7 +351,7 @@ All wallets are reset to {5} points once someone reaches {6} points.", GetServer
 			}
 		}
 
-		public async Task TryToSteal(SocketGuild guild, ulong serverId, ulong discordId, ulong channelId)
+		public static async Task TryToSteal(SocketGuild guild, ulong serverId, ulong discordId, ulong channelId)
 		{
 			int actualLevel;
 
@@ -363,7 +389,9 @@ All wallets are reset to {5} points once someone reaches {6} points.", GetServer
 
 							AddPointsToPlayersWallet(serverId, discordId, diff);
 
-							purgeCollection.Add(await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you stole {diff} points from <@!{topPlayer.DiscordID}>!"));
+							IUserMessage message = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you stole {diff} points from <@!{topPlayer.DiscordID}>!");
+							if (PurgeCollection.ContainsKey(channelId))
+								PurgeCollection[channelId].Add(message);
 
 							await CheckForReset(guild, serverId, discordId, channelId);
 							await CheckForDisaster(serverId, discordId, channelId, hadDisasterMark);
@@ -371,11 +399,16 @@ All wallets are reset to {5} points once someone reaches {6} points.", GetServer
 					}
 				}
 				else
-					purgeCollection.Add(await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, please wait {stealTimeLimitInSeconds} seconds before stealing again."));
+				{
+					IUserMessage message = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, please wait {stealTimeLimitInSeconds} seconds before stealing again.");
+					if (PurgeCollection.ContainsKey(channelId))
+						PurgeCollection[channelId].Add(message);
+
+				}
 			}
 		}
 
-		private async Task CheckForReset(SocketGuild guild, ulong serverId, ulong discordId, ulong channelId)
+		private static async Task CheckForReset(SocketGuild guild, ulong serverId, ulong discordId, ulong channelId)
 		{
 			// increment players reset count, set everyones wallets back to base amount, and give appropriate roles
 			if (GetPlayerWallet(serverId, discordId) >= resetMark)
@@ -417,7 +450,7 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 			}
 		}
 
-		private async Task CheckForDisaster(ulong serverId, ulong discordId, ulong channelId, bool hadDisasterMark)
+		private static async Task CheckForDisaster(ulong serverId, ulong discordId, ulong channelId, bool hadDisasterMark)
 		{
 			if (GetPlayerWallet(serverId, discordId) >= resetMark && !hadDisasterMark)
 			{
@@ -587,7 +620,7 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 			}
 		}
 
-		private ulong GetRandomPlayerDiscordID(ulong serverID)
+		private static ulong GetRandomPlayerDiscordID(ulong serverID)
 		{
 			using (StormBotContext _db = new StormBotContext())
 			{
@@ -661,6 +694,23 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 					.SingleOrDefault();
 
 				return playerData.HasInsurance;
+			}
+		}
+
+		public static IMessageChannel GetServerStormsNotificationChannel(ulong serverId)
+		{
+			using (StormBotContext _db = new StormBotContext())
+			{
+				var channelId = _db.Servers
+					.AsQueryable()
+					.Where(s => s.ServerID == serverId)
+					.Select(s => s.StormsNotificationChannelID)
+					.SingleOrDefault();
+
+				if (channelId != 0)
+					return _client.GetChannel(channelId) as IMessageChannel;
+				else
+					return null;
 			}
 		}
 

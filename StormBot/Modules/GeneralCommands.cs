@@ -117,7 +117,7 @@ namespace StormBot.Modules
                     }
                     else
                     {
-                        bool? flag = BaseService.ToggleServerService(Context.Guild.Id, ServerServices.BlackOpsColdWarService);
+                        bool? flag = await BaseService.ToggleServerService(Context.Guild.Id, ServerServices.BlackOpsColdWarService);
 
                         if (flag.HasValue)
                         {
@@ -125,6 +125,13 @@ namespace StormBot.Modules
                                 await ReplyAsync("Black Ops Cold War tracking was enabled.");
                             else
                                 await ReplyAsync("Black Ops Cold War tracking was disabled.");
+                        }
+                        else
+                        {
+                            if (CallOfDutyService.GetServerCallOfDutyNotificationChannel(Context.Guild.Id) == null)
+                                await ReplyAsync("Please configure a channel to use for Call Of Duty.");
+                            if (CallOfDutyService.GetServerBlackOpsColdWarKillsRoleID(Context.Guild.Id) == 0)
+                                await ReplyAsync("Please configure a role to use for Black Ops Cold War kills.");
                         }
                     }
                 }
@@ -149,7 +156,7 @@ namespace StormBot.Modules
                     }
                     else
                     {
-                        bool? flag = BaseService.ToggleServerService(Context.Guild.Id, ServerServices.ModernWarfareService);
+                        bool? flag = await BaseService.ToggleServerService(Context.Guild.Id, ServerServices.ModernWarfareService);
 
                         if (flag.HasValue)
                         {
@@ -157,6 +164,13 @@ namespace StormBot.Modules
                                 await ReplyAsync("Modern Warfare tracking was enabled.");
                             else
                                 await ReplyAsync("Modern Warfare tracking was disabled.");
+                        }
+                        else
+                        {
+                            if (CallOfDutyService.GetServerCallOfDutyNotificationChannel(Context.Guild.Id) == null)
+                                await ReplyAsync("Please configure a channel to use for Call Of Duty.");
+                            if (CallOfDutyService.GetServerModernWarfareKillsRoleID(Context.Guild.Id) == 0)
+                                await ReplyAsync("Please configure a role to use for Modern Warfare kills.");
                         }
                     }
                 }
@@ -181,7 +195,7 @@ namespace StormBot.Modules
                     }
                     else
                     {
-                        bool? flag = BaseService.ToggleServerService(Context.Guild.Id, ServerServices.WarzoneService);
+                        bool? flag = await BaseService.ToggleServerService(Context.Guild.Id, ServerServices.WarzoneService);
 
                         if (flag.HasValue)
                         {
@@ -189,6 +203,15 @@ namespace StormBot.Modules
                                 await ReplyAsync("Warzone tracking was enabled.");
                             else
                                 await ReplyAsync("Warzone tracking was disabled.");
+                        }
+                        else
+                        {
+                            if (CallOfDutyService.GetServerCallOfDutyNotificationChannel(Context.Guild.Id) == null)
+                                await ReplyAsync("Please configure a channel to use for Call Of Duty.");
+                            if (CallOfDutyService.GetServerWarzoneKillsRoleID(Context.Guild.Id) == 0)
+                                await ReplyAsync("Please configure a role to use for Warzone kills.");
+                            if (CallOfDutyService.GetServerWarzoneWinsRoleID(Context.Guild.Id) == 0)
+                                await ReplyAsync("Please configure a role to use for Warzone wins.");
                         }
                     }
                 }
@@ -213,7 +236,7 @@ namespace StormBot.Modules
                     }
                     else
                     {
-                        bool? flag = BaseService.ToggleServerService(Context.Guild.Id, ServerServices.SoundpadService);
+                        bool? flag = await BaseService.ToggleServerService(Context.Guild.Id, ServerServices.SoundpadService);
 
                         if (flag.HasValue)
                         {
@@ -222,6 +245,8 @@ namespace StormBot.Modules
                             else
                                 await ReplyAsync("Soundboard commands were disabled.");
                         }
+                        else
+                            await ReplyAsync("Please configure a channel to use for Soundpad.");
                     }
                 }
             }
@@ -245,7 +270,7 @@ namespace StormBot.Modules
                     }
                     else
                     {
-                        bool? flag = BaseService.ToggleServerService(Context.Guild.Id, ServerServices.StormsService);
+                        bool? flag = await BaseService.ToggleServerService(Context.Guild.Id, ServerServices.StormsService);
 
                         if (flag.HasValue)
                         {
@@ -253,6 +278,15 @@ namespace StormBot.Modules
                                 await ReplyAsync("Storms were enabled.");
                             else
                                 await ReplyAsync("Storms were disabled.");
+                        }
+                        else
+                        {
+                            if (StormsService.GetServerStormsNotificationChannel(Context.Guild.Id) == null)
+                                await ReplyAsync("Please configure a channel to use for Storms.");
+                            if (StormsService.GetStormsMostRecentResetRoleID(Context.Guild.Id) == 0)
+                                await ReplyAsync("Please configure a role to use for the most recent Storm reset.");
+                            if (StormsService.GetStormsMostResetsRoleID(Context.Guild.Id) == 0)
+                                await ReplyAsync("Please configure a role to use for the most Storm resets.");
                         }
                     }
                 }
@@ -267,7 +301,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if ((CallOfDutyService.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && CallOfDutyService.GetServerToggleBlackOpsColdWarTracking(Context)) || (CallOfDutyService.GetServerAllowServerPermissionModernWarfareTracking(Context) && CallOfDutyService.GetServerToggleModernWarfareTracking(Context)) || (CallOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context) && CallOfDutyService.GetServerToggleWarzoneTracking(Context)))
+                if (CallOfDutyService.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) || CallOfDutyService.GetServerAllowServerPermissionModernWarfareTracking(Context) || CallOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
@@ -282,7 +316,7 @@ namespace StormBot.Modules
                             string input = GetSingleArg(args);
                             ulong discordChannelID = GetDiscordID(input, false);
 
-                            bool changed = BaseService.SetServerChannel(Context.Guild.Id, discordChannelID, ServerChannels.CallOfDutyNotificationChannel);
+                            bool changed = await BaseService.SetServerChannel(Context.Guild.Id, discordChannelID, ServerChannels.CallOfDutyNotificationChannel);
 
                             if (changed)
                                 await ReplyAsync($"The Call of Duty notification channel has been set to: <#{discordChannelID}>");
@@ -306,7 +340,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (SoundpadService.GetServerAllowServerPermissionSoundpadCommands(Context) && SoundpadService.GetServerToggleSoundpadCommands(Context))
+                if (SoundpadService.GetServerAllowServerPermissionSoundpadCommands(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
@@ -321,7 +355,7 @@ namespace StormBot.Modules
                             string input = GetSingleArg(args);
                             ulong discordChannelID = GetDiscordID(input, false);
 
-                            bool changed = BaseService.SetServerChannel(Context.Guild.Id, discordChannelID, ServerChannels.SoundboardNotificationChannel);
+                            bool changed = await BaseService.SetServerChannel(Context.Guild.Id, discordChannelID, ServerChannels.SoundboardNotificationChannel);
 
                             if (changed)
                                 await ReplyAsync($"The Soundboard notification channel has been set to: <#{discordChannelID}>");
@@ -345,7 +379,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (StormsService.GetServerAllowServerPermissionStorms(Context) && StormsService.GetServerToggleStorms(Context))
+                if (StormsService.GetServerAllowServerPermissionStorms(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
@@ -360,7 +394,7 @@ namespace StormBot.Modules
                             string input = GetSingleArg(args);
                             ulong discordChannelID = GetDiscordID(input, false);
 
-                            bool changed = BaseService.SetServerChannel(Context.Guild.Id, discordChannelID, ServerChannels.StormsNotificationChannel);
+                            bool changed = await BaseService.SetServerChannel(Context.Guild.Id, discordChannelID, ServerChannels.StormsNotificationChannel);
 
                             if (changed)
                                 await ReplyAsync($"The Storm notification channel has been set to: <#{discordChannelID}>");
@@ -420,7 +454,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (CallOfDutyService.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && CallOfDutyService.GetServerToggleBlackOpsColdWarTracking(Context))
+                if (CallOfDutyService.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
@@ -459,7 +493,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (CallOfDutyService.GetServerAllowServerPermissionModernWarfareTracking(Context) && CallOfDutyService.GetServerToggleModernWarfareTracking(Context))
+                if (CallOfDutyService.GetServerAllowServerPermissionModernWarfareTracking(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
@@ -498,7 +532,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (CallOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context) && CallOfDutyService.GetServerToggleWarzoneTracking(Context))
+                if (CallOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
@@ -537,7 +571,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (CallOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context) && CallOfDutyService.GetServerToggleWarzoneTracking(Context))
+                if (CallOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
@@ -576,7 +610,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (StormsService.GetServerAllowServerPermissionStorms(Context) && StormsService.GetServerToggleStorms(Context))
+                if (StormsService.GetServerAllowServerPermissionStorms(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 
@@ -615,7 +649,7 @@ namespace StormBot.Modules
         {
             if (!Context.IsPrivate)
             {
-                if (StormsService.GetServerAllowServerPermissionStorms(Context) && StormsService.GetServerToggleStorms(Context))
+                if (StormsService.GetServerAllowServerPermissionStorms(Context))
                 {
                     await Context.Channel.TriggerTypingAsync();
 

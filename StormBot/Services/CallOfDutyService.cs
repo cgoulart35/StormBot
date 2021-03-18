@@ -17,7 +17,7 @@ namespace StormBot.Services
 {
 	public class CallOfDutyService : BaseService
     {
-        public readonly DiscordSocketClient _client;
+        public static DiscordSocketClient _client;
 
         public BaseService BlackOpsColdWarComponent { get; set; }
 
@@ -438,7 +438,7 @@ namespace StormBot.Services
             }
         }
 
-        public IMessageChannel GetServerCallOfDutyNotificationChannel(ulong serverId)
+        public static IMessageChannel GetServerCallOfDutyNotificationChannel(ulong serverId)
         {
             using (StormBotContext _db = new StormBotContext())
             {

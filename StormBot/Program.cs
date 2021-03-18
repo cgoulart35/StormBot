@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using System.IO;
-using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Discord;
 using Discord.Commands;
@@ -10,8 +9,6 @@ using Discord.Addons.Interactive;
 using Newtonsoft.Json;
 using StormBot.Services;
 using StormBot.Entities;
-using StormBot.Database;
-using StormBot.Database.Entities;
 
 namespace StormBot
 {
@@ -213,13 +210,13 @@ namespace StormBot
             Environment.Exit(1);
         }
 
-        private Task Log(LogMessage msg)
+        private static Task Log(LogMessage msg)
         {
             Console.WriteLine(msg.ToString());
             return Task.CompletedTask;
         }
 
-        private async Task SetAsReady()
+        private static async Task SetAsReady()
         {
             isReady = true;
         }
@@ -246,7 +243,7 @@ namespace StormBot
             _announcementsService = _services.GetRequiredService<AnnouncementsService>();
         }
 
-        private void PromptUserForStartup(BaseService service)
+        private static void PromptUserForStartup(BaseService service)
         {
             Console.WriteLine($"\nWould you like to start the {service.Name}? Please answer with 'y' or 'n'.");
             string answer = Console.ReadLine();
