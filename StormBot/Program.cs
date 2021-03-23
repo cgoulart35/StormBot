@@ -26,10 +26,6 @@ namespace StormBot
 
         public static ConfigurationSettingsModel configurationSettingsModel;
 
-        private static readonly string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        private static readonly string StormBotAppDataPath = Path.Combine(appDataPath, @"StormBot\");
-        private static readonly string StormBotConfigSettingsPath = Path.Combine(StormBotAppDataPath, @"ConfigurationSettings.json");
-
         private static bool isReady = false;
 
 		public static void Main(string[] args)
@@ -124,16 +120,8 @@ namespace StormBot
 
 		private static void ConfigureVariables()
         {
-            // create app data directory if it doesn't exist
-            if (!Directory.Exists(StormBotAppDataPath))
-            {
-                Console.WriteLine("The project folder %AppData%/Roaming/StormBot does not exist.");
-                Console.WriteLine("Creating the project folder %AppData%/Roaming/StormBot...");
-                Directory.CreateDirectory(StormBotAppDataPath);
-				CreateNewConfigFile();
-            }
             // create configuration file if it doesn't exist
-            else if (!File.Exists(StormBotConfigSettingsPath))
+            if (!File.Exists(AppContext.BaseDirectory + "ConfigurationSettings.json"))
             {
                 Console.WriteLine("The file ConfigurationSettings.json does not exist.");
 				CreateNewConfigFile();
@@ -144,7 +132,7 @@ namespace StormBot
                 bool createNewFile = true;
                 try
                 {
-                    configurationSettingsModel = JsonConvert.DeserializeObject<ConfigurationSettingsModel>(File.ReadAllText(StormBotConfigSettingsPath));
+                    configurationSettingsModel = JsonConvert.DeserializeObject<ConfigurationSettingsModel>(File.ReadAllText(AppContext.BaseDirectory + "ConfigurationSettings.json"));
 
                     if (configurationSettingsModel.StormBotSoundpadApiHostname == null && configurationSettingsModel.RemoteBootMode)
                     {
@@ -203,7 +191,7 @@ namespace StormBot
 
             Console.WriteLine("Creating ConfigurationSettings.json file...");
             string json = JsonConvert.SerializeObject(configurationSettingsModel);
-            File.WriteAllText(StormBotConfigSettingsPath, json);
+            File.WriteAllText(AppContext.BaseDirectory + "ConfigurationSettings.json", json);
 
             Console.WriteLine("Please fill out the configuration file completely, then re-run the application.");
             System.Threading.Thread.Sleep(10000);
