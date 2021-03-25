@@ -28,6 +28,9 @@ namespace StormBot.Database.Entities
 
 		public bool AllowServerPermissionStorms { get; set; } // dev use only (access in database)
 		public bool ToggleStorms { get; set; }
+
+		public bool AllowServerPermissionMarket { get; set; } // dev use only (access in database)
+		public bool ToggleMarket { get; set; }
 		#endregion
 
 		#region CHANNELS

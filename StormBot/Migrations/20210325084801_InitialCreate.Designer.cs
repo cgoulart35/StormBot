@@ -9,14 +9,14 @@ using StormBot.Database;
 namespace StormBot.Migrations
 {
     [DbContext(typeof(StormBotContext))]
-    [Migration("20210218035819_InitialCreate")]
+    [Migration("20210325084801_InitialCreate")]
     partial class InitialCreate
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "5.0.3");
+                .HasAnnotation("ProductVersion", "5.0.4");
 
             modelBuilder.Entity("StormBot.Database.Entities.CallOfDutyPlayerDataEntity", b =>
                 {
@@ -58,6 +58,20 @@ namespace StormBot.Migrations
                     b.ToTable("CallOfDutyPlayerDataEntity");
                 });
 
+            modelBuilder.Entity("StormBot.Database.Entities.MarketPlayerDataEntity", b =>
+                {
+                    b.Property<ulong>("DiscordID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("MarketItemsJSON")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("DiscordID");
+
+                    b.ToTable("MarketPlayerDataEntity");
+                });
+
             modelBuilder.Entity("StormBot.Database.Entities.ServersEntity", b =>
                 {
                     b.Property<ulong>("ServerID")
@@ -68,6 +82,9 @@ namespace StormBot.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("AllowServerPermissionBlackOpsColdWarTracking")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AllowServerPermissionMarket")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("AllowServerPermissionModernWarfareTracking")
@@ -100,10 +117,19 @@ namespace StormBot.Migrations
                     b.Property<ulong>("SoundboardNotificationChannelID")
                         .HasColumnType("INTEGER");
 
+                    b.Property<ulong>("StormsMostRecentResetRoleID")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<ulong>("StormsMostResetsRoleID")
+                        .HasColumnType("INTEGER");
+
                     b.Property<ulong>("StormsNotificationChannelID")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("ToggleBlackOpsColdWarTracking")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("ToggleMarket")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("ToggleModernWarfareTracking")
@@ -135,6 +161,12 @@ namespace StormBot.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<ulong>("DiscordID")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("HasInsurance")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ResetCount")
                         .HasColumnType("INTEGER");
 
                     b.Property<double>("Wallet")

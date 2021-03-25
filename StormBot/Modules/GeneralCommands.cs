@@ -15,12 +15,14 @@ namespace StormBot.Modules
 	public class GeneralCommands : BaseCommand
     {
         private readonly StormsService _stormsService;
+        private readonly MarketService _marketService;
         private readonly SoundpadService _soundpadService;
         private readonly CallOfDutyService _callOfDutyService;
 
         public GeneralCommands(IServiceProvider services)
         {
             _stormsService = services.GetRequiredService<StormsService>();
+            _marketService = services.GetRequiredService<MarketService>();
             _soundpadService = services.GetRequiredService<SoundpadService>();
             _callOfDutyService = services.GetRequiredService<CallOfDutyService>();
         }
@@ -52,16 +54,17 @@ namespace StormBot.Modules
 **Warzone Tracking Feature:** {3}
 **Soundboard Feature:** {4}
 **Storms Feature:** {5}
-**Call of Duty notification channel:** <#{6}>
-**Soundboard notification channel:** <#{7}>
-**Storms notification channel:** <#{8}>
-**Admin role:** <@&{9}>
-**Black Ops Cold War kills role:** <@&{10}>
-**Modern Warfare kills role:** <@&{11}>
-**Warzone wins role:** <@&{12}>
-**Warzone kills role:** <@&{13}>
-**Most Storm resets role:** <@&{14}>
-**Latest Storm reset role:** <@&{15}>", serverData.PrefixUsed, serverData.ToggleBlackOpsColdWarTracking ? "On" : "Off", serverData.ToggleModernWarfareTracking ? "On" : "Off", serverData.ToggleWarzoneTracking ? "On" : "Off", serverData.ToggleSoundpadCommands ? "On" : "Off", serverData.ToggleStorms ? "On" : "Off", serverData.CallOfDutyNotificationChannelID, serverData.SoundboardNotificationChannelID, serverData.StormsNotificationChannelID, serverData.AdminRoleID, serverData.BlackOpsColdWarKillsRoleID, serverData.ModernWarfareKillsRoleID, serverData.WarzoneWinsRoleID, serverData.WarzoneKillsRoleID, serverData.StormsMostResetsRoleID, serverData.StormsMostRecentResetRoleID);
+**Market Feature:** {6}
+**Call of Duty notification channel:** <#{7}>
+**Soundboard notification channel:** <#{8}>
+**Storms notification channel:** <#{9}>
+**Admin role:** <@&{10}>
+**Black Ops Cold War kills role:** <@&{11}>
+**Modern Warfare kills role:** <@&{12}>
+**Warzone wins role:** <@&{13}>
+**Warzone kills role:** <@&{14}>
+**Most Storm resets role:** <@&{15}>
+**Latest Storm reset role:** <@&{16}>", serverData.PrefixUsed, serverData.ToggleBlackOpsColdWarTracking ? "On" : "Off", serverData.ToggleModernWarfareTracking ? "On" : "Off", serverData.ToggleWarzoneTracking ? "On" : "Off", serverData.ToggleSoundpadCommands ? "On" : "Off", serverData.ToggleStorms ? "On" : "Off", serverData.ToggleMarket ? "On" : "Off", serverData.CallOfDutyNotificationChannelID, serverData.SoundboardNotificationChannelID, serverData.StormsNotificationChannelID, serverData.AdminRoleID, serverData.BlackOpsColdWarKillsRoleID, serverData.ModernWarfareKillsRoleID, serverData.WarzoneWinsRoleID, serverData.WarzoneKillsRoleID, serverData.StormsMostResetsRoleID, serverData.StormsMostRecentResetRoleID);
 
                     await ReplyAsync(message);
                 }
@@ -287,6 +290,43 @@ namespace StormBot.Modules
                                 await ReplyAsync("Please configure a role to use for the most recent Storm reset.");
                             if (StormsService.GetStormsMostResetsRoleID(Context.Guild.Id) == 0)
                                 await ReplyAsync("Please configure a role to use for the most Storm resets.");
+                        }
+                    }
+                }
+            }
+            else
+                await ReplyAsync("This command can only be executed in servers.");
+        }
+
+        // admin role command
+        [Command("config toggle market", RunMode = RunMode.Async)]
+        public async Task ConfigToggleMarketCommand()
+        {
+            if (!Context.IsPrivate)
+            {
+                if (MarketService.GetServerAllowServerPermissionMarket(Context))
+                {
+                    await Context.Channel.TriggerTypingAsync();
+
+                    if (!((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(BaseService.GetServerAdminRole(Context.Guild.Id)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator))
+                    {
+                        await ReplyAsync($"Sorry <@!{Context.User.Id}>, only StormBot Administrators can run this command.");
+                    }
+                    else
+                    {
+                        bool? flag = await BaseService.ToggleServerService(Context.Guild.Id, ServerServices.MarketService);
+
+                        if (flag.HasValue)
+                        {
+                            if (flag.Value)
+                                await ReplyAsync("Market was enabled.");
+                            else
+                                await ReplyAsync("Market was disabled.");
+                        }
+                        else
+                        {
+                            if (StormsService.GetServerToggleStorms(Context) == false)
+                                await ReplyAsync("Please enable Storms.");
                         }
                     }
                 }
@@ -704,6 +744,7 @@ namespace StormBot.Modules
                 output = ValidateOutputLimit(output, HelpConfigCommands(false, prefix));
                 output = ValidateOutputLimit(output, HelpConfigCommands(true, prefix));
                 output = ValidateOutputLimit(output, await HelpStormCommands(notAdmin, prefix));
+                output = ValidateOutputLimit(output, await HelpMarketCommands(notAdmin, prefix));
                 output = ValidateOutputLimit(output, await HelpSoundboardCommands(notAdmin, prefix));
                 output = ValidateOutputLimit(output, await HelpBlackOpsColdWarCommands(notAdmin, prefix));
                 output = ValidateOutputLimit(output, await HelpModernWarfareCommands(notAdmin, prefix));
@@ -725,6 +766,10 @@ namespace StormBot.Modules
             else if (subject.ToLower() == "storm" || subject.ToLower() == "storms")
             {
                 output = ValidateOutputLimit(output, await HelpStormCommands(notAdmin, prefix));
+            }
+            else if (subject.ToLower() == "market")
+            {
+                output = ValidateOutputLimit(output, await HelpMarketCommands(notAdmin, prefix));
             }
             else if (subject.ToLower() == "sb" || subject.ToLower() == "sp" || subject.ToLower() == "soundboard" || subject.ToLower() == "soundpad")
             {
@@ -778,6 +823,13 @@ namespace StormBot.Modules
                 if (DisableIfServiceNotRunning(_stormsService, "subjects (storms subject)"))
                 {
                     output += "Storms\n";
+                }
+            }
+            if (MarketService.GetServerAllowServerPermissionMarket(Context) && MarketService.GetServerToggleMarket(Context))
+            {
+                if (DisableIfServiceNotRunning(_marketService, "subjects (market subject)"))
+                {
+                    output += "Market\n";
                 }
             }
             if (SoundpadService.GetServerAllowServerPermissionSoundpadCommands(Context) && SoundpadService.GetServerToggleSoundpadCommands(Context))
@@ -840,7 +892,8 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
 '**{0}config toggle wz**' to enable/disable Warzone commands and stat tracking on the server __if you are a StormBot administrator__.
 Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking for Warzone participants will resume after the next weekly data fetch (Sundays, 1:00 AM EST).
 '**{0}config toggle sb**' to enable/disable Soundpad commands on the server __if you are a StormBot administrator__.
-'**{0}config toggle storms**' to enable/disable Storms and reactive commands on the server __if you are a StormBot administrator__.", prefix);
+'**{0}config toggle storms**' to enable/disable Storms and reactive commands on the server __if you are a StormBot administrator__.
+'**{0}config toggle market**' to enable/disable Market commands on the server __if you are a StormBot administrator__.", prefix);
 			}
 			else
 			{
@@ -892,6 +945,35 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
 The bot will assign the{5} role for the most recent reset to the player who causes the next reset by reaching {6} points.
 The bot will also assign the{7} role for the most total resets to the players in the lead.
 Wallets are reset to {8} points when a disaster happens to a them once someone reaches {9} points, or if a reset occurs.", prefix, StormsService.levelOneReward, StormsService.levelTwoReward, StormsService.stealAmount, StormsService.insuranceCost, mostRecentRoleStr, StormsService.resetMark, mostResetsRoleStr, StormsService.resetBalance, StormsService.disasterMark);
+                }
+                else
+                    return null;
+            }
+            else
+                return null;
+        }
+
+        private async Task<string> HelpMarketCommands(bool notAdmin, string prefix)
+        {
+            if (MarketService.GetServerAllowServerPermissionMarket(Context) && MarketService.GetServerToggleMarket(Context))
+            {
+                if (DisableIfServiceNotRunning(_marketService, "help market"))
+                {
+                    if (!notAdmin)
+                        await Context.Channel.TriggerTypingAsync();
+
+                    return string.Format("\n\n" + @"__**Help: Market Commands**__
+
+'**{0}craft [imageURL] [price] [item name]**' to craft a market item in your inventory. You will be charged 20% of the sale price for manufacturing.
+'**{0}dismantle [item name]**' to destroy an item for points. Only items that have been sold can be dismantled.
+'**{0}buy [user] [item name]**' to request to buy a user's item for its listed price.
+'**{0}sell [user] [item name]**' to sell your item to the requesting user at the listed price.
+'**{0}rename [item name]**' to rename your item to a different name. The bot will then ask what you would like to change the item's name to.
+'**{0}item [item name]**' to show off your item.
+'**{0}items**' to list out your items.
+'**{0}items [user]**' to list out a user's items.
+
+Market items can't be sold for higher than the reset mark ({1} points). You cannot possess more than one item with the same name. You cannot sell or buy items to or from yourself.", prefix, StormsService.resetMark);
                 }
                 else
                     return null;

@@ -12,6 +12,8 @@ namespace StormBot.Database
 
         public virtual DbSet<StormPlayerDataEntity> StormPlayerData { get; set; }
 
+        public virtual DbSet<MarketPlayerDataEntity> MarketPlayerData { get; set; }
+
         public StormBotContext()
         {
             Database.EnsureCreated();

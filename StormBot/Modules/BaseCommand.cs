@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using StormBot.Services;
@@ -55,6 +56,22 @@ namespace StormBot.Modules
             }
 
             return discordID;
+        }
+
+        public static bool ImageExistsAtURL(string url)
+        {
+            HttpWebRequest request = (HttpWebRequest) WebRequest.Create(url);
+            request.Method = "HEAD";
+
+            try
+            {
+                request.GetResponse();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public static bool DisableIfServiceNotRunning(BaseService service, string command = null)

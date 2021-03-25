@@ -68,7 +68,7 @@ namespace StormBot.Services
 			white_sun_rain_cloud = new Emoji("🌦️");
 			sun_with_face = new Emoji("🌞");
 			rotating_light = new Emoji("🚨");
-	}
+		}
 
 		public override async Task StartService()
 		{
@@ -529,7 +529,7 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 			}
 		}
 
-		private static double AddPointsToPlayersWallet(ulong serverID, ulong discordID, double pointsToAdd)
+		public static double AddPointsToPlayersWallet(ulong serverID, ulong discordID, double pointsToAdd)
 		{
 			using (StormBotContext _db = new StormBotContext())
 			{
@@ -545,7 +545,7 @@ Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have b
 			}
 		}
 
-		private static double SubtractPointsFromPlayersWallet(ulong serverID, ulong discordID, double pointsToSubtract)
+		public static double SubtractPointsFromPlayersWallet(ulong serverID, ulong discordID, double pointsToSubtract)
 		{
 			using (StormBotContext _db = new StormBotContext())
 			{

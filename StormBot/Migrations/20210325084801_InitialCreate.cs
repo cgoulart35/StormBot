@@ -29,6 +29,19 @@ namespace StormBot.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "MarketPlayerDataEntity",
+                columns: table => new
+                {
+                    DiscordID = table.Column<ulong>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    MarketItemsJSON = table.Column<string>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MarketPlayerDataEntity", x => x.DiscordID);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ServersEntity",
                 columns: table => new
                 {
@@ -46,6 +59,8 @@ namespace StormBot.Migrations
                     ToggleSoundpadCommands = table.Column<bool>(type: "INTEGER", nullable: false),
                     AllowServerPermissionStorms = table.Column<bool>(type: "INTEGER", nullable: false),
                     ToggleStorms = table.Column<bool>(type: "INTEGER", nullable: false),
+                    AllowServerPermissionMarket = table.Column<bool>(type: "INTEGER", nullable: false),
+                    ToggleMarket = table.Column<bool>(type: "INTEGER", nullable: false),
                     CallOfDutyNotificationChannelID = table.Column<ulong>(type: "INTEGER", nullable: false),
                     SoundboardNotificationChannelID = table.Column<ulong>(type: "INTEGER", nullable: false),
                     StormsNotificationChannelID = table.Column<ulong>(type: "INTEGER", nullable: false),
@@ -53,7 +68,9 @@ namespace StormBot.Migrations
                     WarzoneWinsRoleID = table.Column<ulong>(type: "INTEGER", nullable: false),
                     WarzoneKillsRoleID = table.Column<ulong>(type: "INTEGER", nullable: false),
                     ModernWarfareKillsRoleID = table.Column<ulong>(type: "INTEGER", nullable: false),
-                    BlackOpsColdWarKillsRoleID = table.Column<ulong>(type: "INTEGER", nullable: false)
+                    BlackOpsColdWarKillsRoleID = table.Column<ulong>(type: "INTEGER", nullable: false),
+                    StormsMostResetsRoleID = table.Column<ulong>(type: "INTEGER", nullable: false),
+                    StormsMostRecentResetRoleID = table.Column<ulong>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -66,7 +83,9 @@ namespace StormBot.Migrations
                 {
                     ServerID = table.Column<ulong>(type: "INTEGER", nullable: false),
                     DiscordID = table.Column<ulong>(type: "INTEGER", nullable: false),
-                    Wallet = table.Column<double>(type: "REAL", nullable: false)
+                    Wallet = table.Column<double>(type: "REAL", nullable: false),
+                    ResetCount = table.Column<int>(type: "INTEGER", nullable: false),
+                    HasInsurance = table.Column<bool>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -78,6 +97,9 @@ namespace StormBot.Migrations
         {
             migrationBuilder.DropTable(
                 name: "CallOfDutyPlayerDataEntity");
+
+            migrationBuilder.DropTable(
+                name: "MarketPlayerDataEntity");
 
             migrationBuilder.DropTable(
                 name: "ServersEntity");

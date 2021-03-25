@@ -458,10 +458,10 @@ namespace StormBot.Services
 						}
 						else
 						{
-							serverData.ToggleStorms = !flag;
+							serverData.ToggleSoundpadCommands = !flag;
 							_db.SaveChanges();
 
-							return serverData.ToggleStorms;
+							return serverData.ToggleSoundpadCommands;
 						}
 
 					case ServerServices.StormsService:
@@ -502,6 +502,30 @@ namespace StormBot.Services
 							_db.SaveChanges();
 
 							return serverData.ToggleStorms;
+						}
+
+					case ServerServices.MarketService:
+
+						flag = serverData.ToggleMarket;
+
+						if (!flag)
+						{
+							if (serverData.ToggleStorms == true)
+							{
+								serverData.ToggleMarket = !flag;
+								_db.SaveChanges();
+
+								return serverData.ToggleMarket;
+							}
+							else
+								return null;
+						}
+						else
+						{
+							serverData.ToggleMarket = !flag;
+							_db.SaveChanges();
+
+							return serverData.ToggleMarket;
 						}
 
 					default:

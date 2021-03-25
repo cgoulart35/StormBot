@@ -20,6 +20,7 @@ namespace StormBot
         private CommandHandler _commandHandler;
         private SoundpadService _soundpadService;
         private StormsService _stormsService;
+        private MarketService _marketService;
         private CallOfDutyService _callOfDutyService;
         private AnnouncementsService _announcementsService;
         private IServiceProvider _services;
@@ -67,6 +68,12 @@ namespace StormBot
                 // ask the user if they want to start the storms service
                 PromptUserForStartup(_stormsService);
 
+                // ask the user if they want to start the market service if the service is enabled
+                if (_stormsService.DoStart == true)
+                {
+                    PromptUserForStartup(_marketService);
+                }                
+
                 // ask the user if they want to start the soundpad service
                 PromptUserForStartup(_soundpadService);
 
@@ -85,6 +92,7 @@ namespace StormBot
             else
             {
                 _stormsService.DoStart = true;
+                _marketService.DoStart = true;
                 _soundpadService.DoStart = true;
                 _callOfDutyService.DoStart = true;
                 _callOfDutyService.ModernWarfareComponent.DoStart = true;
@@ -97,6 +105,7 @@ namespace StormBot
 
             // only services that were selected will be started
             await _stormsService.StartService();
+            await _marketService.StartService();
             _soundpadService.StartService();
             await _callOfDutyService.StartService();
 
@@ -218,6 +227,7 @@ namespace StormBot
                 .AddSingleton<CommandHandler>()
                 .AddSingleton<SoundpadService>()
                 .AddSingleton<StormsService>()
+                .AddSingleton<MarketService>()
                 .AddSingleton<CallOfDutyService>()
                 .AddSingleton<AnnouncementsService>()
                 .BuildServiceProvider();
@@ -227,6 +237,7 @@ namespace StormBot
             _commandHandler = _services.GetRequiredService<CommandHandler>();
             _soundpadService = _services.GetRequiredService<SoundpadService>();
             _stormsService = _services.GetRequiredService<StormsService>();
+            _marketService = _services.GetRequiredService<MarketService>();
             _callOfDutyService = _services.GetRequiredService<CallOfDutyService>();
             _announcementsService = _services.GetRequiredService<AnnouncementsService>();
         }
@@ -258,6 +269,7 @@ namespace StormBot
 
             _soundpadService.StopService();
             _stormsService.StopService();
+            _marketService.StopService();
             _callOfDutyService.StopService();
             _announcementsService.StopService();
 

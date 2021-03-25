@@ -1,8 +1,10 @@
-# StormBot 2.3
+# StormBot 2.4
 
 StormBot is a Discord server bot that has functionality for competitive Storm mini-games, remote and automated Soundpad control (the soundboard program available on Steam), and Call of Duty statistic tracking (Black Ops Cold War, Modern Warfare, and Warzone).
 
-The latest version 2.3 added resets and disasters to the Storms mini-game, and also added the ability to buy insurance and steal points from the top player.
+The latest version 2.4 added Market, a service that allows users to craft, buy, sell, dismantle, and show off items using their Storm points.
+
+Version 2.3 added resets and disasters to the Storms mini-game, and also added the ability to buy insurance and steal points from the top player.
 
 Version 2.2 enabled the Soundpad service on Remote Boot Mode. The StormBot Soundpad API (https://github.com/cgoulart35/StormBotSoundpadApi) can be hosted on the same machine where Soundpad is installed. This application will communicate with StormBot via web requests for remote use of the soundboard (use case; when hosting the bot 24/7 on a Raspberry Pi).
 
@@ -40,6 +42,8 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
 - **'.config toggle sb'** to enable/disable Soundpad commands on the server if you are a StormBot administrator.
 
 - **'.config toggle storms'** to enable/disable Storms and reactive commands on the server if you are a StormBot administrator.
+
+- **'.config toggle market'** to enable/disable Market commands on the server if you are a StormBot administrator.
 
 - **'.config channel cod [channel]'** to set the server's channel for Call of Duty notifications if you are a StormBot administrator.
 
@@ -84,6 +88,26 @@ The bot will assign the @__ role for the most recent reset to the player who cau
 The bot will also assign the @__ role for the most total resets to the players in the lead.
 
 Wallets are reset to x6 points when a disaster happens to a them once someone reaches x7 points, or if a reset occurs.
+
+### Help: Market Commands
+
+- **'.craft [imageURL] [price] [item name]'** to craft a market item in your inventory. You will be charged 20% of the sale price for manufacturing.
+
+- **'.dismantle [item name]'** to destroy an item for points. Only items that have been sold can be dismantled.
+
+- **'.buy [user] [item name]'** to request to buy a user's item for its listed price.
+
+- **'.sell [user] [item name]'** to sell your item to the requesting user at the listed price.
+
+- **'.rename [item name]'** to rename your item to a different name. The bot will then ask what you would like to change the item's name to.
+
+- **'.item [item name]'** to show off your item.
+
+- **'.items'** to list out your items.
+
+- **'.items [user]'** to list out a user's items.
+
+Market items can't be sold for higher than the reset mark (x5 points). You cannot possess more than one item with the same name. You cannot sell or buy items to or from yourself.
 
 ### Help: Soundboard Commands
 
