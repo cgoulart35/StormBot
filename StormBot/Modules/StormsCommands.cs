@@ -192,7 +192,7 @@ namespace StormBot.Modules
                 await ReplyAsync("This command can only be executed in servers.");
         }
 
-        [Command("buy insurance", RunMode = RunMode.Async)]
+        [Command("insurance", RunMode = RunMode.Async)]
         public async Task BuyInsuranceCommand()
         {
             if (!Context.IsPrivate)
@@ -203,7 +203,7 @@ namespace StormBot.Modules
 
                 if (StormsService.GetServerAllowServerPermissionStorms(Context) && StormsService.GetServerToggleStorms(Context))
                 {
-                    if (DisableIfServiceNotRunning(_service, "buy insurance"))
+                    if (DisableIfServiceNotRunning(_service, "insurance"))
                     {
                         ulong serverId = Context.Guild.Id;
                         ulong discordId = Context.User.Id;
@@ -255,13 +255,14 @@ namespace StormBot.Modules
 
                         StormsService.AddPlayerToDbTableIfNotExist(serverId, discordId);
 
-                        string insuranceStr = "";
-                        if (StormsService.GetPlayerInsurance(serverId, discordId))
-                            insuranceStr = "**INSURED**";
-                        else
-                            insuranceStr = "**UNINSURED**";
+                        EmbedBuilder builder = new EmbedBuilder();
+                        builder.WithColor(Color.Green);
+                        builder.WithTitle($"**{Context.Guild.GetUser(discordId).Username}'s Wallet**");
+                        builder.WithThumbnailUrl(Context.User.GetAvatarUrl());
+                        builder.AddField("Wallet", $"`{StormsService.GetPlayerWallet(serverId, discordId)}`", false);
+                        builder.AddField("Insurance", StormsService.GetPlayerInsurance(serverId, discordId) ? "`INSURED`" : "`UNINSURED`", false);
 
-                        IUserMessage message = await ReplyAsync($"<@!{discordId}>, you have {StormsService.GetPlayerWallet(serverId, discordId)} points in your wallet. " + insuranceStr);
+                        IUserMessage message = await ReplyAsync("", false, builder.Build());
                         if (StormsService.PurgeCollection.ContainsKey(channelId))
                             StormsService.PurgeCollection[channelId].Add(message);
                     }
@@ -284,55 +285,47 @@ namespace StormBot.Modules
                 {
                     if (DisableIfServiceNotRunning(_service, "wallets"))
                     {
-                        List<string> output = new List<string>();
-                        output.Add("```md\nSTORMS WALLET LEADERBOARD\n=========================```");
-
                         List<StormPlayerDataEntity> playerData = StormsService.GetAllStormPlayerDataEntities(Context.Guild.Id);
 
-                        // sort list by amounts in players wallets
-                        playerData = playerData.OrderByDescending(player => player.Wallet).ToList();
+                        EmbedBuilder builder = new EmbedBuilder();
+                        builder.WithColor(Color.Green);
+                        builder.WithTitle("**Storms Wallet Leaderboard**");
+                        builder.WithThumbnailUrl(Context.Guild.IconUrl);
 
                         int playerCount = 1;
                         bool atleastOnePlayer = false;
-                        foreach (StormPlayerDataEntity player in playerData)
+                        string playersStr = "";
+                        string pointsStr = "";
+                        string insuranceStr = "";
+                        foreach (StormPlayerDataEntity player in playerData.OrderByDescending(player => player.Wallet))
                         {
                             if (player.Wallet > 0)
                             {
                                 atleastOnePlayer = true;
 
-                                string userStr = "";
-                                if (player.DiscordID != Context.User.Id)
-                                {
-                                    SocketGuildUser user = Context.Guild.GetUser(player.DiscordID);
-                                    userStr = user.Username;
-                                }
-                                else
-                                {
-                                    userStr = $"<@!{player.DiscordID}>";
-                                }
+                                playersStr += $"{playerCount}.) <@!{player.DiscordID}>\n";
+                                pointsStr += $"`{player.Wallet}`\n";
+                                insuranceStr += player.HasInsurance ? "`INSURED`\n" : "`UNINSURED`\n";
 
-                                string insuranceStr = "";
-                                if (player.HasInsurance)
-                                    insuranceStr = "**INSURED**";
-                                else
-                                    insuranceStr = "**UNINSURED**";
-
-                                output = ValidateOutputLimit(output, string.Format(@"**{0}.)** {1} has {2} points in their wallet. {3}", playerCount, userStr, player.Wallet, insuranceStr) + "\n");
                                 playerCount++;
                             }
                         }
 
                         if (!atleastOnePlayer)
-                            output = ValidateOutputLimit(output, "\n" + "No active players.");
-
-                        if (output[0] != "")
                         {
-                            foreach (string chunk in output)
-                            {
-                                IUserMessage message = await ReplyAsync(chunk);
-                                if (StormsService.PurgeCollection.ContainsKey(channelId))
-                                    StormsService.PurgeCollection[channelId].Add(message);
-                            }
+                            IUserMessage message = await ReplyAsync("No active players.");
+                            if (StormsService.PurgeCollection.ContainsKey(channelId))
+                                StormsService.PurgeCollection[channelId].Add(message);
+                        }
+                        else
+                        {
+                            builder.AddField("Player", playersStr, true);
+                            builder.AddField("Wallet", pointsStr, true);
+                            builder.AddField("Insurance", insuranceStr, true);
+
+                            IUserMessage message = await ReplyAsync("", false, builder.Build());
+                            if (StormsService.PurgeCollection.ContainsKey(channelId))
+                                StormsService.PurgeCollection[channelId].Add(message);
                         }
                     }
                 }
@@ -354,49 +347,44 @@ namespace StormBot.Modules
                 {
                     if (DisableIfServiceNotRunning(_service, "resets"))
                     {
-                        List<string> output = new List<string>();
-                        output.Add("```md\nSTORMS RESET LEADERBOARD\n========================```");
-
                         List<StormPlayerDataEntity> playerData = StormsService.GetAllStormPlayerDataEntities(Context.Guild.Id);
 
-                        // sort list by amounts in players wallets
-                        playerData = playerData.OrderByDescending(player => player.ResetCount).ToList();
+                        EmbedBuilder builder = new EmbedBuilder();
+                        builder.WithColor(Color.Green);
+                        builder.WithTitle("**Storms Reset Leaderboard**");
+                        builder.WithThumbnailUrl(Context.Guild.IconUrl);
 
                         int playerCount = 1;
                         bool atleastOnePlayer = false;
-                        foreach (StormPlayerDataEntity player in playerData)
+                        string playersStr = "";
+                        string resetsStr = "";
+                        foreach (StormPlayerDataEntity player in playerData.OrderByDescending(player => player.ResetCount))
                         {
                             if (player.ResetCount > 0)
                             {
                                 atleastOnePlayer = true;
 
-                                string userStr = "";
-                                if (player.DiscordID != Context.User.Id)
-                                {
-                                    SocketGuildUser user = Context.Guild.GetUser(player.DiscordID);
-                                    userStr = user.Username;
-                                }
-                                else
-                                {
-                                    userStr = $"<@!{player.DiscordID}>";
-                                }
+                                playersStr += $"{playerCount}.) <@!{player.DiscordID}>\n";
+                                resetsStr += $"`{player.ResetCount}`\n";
 
-                                output = ValidateOutputLimit(output, string.Format(@"**{0}.)** {1} has {2} resets.", playerCount, userStr, player.ResetCount) + "\n");
                                 playerCount++;
                             }
                         }
 
                         if (!atleastOnePlayer)
-                            output = ValidateOutputLimit(output, "\n" + "No active players.");
-
-                        if (output[0] != "")
                         {
-                            foreach (string chunk in output)
-                            {
-                                IUserMessage message = await ReplyAsync(chunk);
-                                if (StormsService.PurgeCollection.ContainsKey(channelId))
-                                    StormsService.PurgeCollection[channelId].Add(message);
-                            }
+                            IUserMessage message = await ReplyAsync("No active players.");
+                            if (StormsService.PurgeCollection.ContainsKey(channelId))
+                                StormsService.PurgeCollection[channelId].Add(message);
+                        }
+                        else
+                        {
+                            builder.AddField("Player", playersStr, true);
+                            builder.AddField("Resets", resetsStr, true);
+
+                            IUserMessage message = await ReplyAsync("", false, builder.Build());
+                            if (StormsService.PurgeCollection.ContainsKey(channelId))
+                                StormsService.PurgeCollection[channelId].Add(message);
                         }
                     }
                 }

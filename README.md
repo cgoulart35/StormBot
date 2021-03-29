@@ -75,7 +75,7 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
 
 - **'.steal'** to steal x3 points from the player with the most points. (during Storm only)
 
-- **'.buy insurance'** to buy insurance for x4 points to protect your wallet from disasters.
+- **'.insurance'** to buy insurance for x4 points to protect your wallet from disasters.
 
 - **'.wallet'** to show how many points you have in your wallet.
 

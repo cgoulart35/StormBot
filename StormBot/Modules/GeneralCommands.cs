@@ -42,31 +42,31 @@ namespace StormBot.Modules
                 }
                 else
                 {
-                    string message;
-
                     ServersEntity serverData = BaseService.GetServerEntity(Context.Guild.Id);
+                    
+                    EmbedBuilder builder = new EmbedBuilder();
+                    builder.WithColor(Color.Blue);
+                    builder.WithTitle("**Current Configurations**");
+                    builder.WithThumbnailUrl(Context.Guild.IconUrl);
+                    builder.AddField("Prefix", $"`{serverData.PrefixUsed}`", false);
+                    builder.AddField("Storms Feature", serverData.ToggleStorms ? "`On`" : "`Off`", true);
+                    builder.AddField("Market Feature", serverData.ToggleMarket ? "`On`" : "`Off`", true);
+                    builder.AddField("Soundboard Feature", serverData.ToggleSoundpadCommands ? "`On`" : "`Off`", true);
+                    builder.AddField("Black Ops Cold War Tracking", serverData.ToggleBlackOpsColdWarTracking ? "`On`" : "`Off`", true);
+                    builder.AddField("Modern Warfare Tracking", serverData.ToggleModernWarfareTracking ? "`On`" : "`Off`", true);
+                    builder.AddField("Warzone Tracking", serverData.ToggleWarzoneTracking ? "`On`" : "`Off`", true);
+                    builder.AddField("Storms Channel", $"<#{serverData.StormsNotificationChannelID}>", true);
+                    builder.AddField("Soundboard Channel", $"<#{serverData.SoundboardNotificationChannelID}>", true);
+                    builder.AddField("Call of Duty Channel", $"<#{serverData.CallOfDutyNotificationChannelID}>", true);
+                    builder.AddField("Black Ops Cold War Kills Role", $"<@&{serverData.BlackOpsColdWarKillsRoleID}>", true);
+                    builder.AddField("Modern Warfare Kills Role", $"<@&{serverData.ModernWarfareKillsRoleID}>", true);
+                    builder.AddField("Warzone Kills Role", $"<@&{serverData.WarzoneKillsRoleID}>", true);
+                    builder.AddField("Warzone Wins Role", $"<@&{serverData.WarzoneWinsRoleID}>", true);
+                    builder.AddField("Most Storm Resets Role", $"<@&{serverData.StormsMostResetsRoleID}>", true);
+                    builder.AddField("Latest Storm Reset Role", $"<@&{serverData.StormsMostRecentResetRoleID}>", true);
+                    builder.AddField("Admin Role", $"<@&{serverData.AdminRoleID}>", false);
 
-                    message = string.Format(@"__**Current Configurations:**__
-
-**Prefix:** {0}
-**Black Ops Cold War Tracking Feature:** {1}
-**Modern Warfare Tracking Feature:** {2}
-**Warzone Tracking Feature:** {3}
-**Soundboard Feature:** {4}
-**Storms Feature:** {5}
-**Market Feature:** {6}
-**Call of Duty notification channel:** <#{7}>
-**Soundboard notification channel:** <#{8}>
-**Storms notification channel:** <#{9}>
-**Admin role:** <@&{10}>
-**Black Ops Cold War kills role:** <@&{11}>
-**Modern Warfare kills role:** <@&{12}>
-**Warzone wins role:** <@&{13}>
-**Warzone kills role:** <@&{14}>
-**Most Storm resets role:** <@&{15}>
-**Latest Storm reset role:** <@&{16}>", serverData.PrefixUsed, serverData.ToggleBlackOpsColdWarTracking ? "On" : "Off", serverData.ToggleModernWarfareTracking ? "On" : "Off", serverData.ToggleWarzoneTracking ? "On" : "Off", serverData.ToggleSoundpadCommands ? "On" : "Off", serverData.ToggleStorms ? "On" : "Off", serverData.ToggleMarket ? "On" : "Off", serverData.CallOfDutyNotificationChannelID, serverData.SoundboardNotificationChannelID, serverData.StormsNotificationChannelID, serverData.AdminRoleID, serverData.BlackOpsColdWarKillsRoleID, serverData.ModernWarfareKillsRoleID, serverData.WarzoneWinsRoleID, serverData.WarzoneKillsRoleID, serverData.StormsMostResetsRoleID, serverData.StormsMostRecentResetRoleID);
-
-                    await ReplyAsync(message);
+                    await ReplyAsync("", false, builder.Build());
                 }
             }
             else
@@ -937,7 +937,7 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
 '**{0}guess [number]**' to make a guess with a winning reward of {2} points. (__during Storm only__)
 '**{0}bet [points] [number]**' to make a guess. If you win, you earn the amount of points bet within your wallet. If you lose, you lose those points. (__during Storm only__)
 '**{0}steal**' to steal {3} points from the player with the most points. (__during Storm only__)
-'**{0}buy insurance**' to buy insurance for {4} points to protect your wallet from disasters.
+'**{0}insurance**' to buy insurance for {4} points to protect your wallet from disasters.
 '**{0}wallet**' to show how many points you have in your wallet.
 '**{0}wallets**' to show how many points everyone has.
 '**{0}resets**' to show how many resets everyone has.

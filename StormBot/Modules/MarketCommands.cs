@@ -4,8 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Discord;
 using Discord.Commands;
-using Discord.WebSocket;
 using StormBot.Services;
 using StormBot.Models.MarketModels;
 
@@ -345,7 +345,18 @@ namespace StormBot.Modules
                             MarketItemModel item = MarketService.GetPlayerMarketItem(discordId, itemName);
 
                             if (item != null)
-                                await ReplyAsync($"{item.Name} ({item.Price} points)\n{item.ImageURL}");
+                            {
+                                EmbedBuilder builder = new EmbedBuilder();
+                                builder.WithColor(Color.Gold);
+                                builder.WithTitle($"**{item.Name}**");
+                                builder.WithThumbnailUrl(Context.User.GetAvatarUrl());
+                                builder.WithDescription($"Owned by {Context.User.Username}.");
+                                builder.AddField("Price", $"`{item.Price}`", false);
+                                builder.AddField("Can Dismantle", item.HasBeenSold ? "`Yes`" : "`No`", false);
+                                builder.WithImageUrl(item.ImageURL);                                
+
+                                await ReplyAsync("", false, builder.Build());
+                            }
                             else
                                 await ReplyAsync($"<@!{discordId}>, no item exists.");
                         }
@@ -381,34 +392,30 @@ namespace StormBot.Modules
                             MarketService.AddPlayerToDbTableIfNotExist(discordId);
                             MarketItemsModel marketItemsModel = MarketService.GetAllPlayerMarketItems(discordId);
 
-                            if (marketItemsModel != null && marketItemsModel.Items != null)
+                            if (marketItemsModel != null && marketItemsModel.Items != null && marketItemsModel.Items.Count > 0)
                             {
-                                List<string> output = new List<string>();
-                                output.Add("");
+                                EmbedBuilder builder = new EmbedBuilder();
+                                builder.WithColor(Color.Gold);
+                                builder.WithTitle($"**{Context.Guild.GetUser(discordId).Username}'s Inventory**");
+                                builder.WithThumbnailUrl(Context.Guild.GetUser(discordId).GetAvatarUrl());
 
+                                string itemsStr = "";
+                                string pricesStr = "";
                                 foreach (MarketItemModel item in marketItemsModel.Items.OrderByDescending(item => item.Price))
                                 {
-                                    output = ValidateOutputLimit(output, item.Name + " (" + item.Price + " points)\n");
+                                    itemsStr += $"`{item.Name}`\n";
+                                    pricesStr += $"`{item.Price}`\n";
                                 }
 
-                                if (marketItemsModel.Items.Count == 0)
-                                    output = ValidateOutputLimit(output, "\n" + "No items.");
+                                builder.AddField("Item", itemsStr, true);
+                                builder.AddField("Price", pricesStr, true);
 
-                                if (output[0] != "")
-                                {
-                                    foreach (string chunk in output)
-                                    {
-                                        await ReplyAsync(chunk);
-                                    }
-                                }
+                                await ReplyAsync("", false, builder.Build());
                             }
                             else
                             {
                                 if (discordId != Context.User.Id)
-                                {
-                                    SocketGuildUser user = Context.Guild.GetUser(discordId);
-                                    await ReplyAsync($"{user.Username} has no items.");
-                                }
+                                    await ReplyAsync($"<@!{discordId}> has no items.");
                                 else
                                     await ReplyAsync($"<@!{discordId}>, you have no items.");
                             }

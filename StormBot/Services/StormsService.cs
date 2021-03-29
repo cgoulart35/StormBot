@@ -146,14 +146,18 @@ namespace StormBot.Services
 			List<ulong> UsersWaitingInServerForSteal = new List<ulong>();
 			OngoingStormsUsersWaitingForStealTimeLimit.Add(channelId, UsersWaitingInServerForSteal);
 
-			IUserMessage message = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(cloud_rain.ToString() + thunder_cloud_rain.ToString() + umbrella2.ToString() + " __**STORM INCOMING**__ " + umbrella2.ToString() + thunder_cloud_rain.ToString() + cloud_rain.ToString() + string.Format(@"
+			EmbedBuilder builder = new EmbedBuilder();
+			builder.WithColor(Color.Orange);
+			builder.WithTitle(cloud_rain.ToString() + " " + thunder_cloud_rain.ToString() + " " + umbrella2.ToString() + " **STORM INCOMING** " + umbrella2.ToString() + " " + thunder_cloud_rain.ToString() + " " + cloud_rain.ToString());
+			builder.WithDescription($"First to use '**{GetServerPrefix(serverId)}umbrella**' starts the Storm and earns {levelOneReward} points! 10 minute countdown starting now!");
+			builder.WithThumbnailUrl(_client.GetGuild(serverId).IconUrl);
 
-First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute countdown starting now!", GetServerPrefix(serverId), levelOneReward));
+			IUserMessage message = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync("", false, builder.Build());
 
 			if (PurgeCollection.ContainsKey(channelId))
 				PurgeCollection[channelId].Add(message);
 
-				StartStormCountdown(channelId);
+			StartStormCountdown(channelId);
 		}
 
 		public static async Task EndStorm(ulong channelId)
@@ -165,7 +169,11 @@ First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute 
 
 			if (wasRemoved)
 			{
-				IUserMessage message = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(sun_with_face.ToString() + sun_with_face.ToString() + sun_with_face.ToString() + " __**STORM OVER**__ " + sun_with_face.ToString() + sun_with_face.ToString() + sun_with_face.ToString());
+				EmbedBuilder builder = new EmbedBuilder();
+				builder.WithColor(Color.Orange);
+				builder.WithTitle(sun_with_face.ToString() + " " + sun_with_face.ToString() + " " + sun_with_face.ToString() + " **STORM OVER** " + sun_with_face.ToString() + " " + sun_with_face.ToString() + " " + sun_with_face.ToString());
+
+				IUserMessage message = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync("", false, builder.Build());
 				if (PurgeCollection.ContainsKey(channelId))
 					PurgeCollection[channelId].Add(message);
 
@@ -190,9 +198,13 @@ First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute 
 			// announce 5 minutes left if still ongoing
 			if (OngoingStormsLevel.TryGetValue(channelId, out actualLevel))
 			{
-				IUserMessage userMessage = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString() + " __**5 MINUTES REMAINING!**__ " + white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString());
+				EmbedBuilder builder = new EmbedBuilder();
+				builder.WithColor(Color.Orange);
+				builder.WithTitle(white_sun_rain_cloud.ToString() + " " + white_sun_rain_cloud.ToString() + " " + white_sun_rain_cloud.ToString() + " **5 MINUTES REMAINING!** " + white_sun_rain_cloud.ToString() + " " + white_sun_rain_cloud.ToString() + " " + white_sun_rain_cloud.ToString());
+
+				IUserMessage message = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync("", false, builder.Build());
 				if (PurgeCollection.ContainsKey(channelId))
-					PurgeCollection[channelId].Add(userMessage);
+					PurgeCollection[channelId].Add(message);
 			}
 
 			// wait 4 minutes
@@ -201,9 +213,13 @@ First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute 
 			// announce 1 minute left if still ongoing
 			if (OngoingStormsLevel.TryGetValue(channelId, out actualLevel))
 			{
-				IUserMessage userMessage = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString() + " __**1 MINUTE REMAINING!**__ " + white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString() + white_sun_rain_cloud.ToString());
+				EmbedBuilder builder = new EmbedBuilder();
+				builder.WithColor(Color.Orange);
+				builder.WithTitle(white_sun_rain_cloud.ToString() + " " + white_sun_rain_cloud.ToString() + " " + white_sun_rain_cloud.ToString() + " **1 MINUTE REMAINING!** " + white_sun_rain_cloud.ToString() + " " + white_sun_rain_cloud.ToString() + " " + white_sun_rain_cloud.ToString());
+
+				IUserMessage message = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync("", false, builder.Build());
 				if (PurgeCollection.ContainsKey(channelId))
-					PurgeCollection[channelId].Add(userMessage);
+					PurgeCollection[channelId].Add(message);
 			}
 			// wait 1 minute
 			await Task.Delay(60 * 1000);
@@ -237,22 +253,28 @@ First to use '**{0}umbrella**' starts the Storm and earns {1} points! 10 minute 
 						// give user points for level 1
 						AddPointsToPlayersWallet(serverId, discordId, levelOneReward);
 
-						IUserMessage userMessage1 = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you put up your umbrella first and earned {levelOneReward} points!" + string.Format(@"
+						EmbedBuilder builder = new EmbedBuilder();
+						builder.WithColor(Color.Orange);
+						builder.WithThumbnailUrl(_client.GetGuild(serverId).IconUrl);
+						builder.WithTitle(thunder_cloud_rain.ToString() + " " + thunder_cloud_rain.ToString() + " " + thunder_cloud_rain.ToString() + " **STORM IN PROGRESS** " + thunder_cloud_rain.ToString() + " " + thunder_cloud_rain.ToString() + " " + thunder_cloud_rain.ToString());
+						builder.WithDescription($"<@!{discordId}>, you put up your umbrella first and earned {levelOneReward} points!" + string.Format(@"
 
-__**First to guess the winning number correctly between 1 and 200 earns points!**__
-Use '**{0}guess [number]**' to make a guess with a winning reward of {1} points!
-Use '**{0}bet [points] [number]**' to make a guess. If you win, you earn the amount of points bet within your wallet. If you lose, you lose those points.
-Use '**{0}steal**' to steal {2} points from the player with the most points.
+**First to guess the winning number correctly between 1 and 200 earns points!**
 
-Use '**{0}buy insurance**' to buy insurance for {3} points to protect your wallet from disasters.
-Use '**{0}wallet**' to show how many points you have in your wallet!
-Use '**{0}wallets**' to show how many points everyone has!
-Use '**{0}resets**' to show how many resets everyone has.
+- Use '**{0}guess [number]**' to make a guess with a winning reward of {1} points!
+- Use '**{0}bet [points] [number]**' to make a guess. If you win, you earn the amount of points bet within your wallet. If you lose, you lose those points.
+- Use '**{0}steal**' to steal {2} points from the player with the most points.
 
-Points earned are multiplied if you guess within 4 guesses!
-When anyone reaches {4} points, a disaster will occur for a random player. Their wallet will be reset to {5} points if they are not insured.
-All wallets are reset to {5} points once someone reaches {6} points.", GetServerPrefix(serverId), levelTwoReward, stealAmount, insuranceCost, disasterMark, resetBalance, resetMark));
+- Use '**{0}insurance**' to buy insurance for {3} points to protect your wallet from disasters.
+- Use '**{0}wallet**' to show how many points you have in your wallet!
+- Use '**{0}wallets**' to show how many points everyone has!
+- Use '**{0}resets**' to show how many resets everyone has.
 
+- Points earned are multiplied if you guess within 4 guesses!
+- When anyone reaches {4} points, a disaster will occur for a random player. Their wallet will be reset to {5} points if not insured.
+- All wallets reset to {5} points when anyone reaches {6} points.", GetServerPrefix(serverId), levelTwoReward, stealAmount, insuranceCost, disasterMark, resetBalance, resetMark));
+
+						IUserMessage userMessage1 = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync("", false, builder.Build());
 						if (PurgeCollection.ContainsKey(channelId))
 							PurgeCollection[channelId].Add(userMessage1);
 
@@ -442,17 +464,21 @@ All wallets are reset to {5} points once someone reaches {6} points.", GetServer
 				}
 
 				// display reset message and post role announcements; this message is rare and therefore is not purged with other messages
-				await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(rotating_light.ToString() + rotating_light.ToString() + rotating_light.ToString() + " __**RESET TRIGGERED**__ " + rotating_light.ToString() + rotating_light.ToString() + rotating_light.ToString() + string.Format(@"
-
-Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have been given the <@&{2}> role. Everyone now has {3} points in their wallet and no insurance.
+				EmbedBuilder builder = new EmbedBuilder();
+				builder.WithColor(Color.Orange);
+				builder.WithThumbnailUrl(_client.GetGuild(serverId).IconUrl);
+				builder.WithTitle(rotating_light.ToString() + " " + rotating_light.ToString() + " " + rotating_light.ToString() + " **RESET TRIGGERED** " + rotating_light.ToString() + " " + rotating_light.ToString() + " " + rotating_light.ToString());
+				builder.WithDescription(string.Format(@"Congratulations <@!{0}>, you passed {1} points and triggered a reset! You have been given the <@&{2}> role. Everyone now has {3} points in their wallet and no insurance.
 
 {4}you currently have the <@&{5}> role.", discordId, resetMark, mostRecentRoleID, resetBalance, topPlayersStr, mostResetsRoleID));
+
+				await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync("", false, builder.Build());
 			}
 		}
 
 		private static async Task CheckForDisaster(ulong serverId, ulong discordId, ulong channelId, bool hadDisasterMark)
 		{
-			if (GetPlayerWallet(serverId, discordId) >= resetMark && !hadDisasterMark)
+			if (GetPlayerWallet(serverId, discordId) >= disasterMark && !hadDisasterMark)
 			{
 				// reset random player's wallet if they are uninsured
 				ulong randomDiscordID = GetRandomPlayerDiscordID(serverId);

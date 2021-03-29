@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Linq;
+using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
@@ -418,8 +419,14 @@ namespace StormBot.Modules
             // keep track of whether of not it is a valid name; only important when category name provided
             bool categoryExists = false;
 
-            List<string> output = new List<string>();
-            output.Add("");
+            EmbedBuilder builder = new EmbedBuilder();
+            builder.WithColor(Color.Red);
+            builder.WithThumbnailUrl(Context.Guild.IconUrl);   
+
+            if (categoriesMode)
+                builder.WithTitle($"**Soundpad Categories**");
+            else
+                builder.WithTitle($"**Soundpad Sounds**");
 
             List<int> indexes = new List<int>();
 
@@ -432,9 +439,7 @@ namespace StormBot.Modules
                     if (category.Name.ToLower() == categoryName)
                         categoryExists = true;
 
-                    if (categoryName == null || category.Name.ToLower() == categoryName)
-                        output = ValidateOutputLimit(output, "\n**" + displayedCategoryNumber + ".) " + category.Name + "**");
-
+                    List<string> soundsStrList = new List<string>();
                     if (!categoriesMode)
                     {
                         List<Sound> soundList = category.Sounds;
@@ -442,7 +447,7 @@ namespace StormBot.Modules
                         foreach (Sound sound in soundList)
                         {
                             if (categoryName == null || category.Name.ToLower() == categoryName)
-                                output = ValidateOutputLimit(output, "\n" + "     " + displayedSoundNumber + ".) " + sound.Title);
+                                soundsStrList.Add("`" + displayedSoundNumber + ".) " + sound.Title + "`\n");
 
                             displayedSoundNumber++;
                             indexes.Add(sound.Index);
@@ -453,17 +458,33 @@ namespace StormBot.Modules
                         indexes.Add(category.Index);
                     }
 
+                    if (categoryName == null || category.Name.ToLower() == categoryName)
+                    {
+                        if (soundsStrList.Count == 0)
+                            soundsStrList.Add("sounds");
+
+                        string fieldValue = "";
+                        foreach (string soundStr in soundsStrList)
+                        {
+                            if (fieldValue.Length + soundStr.Length <= 1024)
+                                fieldValue += soundStr;
+                            else
+                            {
+                                builder.AddField("\n**" + displayedCategoryNumber + ".) " + category.Name + "**", fieldValue, false);
+                                fieldValue = soundStr;
+                            }
+                        }
+
+                        if (fieldValue != "")
+                            builder.AddField("\n**" + displayedCategoryNumber + ".) " + category.Name + "**", fieldValue, false);
+                    }
+
                     displayedCategoryNumber++;
                 }
             }
-
-            if (displayOutput && output[0] != "")
-            {
-                foreach (string chunk in output)
-                {
-                    await ReplyAsync(chunk);
-                }
-            }
+            
+            if (displayOutput)
+                await ReplyAsync("", false, builder.Build());
 
             return Tuple.Create(indexes, categoryExists);
         }
@@ -807,7 +828,7 @@ namespace StormBot.Modules
                     await Task.Delay(2000);
 
                     // print out category that the sound was added to
-                    await LoadSounds(true, categoryName, false);
+                    await LoadSounds(true, categoryName.ToLower(), false);
                     await ReplyAsync("Sound added: " + soundName);
                 }
             }

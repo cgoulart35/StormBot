@@ -146,14 +146,20 @@ namespace StormBot.Services
 				return null;
 			}
 
-			CookieContainer cookieJar = new CookieContainer();
-			string XSRFTOKEN = "";
+            RestClient client = new RestClient("https://profile.callofduty.com");
+            client.Timeout = -1;
+            client.UnsafeAuthenticatedConnectionSharing = true;
+
+            CookieContainer cookieJar = new CookieContainer();
+            client.CookieContainer = cookieJar;
+
+            string XSRFTOKEN = "";
 
 			// make initial request to get the XSRF-TOKEN
-			InitializeAPI(ref cookieJar, ref XSRFTOKEN);
+			InitializeAPI(client, ref XSRFTOKEN);
 
 			// login to the API with credentials and XSRF-TOKEN to generate cookie tokens needed to retrieve player data
-			LoginAPI(ref cookieJar, XSRFTOKEN);
+			LoginAPI(client, XSRFTOKEN);
 
 			// retrieve updated data via Call of Duty API for all participating players with cookie tokens obtained from login
 			List<CallOfDutyPlayerModel> allNewPlayersData = GetAllPlayersDataAPI(cookieJar, allStoredPlayersData);
@@ -164,25 +170,21 @@ namespace StormBot.Services
             return allNewPlayersData;
 		}
 
-		private static void InitializeAPI(ref CookieContainer cookieJar, ref string XSRFTOKEN)
+		private static void InitializeAPI(RestClient client, ref string XSRFTOKEN)
         {
-            RestClient client = new RestClient("https://profile.callofduty.com/null/login");
-            client.CookieContainer = cookieJar;
-            client.Timeout = -1;
-            RestRequest request = new RestRequest(Method.GET);
-            request.AddHeader("Cookie", "");
-            client.UnsafeAuthenticatedConnectionSharing = true;
+            RestRequest request = new RestRequest("/null/login", Method.GET);
             client.Execute(request);
 
-            XSRFTOKEN = client.CookieContainer.GetCookies(new Uri("https://profile.callofduty.com/null/login"))["XSRF-TOKEN"].Value;
+            XSRFTOKEN = client.CookieContainer.GetCookies(new Uri("https://profile.callofduty.com"))["XSRF-TOKEN"].Value;
         }
 
-        private static void LoginAPI(ref CookieContainer cookieJar, string XSRFTOKEN)
+        private static void LoginAPI(RestClient client, string XSRFTOKEN)
         {
-            RestClient client = new RestClient("https://profile.callofduty.com/do_login?new_SiteId=cod");
-            client.CookieContainer = cookieJar;
-            client.Timeout = -1;
-            RestRequest request = new RestRequest(Method.POST);
+            string cookieHeader = client.CookieContainer.GetCookieHeader(new Uri("https://profile.callofduty.com"));
+
+            RestRequest request = new RestRequest("do_login?new_SiteId=cod", Method.POST);
+            request.AddHeader("Cookie", cookieHeader);
+            request.AlwaysMultipartFormData = true;
             request.AddParameter("username", Program.configurationSettingsModel.ActivisionEmail);
             request.AddParameter("password", Program.configurationSettingsModel.ActivisionPassword);
             request.AddParameter("remember_me", "true");
