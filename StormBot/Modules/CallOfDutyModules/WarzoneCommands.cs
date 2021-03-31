@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using System.Linq;
 using System.Collections.Generic;
+using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,17 +52,18 @@ namespace StormBot.Modules.CallOfDutyModules
 
                         SocketGuild guild = CallOfDutyService._client.GetGuild(serverId);
 
-                        List<string> output = new List<string>();
-                        output.AddRange(await GetLast7DaysKills(newData, guild));
-                        output.AddRange(await GetWeeklyWins(newData, guild, true, oldData));
+                        EmbedBuilder builder1 = await GetLast7DaysKills(newData, guild);
+                        EmbedBuilder builder2 = await GetWeeklyWins(newData, guild, true, oldData);
 
-                        if (output[0] != "")
-                        {
-                            foreach (string chunk in output)
-                            {
-                                await channel.SendMessageAsync(chunk);
-                            }
-                        }
+                        if (builder1 != null)
+                            await channel.SendMessageAsync("", false, builder1.Build());
+                        else
+                            await channel.SendMessageAsync("No data returned.");
+
+                        if (builder2 != null)
+                            await channel.SendMessageAsync("", false, builder2.Build());
+                        else
+                            await channel.SendMessageAsync("No data returned.");
                     }
                 }
             }
@@ -83,40 +85,39 @@ namespace StormBot.Modules.CallOfDutyModules
 
                         SocketGuild guild = CallOfDutyService._client.GetGuild(serverId);
 
-                        List<string> output = await GetWeeklyWins(newData, guild);
+                        EmbedBuilder builder = await GetWeeklyWins(newData, guild);
 
-                        if (output[0] != "")
-                        {
-                            foreach (string chunk in output)
-                            {
-                                await channel.SendMessageAsync(chunk);
-                            }
-                        }
+                        if (builder != null)
+                            await channel.SendMessageAsync("", false, builder.Build());
+                        else
+                            await channel.SendMessageAsync("No data returned.");
                     }
                 }
             }
         }
 
-        public async Task<List<string>> GetLast7DaysKills(List<CallOfDutyPlayerModel> newData, SocketGuild guild = null)
+        public async Task<EmbedBuilder> GetLast7DaysKills(List<CallOfDutyPlayerModel> newData, SocketGuild guild = null)
         {
             if (guild == null)
                 guild = Context.Guild;
 
-            List<string> output = new List<string>();
-
             if (newData != null)
             {
-                output.Add("```md\nWARZONE KILLS IN LAST 7 DAYS\n============================```");
-                newData = newData.OrderByDescending(player => player.Data.Weekly.All.Properties != null ? player.Data.Weekly.All.Properties.Kills : 0).ToList();
+                EmbedBuilder builder = new EmbedBuilder();
+                builder.WithColor(Color.Purple);
+                builder.WithTitle("**Warzone Kills In Last 7 Days**");
 
                 int playerCount = 1;
                 bool atleastOnePlayer = false;
+                string playersStr = "";
+                string killsStr = "";
+                newData = newData.OrderByDescending(player => player.Data.Weekly.All.Properties != null ? player.Data.Weekly.All.Properties.Kills : 0).ToList();
                 foreach (CallOfDutyPlayerModel player in newData)
                 {
                     double kills = 0;
 
                     // if user has not played this week
-                    if (player.Data.Weekly.All.Properties == null)
+                    if (player.Data.Weekly.All.Properties == null || player.Data.Weekly.All.Properties.Kills == 0)
                         continue;
                     // if user has played this week
                     else
@@ -125,7 +126,8 @@ namespace StormBot.Modules.CallOfDutyModules
                         kills = player.Data.Weekly.All.Properties.Kills;
                     }
 
-                    output = ValidateOutputLimit(output, string.Format(@"**{0}.)** <@!{1}> has {2} kills in the last 7 days.", playerCount, player.DiscordID, kills) + "\n");
+                    playersStr += $"{playerCount}.) <@!{player.DiscordID}>\n";
+                    killsStr += $"`{kills}`\n";
 
                     playerCount++;
                 }
@@ -150,21 +152,22 @@ namespace StormBot.Modules.CallOfDutyModules
                         winners += string.Format(@" <@!{0}>,", DiscordID);
                     }
 
-                    output = ValidateOutputLimit(output, "\n" + string.Format(@"Congratulations{0} you have the most Warzone kills out of all Warzone participants in the last 7 days!{1}", winners, roleStr));
+                    string messageStr = string.Format(@"Congratulations{0} you have the most Warzone kills out of all Warzone participants in the last 7 days!{1}", winners, roleStr);
+
+                    builder.WithDescription(messageStr);
+                    builder.AddField("Player", playersStr, true);
+                    builder.AddField("Kills", killsStr, true);
                 }
                 else
-                    output = ValidateOutputLimit(output, "\n" + "No active players this week.");
+                    builder.WithDescription("No active players this week.");
 
-                return output;
+                return builder;
             }
             else
-            {
-                output.Add("No data returned.");
-                return output;
-            }
+                return null;
         }
 
-        public async Task<List<string>> GetWeeklyWins(List<CallOfDutyPlayerModel> newData, SocketGuild guild = null, bool updateRoles = false, List<CallOfDutyPlayerModel> storedData = null)
+        public async Task<EmbedBuilder> GetWeeklyWins(List<CallOfDutyPlayerModel> newData, SocketGuild guild = null, bool updateRoles = false, List<CallOfDutyPlayerModel> storedData = null)
         {
             if (guild == null)
                 guild = Context.Guild;
@@ -175,11 +178,11 @@ namespace StormBot.Modules.CallOfDutyModules
             
             List<CallOfDutyPlayerModel> outputPlayers = new List<CallOfDutyPlayerModel>();
 
-            List<string> output = new List<string>();
-
             if (newData != null && storedData != null)
             {
-                output.Add("```md\nWARZONE WEEKLY WINS\n===================```");
+                EmbedBuilder builder = new EmbedBuilder();
+                builder.WithColor(Color.Purple);
+                builder.WithTitle("**Warzone Weekly Wins**");
 
                 // set weekly win counts
                 foreach (CallOfDutyPlayerModel player in newData)
@@ -213,13 +216,14 @@ namespace StormBot.Modules.CallOfDutyModules
                     }
                 }
 
-                // sort weekly win count
-                outputPlayers = outputPlayers.OrderByDescending(player => player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins).ToList();
+                // sort weekly win count & print weekly wins
 
-                // print weekly wins
                 int playerCount = 1;
                 bool atleastOnePlayer = false;
+                string playersStr = "";
+                string winsStr = "";
                 string nextWeekMessages = "";
+                outputPlayers = outputPlayers.OrderByDescending(player => player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins).ToList();
                 foreach (CallOfDutyPlayerModel player in outputPlayers)
                 {
                     if (player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins == -1)
@@ -227,18 +231,28 @@ namespace StormBot.Modules.CallOfDutyModules
                     else
                     {
                         atleastOnePlayer = true;
-                        output = ValidateOutputLimit(output, string.Format(@"**{0}.)** <@!{1}> has {2} wins this week.", playerCount, player.DiscordID, player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins) + "\n");
+
+                        playersStr += $"{playerCount}.) <@!{player.DiscordID}>\n";
+                        winsStr += $"`{player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins}`\n";
+
                         playerCount++;
                     }
                 }
-
-                if (nextWeekMessages != "")
-                    output = ValidateOutputLimit(output, "\n" + nextWeekMessages);
 
                 if (atleastOnePlayer)
                 {
                     double topScore = outputPlayers[0].Data.Lifetime.Mode.BattleRoyal.Properties.Wins;
                     List<ulong> topPlayersDiscordIDs = outputPlayers.Where(player => player.Data.Lifetime.Mode.BattleRoyal.Properties?.Wins == topScore).Select(player => player.DiscordID).ToList();
+
+                    // update the roles only every week
+                    ulong roleID = CallOfDutyService.GetServerWarzoneWinsRoleID(guild.Id);
+                    string roleStr = "";
+                    if (updateRoles && roleID != 0)
+                    {
+                        await BaseService.UnassignRoleFromAllMembers(roleID, guild);
+                        await BaseService.GiveUsersRole(roleID, topPlayersDiscordIDs, guild);
+                        roleStr = $" You have been assigned the role <@&{roleID}>!";
+                    }
 
                     string winners = updateRoles ? "Congratulations " : "";
                     foreach (ulong DiscordID in topPlayersDiscordIDs)
@@ -246,28 +260,19 @@ namespace StormBot.Modules.CallOfDutyModules
                         winners += string.Format(@"<@!{0}>, ", DiscordID);
                     }
 
-                    output = ValidateOutputLimit(output, "\n" + string.Format(@"{0}you have the most Warzone wins out of all Warzone participants!", winners));
+                    string messageStr = string.Format(@"{0}you have the most Warzone wins out of all Warzone participants!{1}", winners, roleStr);
 
-                    // update the roles only every week
-                    ulong roleID = CallOfDutyService.GetServerWarzoneWinsRoleID(guild.Id);
-                    if (updateRoles && roleID != 0)
-                    {
-                        await BaseService.UnassignRoleFromAllMembers(roleID, guild);
-                        await BaseService.GiveUsersRole(roleID, topPlayersDiscordIDs, guild);
-
-                        output = ValidateOutputLimit(output, $" You have been assigned the role <@&{roleID}>!");
-                    }
+                    builder.WithDescription(messageStr + "\n\n" + nextWeekMessages);
+                    builder.AddField("Player", playersStr, true);
+                    builder.AddField("Wins", winsStr, true);
                 }
                 else
-                    output = ValidateOutputLimit(output, "\n" + "No active players.");
+                    builder.WithDescription("No active players this week." + "\n\n" + nextWeekMessages);
 
-                return output;
+                return builder;
             }
             else
-            {
-                output.Add("No data returned.");
-                return output;
-            }
+                return null;
         }
 
         #region COMMAND FUNCTIONS
@@ -291,14 +296,12 @@ namespace StormBot.Modules.CallOfDutyModules
                         {
                             List<CallOfDutyPlayerModel> newData = _service.GetNewPlayerData(false, Context.Guild.Id, "mw", "wz");
 
-                            List<string> output = await GetWeeklyWins(newData);
-                            if (output[0] != "")
-                            {
-                                foreach (string chunk in output)
-                                {
-                                    await ReplyAsync(chunk);
-                                }
-                            }
+                            EmbedBuilder builder = await GetWeeklyWins(newData);
+
+                            if (builder != null)
+                                await ReplyAsync("", false, builder.Build());
+                            else
+                                await ReplyAsync("No data returned.");
                         }
                     }
                 }
@@ -329,12 +332,16 @@ namespace StormBot.Modules.CallOfDutyModules
 
                             if (newData != null)
                             {
-                                List<string> output = new List<string>();
-                                output.Add("```md\nWARZONE LIFETIME WINS\n=====================```");
-                                newData = newData.OrderByDescending(player => player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins).ToList();
+                                EmbedBuilder builder = new EmbedBuilder();
+                                builder.WithColor(Color.Purple);
+                                builder.WithTitle("**Warzone Lifetime Wins**");
+                                builder.WithThumbnailUrl(Context.Guild.IconUrl);
 
                                 int playerCount = 1;
                                 bool atleastOnePlayer = false;
+                                string playersStr = "";
+                                string winsStr = "";
+                                newData = newData.OrderByDescending(player => player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins).ToList();
                                 foreach (CallOfDutyPlayerModel player in newData)
                                 {
                                     double wins = 0;
@@ -349,8 +356,9 @@ namespace StormBot.Modules.CallOfDutyModules
                                         wins = player.Data.Lifetime.Mode.BattleRoyal.Properties.Wins;
                                     }
 
-                                    output = ValidateOutputLimit(output, string.Format(@"**{0}.)** <@!{1}> has {2} total Warzone wins.", playerCount, player.DiscordID, wins) + "\n");
-                                    
+                                    playersStr += $"{playerCount}.) <@!{player.DiscordID}>\n";
+                                    winsStr += $"`{wins}`\n";
+
                                     playerCount++;
                                 }
 
@@ -365,27 +373,19 @@ namespace StormBot.Modules.CallOfDutyModules
                                         winners += string.Format(@"<@!{0}>, ", DiscordID);
                                     }
 
-                                    output = ValidateOutputLimit(output, "\n" + $"{winners}you have the most Warzone wins out of all Warzone participants!");
+                                    string messageStr = $"{winners}you have the most Warzone wins out of all Warzone participants!";
 
-                                    if (output[0] != "")
-                                    {
-                                        foreach (string chunk in output)
-                                        {
-                                            await ReplyAsync(chunk);
-                                        }
-                                    }
+                                    builder.WithDescription(messageStr);
+                                    builder.AddField("Player", playersStr, true);
+                                    builder.AddField("Wins", winsStr, true);
+
+                                    await ReplyAsync("", false, builder.Build());
                                 }
                                 else
                                 {
-                                    output = ValidateOutputLimit(output, "\n" + "No active players.");
+                                    builder.WithDescription("No active players.");
 
-                                    if (output[0] != "")
-                                    {
-                                        foreach (string chunk in output)
-                                        {
-                                            await ReplyAsync(chunk);
-                                        }
-                                    }
+                                    await ReplyAsync("", false, builder.Build());
                                 }
                             }
                             else

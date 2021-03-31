@@ -184,11 +184,17 @@ namespace StormBot.Modules.CallOfDutyModules
             else if (gameAbbrev == "cw" && modeAbbrev == "mp")
                 gameName = "Black Ops Cold War";
 
-            string output = "__**Participants: " + gameName + "**__\n";
+            EmbedBuilder builder = new EmbedBuilder();
+            builder.WithColor(Color.Purple);
+            builder.WithTitle($"**{gameName} Participants**");
+            builder.WithThumbnailUrl(Context.Guild.IconUrl);
 
             if (participatingAccountsData.Any())
             {
                 int accountCount = 1;
+                string playersStr = "";
+                string usernamesStr = "";
+                string tagsStr = "";
                 foreach (CallOfDutyPlayerDataEntity account in participatingAccountsData)
                 {
                     ulong discordID = account.DiscordID;
@@ -210,16 +216,22 @@ namespace StormBot.Modules.CallOfDutyModules
                     else if (account.Platform == "uno")
                         platform = "Activision";
 
-                    output += string.Format(@"**{0}.)** <@!{1}> ({2}{3}, {4}).", accountCount, discordID, username, tag, platform) + "\n";
+                    playersStr += $"{accountCount}.) <@!{discordID}> ({platform})\n";
+                    usernamesStr += $"`{username}`\n";
+                    tagsStr += $"`{tag}`\n";
 
                     accountCount++;
                 }
-                await ReplyAsync(output);
+
+                builder.AddField("Player", playersStr, true);
+                builder.AddField("Username", usernamesStr, true);
+                builder.AddField("Tag", tagsStr, true);
+
+                await ReplyAsync("", false, builder.Build());
             }
             else
-            {
                 await ReplyAsync("Zero participants.");
-            }
+
             return participatingAccountsData;
         }
     }

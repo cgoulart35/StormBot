@@ -234,7 +234,7 @@ namespace StormBot.Services
             string username = storedPlayerData.Username;
             string tag = "";
 
-            if (storedPlayerData.Tag != "")
+            if (storedPlayerData.Tag != "" && storedPlayerData.Tag != null)
                 tag = "%23" + storedPlayerData.Tag;
 
             RestClient client = new RestClient(string.Format(@"https://my.callofduty.com/api/papi-client/stats/cod/v1/title/{0}/platform/{1}/gamer/{2}{3}/profile/type/{4}", gameAbbrev, platform, username, tag, modeAbbrev));

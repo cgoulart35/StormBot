@@ -123,7 +123,11 @@ namespace StormBot.Services
 
 						if ((coldWarBool || modernWarfareBool || warzoneBool) && server.CallOfDutyNotificationChannelID != 0)
 						{
-							await ((IMessageChannel)_client.GetChannel(server.CallOfDutyNotificationChannelID)).SendMessageAsync("```fix\nHERE ARE THIS WEEK'S WINNERS!!!! CONGRATULATIONS!!!\n```");
+							EmbedBuilder builder = new EmbedBuilder();
+							builder.WithColor(Color.Magenta);
+							builder.WithTitle("**HERE ARE THIS WEEK'S WINNERS!!!! CONGRATULATIONS!!!**");
+
+							await ((IMessageChannel)_client.GetChannel(server.CallOfDutyNotificationChannelID)).SendMessageAsync("", false, builder.Build());
 						}
 					}
 
@@ -155,7 +159,11 @@ namespace StormBot.Services
 
 						if ((coldWarBool || modernWarfareBool || warzoneBool) && server.CallOfDutyNotificationChannelID != 0)
 						{
-							await ((IMessageChannel)_client.GetChannel(server.CallOfDutyNotificationChannelID)).SendMessageAsync("```fix\nHERE ARE THIS WEEK'S CURRENT RANKINGS!\n```");
+							EmbedBuilder builder = new EmbedBuilder();
+							builder.WithColor(Color.Magenta);
+							builder.WithTitle("**HERE ARE THIS WEEK'S CURRENT RANKINGS!**");
+
+							await ((IMessageChannel)_client.GetChannel(server.CallOfDutyNotificationChannelID)).SendMessageAsync("", false, builder.Build());
 						}
 					}
 
