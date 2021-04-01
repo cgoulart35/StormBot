@@ -558,7 +558,7 @@ namespace StormBot.Services
                     bool flag = _db.Servers
                         .AsQueryable()
                         .Where(s => s.ServerID == context.Guild.Id)
-                        .Select(s => s.ToggleModernWarfareTracking)
+                        .Select(s => s.ToggleWarzoneTracking)
                         .Single();
 
                     if (!flag)

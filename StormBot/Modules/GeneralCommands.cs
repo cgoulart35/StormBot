@@ -722,90 +722,6 @@ namespace StormBot.Modules
                 await ReplyAsync("This command can only be executed in servers.");
         }
 
-        [Command("help", RunMode = RunMode.Async)]
-        public async Task HelpCommand(params string[] args)
-        {
-            string subject = GetSingleArg(args);
-            List<string> output = new List<string>();
-            output.Add("");
-
-            bool notAdmin = true;
-            if (!Context.IsPrivate)
-                notAdmin = !((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(BaseService.GetServerAdminRole(Context.Guild.Id)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator);
-
-            string prefix = BaseService.GetServerOrPrivateMessagePrefix(Context);
-
-            if (subject == null)
-            {
-                if (!notAdmin)
-                    await Context.Channel.TriggerTypingAsync();
-
-                output = ValidateOutputLimit(output, HelpHelpCommands(prefix));
-                output = ValidateOutputLimit(output, HelpConfigCommands(false, prefix));
-                output = ValidateOutputLimit(output, HelpConfigCommands(true, prefix));
-                output = ValidateOutputLimit(output, await HelpStormCommands(notAdmin, prefix));
-                output = ValidateOutputLimit(output, await HelpMarketCommands(notAdmin, prefix));
-                output = ValidateOutputLimit(output, await HelpSoundboardCommands(notAdmin, prefix));
-                output = ValidateOutputLimit(output, await HelpBlackOpsColdWarCommands(notAdmin, prefix));
-                output = ValidateOutputLimit(output, await HelpModernWarfareCommands(notAdmin, prefix));
-                output = ValidateOutputLimit(output, await HelpWarzoneCommands(notAdmin, prefix));
-            }
-            else if (subject.ToLower() == "help")
-            {
-                if (!notAdmin)
-                    await Context.Channel.TriggerTypingAsync();
-                output = ValidateOutputLimit(output, HelpHelpCommands(prefix));
-            }
-            else if (subject.ToLower() == "config" || subject.ToLower() == "configs" || subject.ToLower() == "configuration" || subject.ToLower() == "configurations")
-            {
-                if (!notAdmin)
-                    await Context.Channel.TriggerTypingAsync();
-                output = ValidateOutputLimit(output, HelpConfigCommands(false, prefix));
-                output = ValidateOutputLimit(output, HelpConfigCommands(true, prefix));
-            }
-            else if (subject.ToLower() == "storm" || subject.ToLower() == "storms")
-            {
-                output = ValidateOutputLimit(output, await HelpStormCommands(notAdmin, prefix));
-            }
-            else if (subject.ToLower() == "market")
-            {
-                output = ValidateOutputLimit(output, await HelpMarketCommands(notAdmin, prefix));
-            }
-            else if (subject.ToLower() == "sb" || subject.ToLower() == "sp" || subject.ToLower() == "soundboard" || subject.ToLower() == "soundpad")
-            {
-                output = ValidateOutputLimit(output, await HelpSoundboardCommands(notAdmin, prefix));
-            }
-            else if (subject.ToLower() == "mw" || subject.ToLower() == "modern warfare" || subject.ToLower() == "modernwarfare")
-            {
-                output = ValidateOutputLimit(output, await HelpModernWarfareCommands(notAdmin, prefix));
-            }
-            else if (subject.ToLower() == "wz" || subject.ToLower() == "warzone")
-            {
-                output = ValidateOutputLimit(output, await HelpWarzoneCommands(notAdmin, prefix));
-            }
-            else if (subject.ToLower() == "bocw" || subject.ToLower() == "black ops cold war" || subject.ToLower() == "blackopscoldwar" || subject.ToLower() == "cw" || subject.ToLower() == "cold war" || subject.ToLower() == "coldwar")
-            {
-                output = ValidateOutputLimit(output, await HelpBlackOpsColdWarCommands(notAdmin, prefix));
-            }
-            else
-            {
-                if (!notAdmin)
-                    await Context.Channel.TriggerTypingAsync();
-                output = ValidateOutputLimit(output, "The subject name '" + subject + "' does not exist, or is not available.");
-            }
-
-            if (output[0] != "")
-            {
-                foreach (string chunk in output)
-                {
-                    if (!notAdmin)
-                        await ReplyAsync(chunk);
-                    else
-                        await Context.User.SendMessageAsync(chunk);
-                }
-            }
-        }
-
         [Command("subjects", RunMode = RunMode.Async)]
         public async Task SubjectsCommand()
         {
@@ -816,99 +732,189 @@ namespace StormBot.Modules
             if (!notAdmin)
                 await Context.Channel.TriggerTypingAsync();
 
-            string output = "__**Subjects:**__\nHelp\nConfig\n";
+            EmbedBuilder builder = new EmbedBuilder();
+            builder.WithColor(Color.Blue);
+            builder.WithTitle("**Command Categories**");
+            builder.WithThumbnailUrl(Context.Guild.IconUrl);
+
+            string subjectsStr = "`Help`\n`Config`\n";
 
             if (StormsService.GetServerAllowServerPermissionStorms(Context) && StormsService.GetServerToggleStorms(Context))
             {
                 if (DisableIfServiceNotRunning(_stormsService, "subjects (storms subject)"))
                 {
-                    output += "Storms\n";
+                    subjectsStr += "`Storms`\n";
                 }
             }
             if (MarketService.GetServerAllowServerPermissionMarket(Context) && MarketService.GetServerToggleMarket(Context))
             {
                 if (DisableIfServiceNotRunning(_marketService, "subjects (market subject)"))
                 {
-                    output += "Market\n";
+                    subjectsStr += "`Market`\n";
                 }
             }
             if (SoundpadService.GetServerAllowServerPermissionSoundpadCommands(Context) && SoundpadService.GetServerToggleSoundpadCommands(Context))
             {
                 if (DisableIfServiceNotRunning(_soundpadService, "subjects (soundpad subject)"))
                 {
-                    output += "Soundpad\n";
+                    subjectsStr += "`Soundpad`\n";
                 }
             }
             if (CallOfDutyService.GetServerAllowServerPermissionBlackOpsColdWarTracking(Context) && CallOfDutyService.GetServerToggleBlackOpsColdWarTracking(Context))
             {
                 if (DisableIfServiceNotRunning(_callOfDutyService.BlackOpsColdWarComponent, "subjects (Black Ops Cold War subject)"))
                 {
-                    output += "Black Ops Cold War\n";
+                    subjectsStr += "`Black Ops Cold War`\n";
                 }
             }
             if (CallOfDutyService.GetServerAllowServerPermissionModernWarfareTracking(Context) && CallOfDutyService.GetServerToggleModernWarfareTracking(Context))
             {
                 if (DisableIfServiceNotRunning(_callOfDutyService.ModernWarfareComponent, "subjects (Modern Warfare subject)"))
                 {
-                    output += "Modern Warfare\n";
+                    subjectsStr += "`Modern Warfare`\n";
                 }
             }
             if (CallOfDutyService.GetServerAllowServerPermissionWarzoneTracking(Context) && CallOfDutyService.GetServerToggleWarzoneTracking(Context))
             {
                 if (DisableIfServiceNotRunning(_callOfDutyService.WarzoneComponent, "subjects (Warzone subject)"))
                 {
-                    output += "Warzone\n";
+                    subjectsStr += "`Warzone`\n";
                 }
             }
 
+            builder.AddField("Subjects", subjectsStr, false);
+
             if (!notAdmin)
-                await ReplyAsync(output);
+                await ReplyAsync("", false, builder.Build());
             else
-                await Context.User.SendMessageAsync(output);
+                await Context.User.SendMessageAsync("", false, builder.Build());
+        }
+
+        [Command("help", RunMode = RunMode.Async)]
+        public async Task HelpCommand(params string[] args)
+        {
+            string subject = GetSingleArg(args);
+
+            bool notAdmin = true;
+            if (!Context.IsPrivate)
+                notAdmin = !((SocketGuildUser)Context.User).Roles.Select(r => r.Id).Contains(BaseService.GetServerAdminRole(Context.Guild.Id)) && !(((SocketGuildUser)Context.User).GuildPermissions.Administrator);
+
+            string prefix = BaseService.GetServerOrPrivateMessagePrefix(Context);
+
+            EmbedBuilder builder = new EmbedBuilder();
+            builder.WithColor(Color.Blue);
+            builder.WithTitle("**StormBot Commands**");
+            builder.WithDescription("Please see https://github.com/cgoulart35/StormBot for more detailed command descriptions.");
+            builder.WithThumbnailUrl(Context.Guild.IconUrl);
+
+            if (subject == null)
+            {
+                if (!notAdmin)
+                    await Context.Channel.TriggerTypingAsync();
+
+                builder.AddField("Help", HelpHelpCommands(prefix));
+                builder.AddField("Config", HelpConfigCommands(prefix));
+
+                string commands1 = await HelpStormCommands(notAdmin, prefix);
+                if (commands1 != null)
+                    builder.AddField("Storm", commands1);
+
+                string commands2 = await HelpMarketCommands(notAdmin, prefix);
+                if (commands2 != null)
+                    builder.AddField("Market", commands2);
+
+                string commands3 = await HelpSoundboardCommands(notAdmin, prefix);
+                if (commands3 != null)
+                    builder.AddField("Soundboard", commands3);
+
+                string commands4 = await HelpBlackOpsColdWarCommands(notAdmin, prefix);
+                if (commands4 != null)
+                    builder.AddField("Black Ops Cold War", commands4);
+
+                string commands5 = await HelpModernWarfareCommands(notAdmin, prefix);
+                if (commands5 != null)
+                    builder.AddField("Modern Warfare", commands5);
+
+                string commands6 = await HelpWarzoneCommands(notAdmin, prefix);
+                if (commands6 != null)
+                    builder.AddField("Warzone", commands6);
+            }
+            else if (subject.ToLower() == "help")
+            {
+                if (!notAdmin)
+                    await Context.Channel.TriggerTypingAsync();
+
+                builder.AddField("Help", HelpHelpCommands(prefix));
+            }
+            else if (subject.ToLower() == "config" || subject.ToLower() == "configs" || subject.ToLower() == "configuration" || subject.ToLower() == "configurations")
+            {
+                if (!notAdmin)
+                    await Context.Channel.TriggerTypingAsync();
+
+                builder.AddField("Config", HelpConfigCommands(prefix));
+            }
+            else if (subject.ToLower() == "storm" || subject.ToLower() == "storms")
+            {
+                string commands1 = await HelpStormCommands(notAdmin, prefix);
+                if (commands1 != null)
+                    builder.AddField("Storm", commands1);
+            }
+            else if (subject.ToLower() == "market")
+            {
+                string commands2 = await HelpMarketCommands(notAdmin, prefix);
+                if (commands2 != null)
+                    builder.AddField("Market", commands2);
+            }
+            else if (subject.ToLower() == "sb" || subject.ToLower() == "sp" || subject.ToLower() == "soundboard" || subject.ToLower() == "soundpad")
+            {
+                string commands3 = await HelpSoundboardCommands(notAdmin, prefix);
+                if (commands3 != null)
+                    builder.AddField("Soundboard", commands3);
+            }
+            else if (subject.ToLower() == "bocw" || subject.ToLower() == "black ops cold war" || subject.ToLower() == "blackopscoldwar" || subject.ToLower() == "cw" || subject.ToLower() == "cold war" || subject.ToLower() == "coldwar")
+            {
+                string commands4 = await HelpBlackOpsColdWarCommands(notAdmin, prefix);
+                if (commands4 != null)
+                    builder.AddField("Black Ops Cold War", commands4);
+            }
+            else if (subject.ToLower() == "mw" || subject.ToLower() == "modern warfare" || subject.ToLower() == "modernwarfare")
+            {
+                string commands5 = await HelpModernWarfareCommands(notAdmin, prefix);
+                if (commands5 != null)
+                    builder.AddField("Modern Warfare", commands5);
+            }
+            else if (subject.ToLower() == "wz" || subject.ToLower() == "warzone")
+            {
+                string commands6 = await HelpWarzoneCommands(notAdmin, prefix);
+                if (commands6 != null)
+                    builder.AddField("Warzone", commands6);
+            }
+            else
+            {
+                if (!notAdmin)
+                    await Context.Channel.TriggerTypingAsync();
+
+                await ReplyAsync("The subject name '" + subject + "' does not exist, or is not available.");
+
+                return;
+            }
+
+            if (!notAdmin)
+                await ReplyAsync("", false, builder.Build());
+            else
+                await Context.User.SendMessageAsync("", false, builder.Build());
         }
 		#endregion
 
 		private static string HelpHelpCommands(string prefix)
 		{
-			return string.Format("\n\n" + @"__**Help: Help Commands**__
-
-'**{0}help**' to display information on all commands.
-'**{0}help [subject]**' to display information on all commands for a specific subject.
-'**{0}subjects**' to display the existing command subjects.", prefix);
+			return string.Format(@"`{0}help`, `{0}help [subject]`, `{0}subjects`", prefix);
 		}
 
-		private static string HelpConfigCommands(bool partTwo, string prefix)
+		private static string HelpConfigCommands(string prefix)
 		{
-			if (!partTwo)
-			{
-				return string.Format("\n\n" + @"__**Help: Config Commands**__
-
-'**{0}config all**' to display all current set configurations __if you are a StormBot administrator__.
-'**{0}config prefix [prefix]**' to set the server's bot command prefix __if you are a StormBot administrator__.
-'**{0}config toggle bocw**' to enable/disable Black Ops Cold War commands and stat tracking on the server __if you are a StormBot administrator__.
-Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking for Black Ops Cold War participants will resume after the next weekly data fetch (Sundays, 1:00 AM EST).
-'**{0}config toggle mw**' to enable/disable Modern Warfare commands and stat tracking on the server __if you are a StormBot administrator__.
-Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking for Modern Warfare participants will resume after the next weekly data fetch (Sundays, 1:00 AM EST).
-'**{0}config toggle wz**' to enable/disable Warzone commands and stat tracking on the server __if you are a StormBot administrator__.
-Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking for Warzone participants will resume after the next weekly data fetch (Sundays, 1:00 AM EST).
-'**{0}config toggle sb**' to enable/disable Soundpad commands on the server __if you are a StormBot administrator__.
-'**{0}config toggle storms**' to enable/disable Storms and reactive commands on the server __if you are a StormBot administrator__.
-'**{0}config toggle market**' to enable/disable Market commands on the server __if you are a StormBot administrator__.", prefix);
-			}
-			else
-			{
-				return string.Format("\n\n" + @"'**{0}config channel cod [channel]**' to set the server's channel for Call of Duty notifications __if you are a StormBot administrator__.
-'**{0}config channel sb [channel]**' to set the server's channel for Soundboard notifications __if you are a StormBot administrator__.
-'**{0}config channel storms [channel]**' to set the server's channel for Storm notifications __if you are a StormBot administrator__.
-'**{0}config role admin [role]**' to set the server's admin role for special commands and configuration __if you are a StormBot administrator__.
-'**{0}config role bocw kills [role]**' to set the server's role for the most weekly Black Ops Cold War kills __if you are a StormBot administrator__.
-'**{0}config role mw kills [role]**' to set the server's role for the most weekly Modern Warfare kills __if you are a StormBot administrator__.
-'**{0}config role wz wins [role]**' to set the server's role for the most Warzone wins __if you are a StormBot administrator__.
-'**{0}config role wz kills [role]**' to set the server's role for the most weekly Warzone kills __if you are a StormBot administrator__.
-'**{0}config role storms most [role]**' to set the server's role for the most Storm resets __if you are a StormBot administrator__.
-'**{0}config role storms recent [role]**' to set the server's role for the most recent Storm reset __if you are a StormBot administrator__.", prefix);
-			}
-		}
+            return $"`{prefix}config all`, `{prefix}config prefix [prefix]`,\n`{prefix}config toggle bocw`, `{prefix}config toggle mw`, `{prefix}config toggle wz`, `{prefix}config toggle sb`, `{prefix}config toggle storms`,\n`{prefix}config toggle market`,\n`{prefix}config channel cod [channel]`,\n`{prefix}config channel sb [channel]`,\n`{prefix}config channel storms [channel]`,\n`{prefix}config role admin [role]`,\n`{prefix}config role bocw kills [role]`,\n`{prefix}config role mw kills [role]`,\n`{prefix}config role wz wins [role]`,\n`{prefix}config role wz kills [role]`,\n`{prefix}config role storms most [role]`,\n`{prefix}config role storms recent [role]`";
+        }
 
 		private async Task<string> HelpStormCommands(bool notAdmin, string prefix)
         {
@@ -919,32 +925,7 @@ Warning: If disabled, then re-enabled after a weekly data fetch, daily tracking 
                     if (!notAdmin)
                         await Context.Channel.TriggerTypingAsync();
 
-                    string mostRecentRoleStr = "";
-                    if (!Context.IsPrivate && !notAdmin)
-                    {
-                        mostRecentRoleStr += " <@&" + (StormsService.GetStormsMostRecentResetRoleID(Context.Guild.Id)).ToString() + ">";
-                    }
-
-                    string mostResetsRoleStr = "";
-                    if (!Context.IsPrivate && !notAdmin)
-                    {
-                        mostResetsRoleStr += " <@&" + (StormsService.GetStormsMostResetsRoleID(Context.Guild.Id)).ToString() + ">";
-                    }
-
-                    return string.Format("\n\n" + @"__**Help: Storm Commands**__
-
-'**{0}umbrella**' to start the incoming Storm and earn {1} points.
-'**{0}guess [number]**' to make a guess with a winning reward of {2} points. (__during Storm only__)
-'**{0}bet [points] [number]**' to make a guess. If you win, you earn the amount of points bet within your wallet. If you lose, you lose those points. (__during Storm only__)
-'**{0}steal**' to steal {3} points from the player with the most points. (__during Storm only__)
-'**{0}insurance**' to buy insurance for {4} points to protect your wallet from disasters.
-'**{0}wallet**' to show how many points you have in your wallet.
-'**{0}wallets**' to show how many points everyone has.
-'**{0}resets**' to show how many resets everyone has.
-
-The bot will assign the{5} role for the most recent reset to the player who causes the next reset by reaching {6} points.
-The bot will also assign the{7} role for the most total resets to the players in the lead.
-Wallets are reset to {8} points when a disaster happens to a them once someone reaches {9} points, or if a reset occurs.", prefix, StormsService.levelOneReward, StormsService.levelTwoReward, StormsService.stealAmount, StormsService.insuranceCost, mostRecentRoleStr, StormsService.resetMark, mostResetsRoleStr, StormsService.resetBalance, StormsService.disasterMark);
+                    return $"`{prefix}umbrella`, `{prefix}guess [number]`, `{prefix}bet [points] [number]`, `{prefix}steal`, `{prefix}insurance`, `{prefix}wallet`, `{prefix}wallets`, `{prefix}resets`";
                 }
                 else
                     return null;
@@ -962,18 +943,7 @@ Wallets are reset to {8} points when a disaster happens to a them once someone r
                     if (!notAdmin)
                         await Context.Channel.TriggerTypingAsync();
 
-                    return string.Format("\n\n" + @"__**Help: Market Commands**__
-
-'**{0}craft [imageURL] [price] [item name]**' to craft a market item in your inventory. You will be charged 20% of the sale price for manufacturing.
-'**{0}dismantle [item name]**' to destroy an item for points. Only items that have been sold can be dismantled.
-'**{0}buy [user] [item name]**' to request to buy a user's item for its listed price.
-'**{0}sell [user] [item name]**' to sell your item to the requesting user at the listed price.
-'**{0}rename [item name]**' to rename your item to a different name. The bot will then ask what you would like to change the item's name to.
-'**{0}item [item name]**' to show off your item.
-'**{0}items**' to list out your items.
-'**{0}items [user]**' to list out a user's items.
-
-Market items can't be sold for higher than the reset mark ({1} points). You cannot possess more than one item with the same name. You cannot sell or buy items to or from yourself.", prefix, StormsService.resetMark);
+                    return $"`{prefix}craft [imageURL] [price] [item name]`,\n`{prefix}dismantle [item name]`, `{prefix}buy [user] [item name]`,\n`{prefix}sell [user] [item name]`, `{prefix}rename [item name]`,\n`{prefix}item [item name]`, `{prefix}items`, `{prefix}items [user]`";
                 }
                 else
                     return null;
@@ -991,21 +961,7 @@ Market items can't be sold for higher than the reset mark ({1} points). You cann
                     if (!notAdmin)
                         await Context.Channel.TriggerTypingAsync();
 
-                    return string.Format("\n\n" + @"__**Help: Soundboard Commands**__
-
-'**{0}add [YouTube video URL] [sound name]**' to add a YouTube to MP3 sound to the soundboard in the specified category.
-The bot will then ask you to select a category to add the sound to.
-'**{0}approve [user]**' to approve a user's existing request to add to the soundboard __if you are a StormBot administrator__.
-'**{0}categories**' to display all categories.
-'**{0}delete [sound number]**' to delete the sound with the corresponding number from the soundboard __if you are a StormBot administrator__.
-'**{0}deny [user]**' to deny a user's existing request to add to the soundboard __if you are a StormBot administrator__.
-'**{0}pause**' to pause/resume the sound currently playing.
-'**{0}play [sound number]**' to play the sound with the corresponding number.
-'**{0}sounds**' to display all categories and their playable sounds.
-The bot will then ask you to play a sound by entering the corresponding number.
-'**{0}sounds [category name]**' to display all playable sounds in the specified category.
-The bot will then ask you to play a sound by entering the corresponding number.
-'**{0}stop**' to stop the sound currently playing.", prefix);
+                    return $"`{prefix}add [YouTube video URL] [sound name]`, `{prefix}approve [user]`, `{prefix}categories`, `{prefix}delete [sound number]`, `{prefix}deny [user]`, `{prefix}pause`, `{prefix}play [sound number]`, `{prefix}sounds`, `{prefix}sounds [category name]`, `{prefix}stop`";
                 }
                 else
                     return null;
@@ -1023,25 +979,7 @@ The bot will then ask you to play a sound by entering the corresponding number.
                     if (!notAdmin)
                         await Context.Channel.TriggerTypingAsync();
 
-                    string roleStr = "";
-                    if (!Context.IsPrivate && !notAdmin)
-                    {
-                        roleStr += " <@&" + (CallOfDutyService.GetServerBlackOpsColdWarKillsRoleID(Context.Guild.Id)).ToString() + ">";
-                    }
-
-                    return string.Format("\n\n" + @"__**Help: Black Ops Cold War Commands**__
-
-'**{0}bocw participate**' to add your account to the list of Call of Duty accounts participating in the Black Ops Cold War services.
-The bot will then ask you to enter the account name, tag, and platform.
-'**{0}bocw leave**' to remove your account from the list of Call of Duty accounts participating in the Black Ops Cold War services.
-'**{0}bocw participants**' to list out the Call of Duty accounts participating in the Black Ops Cold War services __if you are a StormBot administrator__.
-'**{0}bocw add participant [user]**' to add an account to the list of Call of Duty accounts participating in the Black Ops Cold War services __if you are a StormBot administrator__.
-The bot will then ask you to enter the account name, tag, and platform.
-'**{0}bocw rm participant [user]**' to remove an account from the list of Call of Duty accounts participating in the Black Ops Cold War services __if you are a StormBot administrator__.
-'**{0}bocw lifetime kills**' to display the lifetime total game kills of all participating Black Ops Cold War players from highest to lowest __if you are a StormBot administrator__.
-'**{0}bocw weekly kills**' to display the total game kills so far this week of all participating Black Ops Cold War players from highest to lowest __if you are a StormBot administrator__.
-
-The bot will only assign the{1} role for Black Ops Cold War kills to the player in first place at the end of the week.", prefix, roleStr);
+                    return $"`{prefix}bocw participate`, `{prefix}bocw leave`, `{prefix}bocw participants`,\n`{prefix}bocw add participant [user]`, `{prefix}bocw rm participant [user]`,\n`{prefix}bocw lifetime kills`, `{prefix}bocw weekly kills`";
                 }
                 else
                     return null;
@@ -1059,25 +997,7 @@ The bot will only assign the{1} role for Black Ops Cold War kills to the player 
                     if (!notAdmin)
                         await Context.Channel.TriggerTypingAsync();
 
-                    string roleStr = "";
-                    if (!Context.IsPrivate && !notAdmin)
-                    {
-                        roleStr += " <@&" + (CallOfDutyService.GetServerModernWarfareKillsRoleID(Context.Guild.Id)).ToString() + ">";
-                    }
-
-                    return string.Format("\n\n" + @"__**Help: Modern Warfare Commands**__
-
-'**{0}mw participate**' to add your account to the list of Call of Duty accounts participating in the Modern Warfare services.
-The bot will then ask you to enter the account name, tag, and platform.
-'**{0}mw leave**' to remove your account from the list of Call of Duty accounts participating in the Modern Warfare services.
-'**{0}mw participants**' to list out the Call of Duty accounts participating in the Modern Warfare services __if you are a StormBot administrator__.
-'**{0}mw add participant [user]**' to add an account to the list of Call of Duty accounts participating in the Modern Warfare services __if you are a StormBot administrator__.
-The bot will then ask you to enter the account name, tag, and platform.
-'**{0}mw rm participant [user]**' to remove an account from the list of Call of Duty accounts participating in the Modern Warfare services __if you are a StormBot administrator__.
-'**{0}mw wz lifetime kills**' to display the lifetime total game kills (Modern Warfare + Warzone) of all participating Modern Warfare players from highest to lowest __if you are a StormBot administrator__.
-'**{0}mw wz weekly kills**' to display the total game kills (Modern Warfare + Warzone) so far this week of all participating Modern Warfare players from highest to lowest __if you are a StormBot administrator__.
-
-The bot will only assign the{1} role for Modern Warfare kills to the player in first place at the end of the week with the most multiplayer kills (not Warzone).", prefix, roleStr);
+                    return $"`{prefix}mw participate`, `{prefix}mw leave`, `{prefix}mw participants`,\n`{prefix}mw add participant [user]`, `{prefix}mw rm participant [user]`,\n`{prefix}mw wz lifetime kills`, `{prefix}mw wz weekly kills`";
                 }
                 else
                     return null;
@@ -1095,32 +1015,8 @@ The bot will only assign the{1} role for Modern Warfare kills to the player in f
                     if (!notAdmin)
                         await Context.Channel.TriggerTypingAsync();
 
-                    string winsRoleStr = "";
-                    if (!Context.IsPrivate && !notAdmin)
-                    {
-                        winsRoleStr += " <@&" + (CallOfDutyService.GetServerWarzoneWinsRoleID(Context.Guild.Id)).ToString() + ">";
-                    }
+                    return $"`{prefix}wz participate`, `{prefix}wz leave`, `{prefix}wz participants`,\n`{prefix}wz add participant [user]`, `{prefix}wz rm participant [user]`,\n`{prefix}wz lifetime wins`, `{prefix}wz weekly wins`";
 
-                    string killsRoleStr = "";
-                    if (!Context.IsPrivate && !notAdmin)
-                    {
-                        killsRoleStr += " <@&" + (CallOfDutyService.GetServerWarzoneKillsRoleID(Context.Guild.Id)).ToString() + ">";
-                    }
-
-                    return string.Format("\n\n" + @"__**Help: Warzone Commands**__
-
-'**{0}wz participate**' to add your account to the list of Call of Duty accounts participating in the Warzone services.
-The bot will then ask you to enter the account name, tag, and platform.
-'**{0}wz leave**' to remove your account from the list of Call of Duty accounts participating in the Warzone services.
-'**{0}wz participants**' to list out the Call of Duty accounts participating in the Warzone services __if you are a StormBot administrator__.
-'**{0}wz add participant [user]**' to add an account to the list of Call of Duty accounts participating in the Warzone services __if you are a StormBot administrator__.
-The bot will then ask you to enter the account name, tag, and platform.
-'**{0}wz rm participant [user]**' to remove an account from the list of Call of Duty accounts participating in the Warzone services __if you are a StormBot administrator__.
-'**{0}wz lifetime wins**' to display the lifetime total Warzone wins of all participating players from highest to lowest __if you are a StormBot administrator__.
-'**{0}wz weekly wins**' to display the total Warzone wins so far this week of all participating players from highest to lowest __if you are a StormBot administrator__.
-
-The bot will only assign the{1} role for Warzone wins to the player in first place at the end of the week with the most Warzone wins.
-The bot will only assign the{2} role for Warzone kills to the player in first place at the end of the week with the most Warzone kills (not multiplayer).", prefix, winsRoleStr, killsRoleStr);
                 }
                 else
                     return null;
