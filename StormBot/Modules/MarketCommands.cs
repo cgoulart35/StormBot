@@ -207,7 +207,11 @@ namespace StormBot.Modules
                                 Array.Copy(args, 1, itemNameArgs, 0, args.Length - 1);
                                 string itemName = GetSingleArg(itemNameArgs);
 
+                                StormsService.AddPlayerToDbTableIfNotExist(serverId, discordId);
                                 MarketService.AddPlayerToDbTableIfNotExist(discordId);
+
+                                StormsService.AddPlayerToDbTableIfNotExist(serverId, ownerDiscordId);
+                                MarketService.AddPlayerToDbTableIfNotExist(ownerDiscordId);
 
                                 if (discordId != ownerDiscordId)
                                 {
@@ -300,7 +304,12 @@ namespace StormBot.Modules
                                 Array.Copy(args, 1, itemNameArgs, 0, args.Length - 1);
                                 string itemName = GetSingleArg(itemNameArgs);
 
+                                StormsService.AddPlayerToDbTableIfNotExist(serverId, discordId);
                                 MarketService.AddPlayerToDbTableIfNotExist(discordId);
+
+                                StormsService.AddPlayerToDbTableIfNotExist(serverId, buyerDiscordId);
+                                MarketService.AddPlayerToDbTableIfNotExist(buyerDiscordId);
+
                                 int? status = MarketService.GetTransactionStatus(serverId, buyerDiscordId, discordId, itemName);
 
                                 if (discordId != buyerDiscordId)
