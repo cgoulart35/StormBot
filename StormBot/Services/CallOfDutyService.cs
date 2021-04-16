@@ -200,6 +200,9 @@ namespace StormBot.Services
             // create CallOfDutyPlayerModel for each participating player from database with GetAPlayersData() & add each model to the allNewPlayerData list
             foreach (CallOfDutyPlayerDataEntity storedPlayerData in allStoredPlayersData)
             {
+                // TODO: remove after debugging purposes fulfilled; rate limit issue?
+                Console.WriteLine("Getting player data for: " + storedPlayerData.Username);
+
                 CallOfDutyPlayerModel newPlayerData = GetAPlayersDataAPI(cookieJar, storedPlayerData);
 
                 if (newPlayerData.Status == null || newPlayerData.Status != "success")
@@ -215,15 +218,23 @@ namespace StormBot.Services
                     Console.WriteLine(newPlayerData.Data.Lifetime.Mode.BattleRoyal.Properties.Wins);
                     Console.WriteLine(newPlayerData.Data.Weekly.All.Properties.Kills);
 
-                    return null;
+                    //return null;
+                    continue;
                 }
+
+                // TODO: remove after debugging purposes fulfilled; rate limit issue?
+                Console.WriteLine("Successfully got player data for: " + newPlayerData.Data.Username);
 
                 newPlayerData.DiscordID = storedPlayerData.DiscordID;
                 allNewPlayersData.Add(newPlayerData);
             }
 
             // create and return allPlayerDataModel with list
-            return allNewPlayersData;
+            // TODO: fix after debugging purposes fulfilled; rate limit issue?
+            if (allNewPlayersData.Count != 0)
+                return allNewPlayersData;
+            else
+                return null;
         }
 
         private static CallOfDutyPlayerModel GetAPlayersDataAPI(CookieContainer cookieJar, CallOfDutyPlayerDataEntity storedPlayerData)
