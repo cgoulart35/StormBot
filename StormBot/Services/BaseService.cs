@@ -97,6 +97,8 @@ namespace StormBot.Services
 					ToggleSoundpadCommands = false,
 					AllowServerPermissionStorms = true,
 					ToggleStorms = false,
+					AllowServerPermissionMarket = true,
+					ToggleMarket = false,
 					CallOfDutyNotificationChannelID = 0,
 					SoundboardNotificationChannelID = 0,
 					StormsNotificationChannelID = 0,
