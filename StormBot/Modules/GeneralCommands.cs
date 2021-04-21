@@ -735,7 +735,9 @@ namespace StormBot.Modules
             EmbedBuilder builder = new EmbedBuilder();
             builder.WithColor(Color.Blue);
             builder.WithTitle("**Command Categories**");
-            builder.WithThumbnailUrl(Context.Guild.IconUrl);
+
+            if (!Context.IsPrivate)
+                builder.WithThumbnailUrl(Context.Guild.IconUrl);
 
             string subjectsStr = "`Help`\n`Config`\n";
 
@@ -805,7 +807,9 @@ namespace StormBot.Modules
             builder.WithColor(Color.Blue);
             builder.WithTitle("**StormBot Commands**");
             builder.WithDescription("Please see https://github.com/cgoulart35/StormBot for more detailed command descriptions.");
-            builder.WithThumbnailUrl(Context.Guild.IconUrl);
+
+            if (!Context.IsPrivate)
+                builder.WithThumbnailUrl(Context.Guild.IconUrl);
 
             if (subject == null)
             {
