@@ -303,7 +303,7 @@ namespace StormBot.Modules
                             {
                                 atleastOnePlayer = true;
 
-                                playersStr += $"{playerCount}.) <@!{player.DiscordID}>\n";
+                                playersStr += $"`{playerCount}.)` <@!{player.DiscordID}>\n";
                                 pointsStr += $"`{player.Wallet}`\n";
                                 insuranceStr += player.HasInsurance ? "`INSURED`\n" : "`UNINSURED`\n";
 
@@ -364,7 +364,7 @@ namespace StormBot.Modules
                             {
                                 atleastOnePlayer = true;
 
-                                playersStr += $"{playerCount}.) <@!{player.DiscordID}>\n";
+                                playersStr += $"`{playerCount}.)` <@!{player.DiscordID}>\n";
                                 resetsStr += $"`{player.ResetCount}`\n";
 
                                 playerCount++;

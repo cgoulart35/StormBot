@@ -117,7 +117,7 @@ namespace StormBot.Modules.CallOfDutyModules
                         kills = player.Data.Weekly.All.Properties.Kills;
                     }
 
-                    playersStr += $"{playerCount}.) <@!{player.DiscordID}>\n";
+                    playersStr += $"`{playerCount}.)` <@!{player.DiscordID}>\n";
                     killsStr += $"`{kills}`\n";
                     
                     playerCount++;
@@ -220,7 +220,7 @@ namespace StormBot.Modules.CallOfDutyModules
                     {
                         atleastOnePlayer = true;
 
-                        playersStr += $"{playerCount}.) <@!{player.DiscordID}>\n";
+                        playersStr += $"`{playerCount}.)` <@!{player.DiscordID}>\n";
                         killsStr += $"`{player.Data.Lifetime.All.Properties.Kills}`\n";
 
                         playerCount++;
@@ -337,7 +337,7 @@ namespace StormBot.Modules.CallOfDutyModules
                                         kills = player.Data.Lifetime.All.Properties.Kills;
                                     }
 
-                                    playersStr += $"{playerCount}.) <@!{player.DiscordID}>\n";
+                                    playersStr += $"`{playerCount}.)` <@!{player.DiscordID}>\n";
                                     killsStr += $"`{kills}`\n";
 
                                     playerCount++;

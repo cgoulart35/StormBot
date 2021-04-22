@@ -202,7 +202,7 @@ namespace StormBot.Modules.CallOfDutyModules
                     string tag = "";
                     string platform = "";
 
-                    if (account.Tag != "")
+                    if (account.Tag != null && account.Tag != "")
                         tag = "#" + account.Tag;
 
                     if (account.Platform == "battle")
@@ -216,9 +216,13 @@ namespace StormBot.Modules.CallOfDutyModules
                     else if (account.Platform == "uno")
                         platform = "Activision";
 
-                    playersStr += $"{accountCount}.) <@!{discordID}> ({platform})\n";
+                    playersStr += $"`{accountCount}.)` <@!{discordID}> ({platform})\n";
                     usernamesStr += $"`{username}`\n";
-                    tagsStr += $"`{tag}`\n";
+
+                    if (tag != "")
+                        tagsStr += $"`{tag}`\n";
+                    else
+                        tagsStr += "`        `\n";
 
                     accountCount++;
                 }
