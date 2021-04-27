@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Threading;
 using System.Linq;
 using Discord;
 using Discord.Commands;
@@ -19,6 +20,8 @@ namespace StormBot.Services
 		private static Dictionary<ulong, int> OngoingStormsWinningNumber;
 		private static Dictionary<ulong, Dictionary<ulong, int>> OngoingStormsUserGuessCount;
 		private static Dictionary<ulong, List<ulong>> OngoingStormsUsersWaitingForStealTimeLimit;
+
+		private static SemaphoreSlim levelTwoLock = new SemaphoreSlim(1, 1);
 
 		public static Dictionary<ulong, List<IUserMessage>> PurgeCollection;
 
@@ -240,24 +243,27 @@ namespace StormBot.Services
 		{
 			int actualLevel;
 
-			// if there is an ongoing storm
-			if (OngoingStormsLevel.TryGetValue(channelId, out actualLevel))
+			await levelTwoLock.WaitAsync();
+			try
 			{
-				// if the ongoing storm is on the correct step for this command, give the user points and update the storm level
-				if (actualLevel == inputLevel)
+				// if there is an ongoing storm
+				if (OngoingStormsLevel.TryGetValue(channelId, out actualLevel))
 				{
-					bool hadDisasterMark = GetPlayerWallet(serverId, discordId) >= disasterMark;
-
-					if (actualLevel == 1)
+					// if the ongoing storm is on the correct step for this command, give the user points and update the storm level
+					if (actualLevel == inputLevel)
 					{
-						// give user points for level 1
-						AddPointsToPlayersWallet(serverId, discordId, levelOneReward);
+						bool hadDisasterMark = GetPlayerWallet(serverId, discordId) >= disasterMark;
 
-						EmbedBuilder builder = new EmbedBuilder();
-						builder.WithColor(Color.Orange);
-						builder.WithThumbnailUrl(_client.GetGuild(serverId).IconUrl);
-						builder.WithTitle(thunder_cloud_rain.ToString() + " " + thunder_cloud_rain.ToString() + " " + thunder_cloud_rain.ToString() + " **STORM IN PROGRESS** " + thunder_cloud_rain.ToString() + " " + thunder_cloud_rain.ToString() + " " + thunder_cloud_rain.ToString());
-						builder.WithDescription($"<@!{discordId}>, you put up your umbrella first and earned {levelOneReward} points!" + string.Format(@"
+						if (actualLevel == 1)
+						{
+							// give user points for level 1
+							AddPointsToPlayersWallet(serverId, discordId, levelOneReward);
+
+							EmbedBuilder builder = new EmbedBuilder();
+							builder.WithColor(Color.Orange);
+							builder.WithThumbnailUrl(_client.GetGuild(serverId).IconUrl);
+							builder.WithTitle(thunder_cloud_rain.ToString() + " " + thunder_cloud_rain.ToString() + " " + thunder_cloud_rain.ToString() + " **STORM IN PROGRESS** " + thunder_cloud_rain.ToString() + " " + thunder_cloud_rain.ToString() + " " + thunder_cloud_rain.ToString());
+							builder.WithDescription($"<@!{discordId}>, you put up your umbrella first and earned {levelOneReward} points!" + string.Format(@"
 
 **First to guess the winning number correctly between 1 and 200 earns points!**
 
@@ -274,102 +280,107 @@ namespace StormBot.Services
 - When anyone reaches {4} points, a disaster will occur for a random player. Their wallet will be reset to {5} points if not insured.
 - All wallets reset to {5} points when anyone reaches {6} points.", GetServerPrefix(serverId), levelTwoReward, stealAmount, insuranceCost, disasterMark, resetBalance, resetMark));
 
-						IUserMessage userMessage1 = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync("", false, builder.Build());
-						if (PurgeCollection.ContainsKey(channelId))
-							PurgeCollection[channelId].Add(userMessage1);
-
-						// update storm to level 2
-						OngoingStormsLevel[channelId] = 2;
-					}
-					else if (actualLevel == 2)
-					{
-						// if user has guessed, get count; otherwise, set count to 0
-						int guessCount;
-						if (!OngoingStormsUserGuessCount[channelId].TryGetValue(discordId, out guessCount))
-							 guessCount = 0;
-
-						// store user's guess count as 1 if it's their first guess
-						if (guessCount == 0)
-						{
-							guessCount = 1;
-							OngoingStormsUserGuessCount[channelId].Add(discordId, guessCount);
-						}
-						// if it's not the users first guess, increment the count
-						else
-						{
-							OngoingStormsUserGuessCount[channelId][discordId] += 1;
-							guessCount = OngoingStormsUserGuessCount[channelId][discordId];
-						}
-
-						double multiplier = 1;
-						if (guessCount == 1)
-							multiplier = 10;
-						else if (guessCount == 2)
-							multiplier = 5;
-						else if (guessCount == 3)
-							multiplier = 2.5;
-						else if (guessCount == 4)
-							multiplier = 1.25;
-
-						if (guess == OngoingStormsWinningNumber[channelId])
-						{
-							// give user points for level 2 (default levelTwoReward, or points bet)
-							double reward = levelTwoReward;
-							if (bet != null && bet.Value > levelTwoReward)
-								reward = bet.Value;
-
-							AddPointsToPlayersWallet(serverId, discordId, reward * multiplier);
-
-							string multiplierStr = "";
-							if (multiplier > 1)
-								multiplierStr = $" ( **{guessCount} GUESSES:** {reward} points x{multiplier} multiplier )";
-
-							IUserMessage userMessage2 = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you guessed correctly and earned {reward * multiplier} points!" + multiplierStr);
+							IUserMessage userMessage1 = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync("", false, builder.Build());
 							if (PurgeCollection.ContainsKey(channelId))
-								PurgeCollection[channelId].Add(userMessage2);
+								PurgeCollection[channelId].Add(userMessage1);
 
-							// end storm at level 3
-							OngoingStormsLevel[channelId] = 3;
-							EndStorm(channelId);
+							// update storm to level 2
+							OngoingStormsLevel[channelId] = 2;
 						}
-						else
+						else if (actualLevel == 2)
 						{
-							string message = $"<@!{discordId}>, you guessed incorrectly";
+							// if user has guessed, get count; otherwise, set count to 0
+							int guessCount;
+							if (!OngoingStormsUserGuessCount[channelId].TryGetValue(discordId, out guessCount))
+								guessCount = 0;
 
-							if (bet != null)
+							// store user's guess count as 1 if it's their first guess
+							if (guessCount == 0)
 							{
-								message += $" and lost {bet.Value} points.\n";
+								guessCount = 1;
+								OngoingStormsUserGuessCount[channelId].Add(discordId, guessCount);
+							}
+							// if it's not the users first guess, increment the count
+							else
+							{
+								OngoingStormsUserGuessCount[channelId][discordId] += 1;
+								guessCount = OngoingStormsUserGuessCount[channelId][discordId];
+							}
 
-								// take points from user if they bet
-								SubtractPointsFromPlayersWallet(serverId, discordId, bet.Value);
+							double multiplier = 1;
+							if (guessCount == 1)
+								multiplier = 10;
+							else if (guessCount == 2)
+								multiplier = 5;
+							else if (guessCount == 3)
+								multiplier = 2.5;
+							else if (guessCount == 4)
+								multiplier = 1.25;
+
+							if (guess == OngoingStormsWinningNumber[channelId])
+							{
+								// give user points for level 2 (default levelTwoReward, or points bet)
+								double reward = levelTwoReward;
+								if (bet != null && bet.Value > levelTwoReward)
+									reward = bet.Value;
+
+								AddPointsToPlayersWallet(serverId, discordId, reward * multiplier);
+
+								string multiplierStr = "";
+								if (multiplier > 1)
+									multiplierStr = $" ( **{guessCount} GUESSES:** {reward} points x{multiplier} multiplier )";
+
+								IUserMessage userMessage2 = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you guessed correctly and earned {reward * multiplier} points!" + multiplierStr);
+								if (PurgeCollection.ContainsKey(channelId))
+									PurgeCollection[channelId].Add(userMessage2);
+
+								// end storm at level 3
+								OngoingStormsLevel[channelId] = 3;
+								EndStorm(channelId);
 							}
 							else
 							{
-								message += ".\n";
+								string message = $"<@!{discordId}>, you guessed incorrectly";
+
+								if (bet != null)
+								{
+									message += $" and lost {bet.Value} points.\n";
+
+									// take points from user if they bet
+									SubtractPointsFromPlayersWallet(serverId, discordId, bet.Value);
+								}
+								else
+								{
+									message += ".\n";
+								}
+
+								message += "The winning number is ";
+
+								if (guess < OngoingStormsWinningNumber[channelId])
+								{
+									message += "greater than ";
+								}
+								else
+								{
+									message += "less than ";
+								}
+
+								message += guess + ".";
+
+								IUserMessage userMessage3 = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(message);
+								if (PurgeCollection.ContainsKey(channelId))
+									PurgeCollection[channelId].Add(userMessage3);
 							}
-
-							message += "The winning number is ";
-
-							if (guess < OngoingStormsWinningNumber[channelId])
-							{
-								message += "greater than ";
-							}
-							else
-							{
-								message += "less than ";
-							}
-
-							message += guess + ".";
-
-							IUserMessage userMessage3 = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync(message);
-							if (PurgeCollection.ContainsKey(channelId))
-								PurgeCollection[channelId].Add(userMessage3);
 						}
-					}
 
-					await CheckForReset(guild, serverId, discordId, channelId);
-					await CheckForDisaster(serverId, discordId, channelId, hadDisasterMark);
+						await CheckForReset(guild, serverId, discordId, channelId);
+						await CheckForDisaster(serverId, discordId, channelId, hadDisasterMark);
+					}
 				}
+			}
+			finally
+			{
+				levelTwoLock.Release();
 			}
 		}
 
@@ -377,56 +388,64 @@ namespace StormBot.Services
 		{
 			int actualLevel;
 
-			// make sure that there is an ongoing storm on level two
-			if (OngoingStormsLevel.TryGetValue(channelId, out actualLevel) && actualLevel == 2)
+			await levelTwoLock.WaitAsync();
+			try
 			{
-				// make sure user has not stolen in the last ten seconds
-				if (!OngoingStormsUsersWaitingForStealTimeLimit[channelId].Contains(discordId))
+				// make sure that there is an ongoing storm on level two
+				if (OngoingStormsLevel.TryGetValue(channelId, out actualLevel) && actualLevel == 2)
 				{
-					// add user to list of users waiting and trigger removal after set time in seconds
-					OngoingStormsUsersWaitingForStealTimeLimit[channelId].Add(discordId);
-					StartUsersStealTimeLimitCountdown(channelId, discordId);
-
-					AddPlayerToDbTableIfNotExist(serverId, discordId);
-
-					bool hadDisasterMark = GetPlayerWallet(serverId, discordId) >= disasterMark;
-
-					// get the top players to steal from (exclude the criminal/person stealing) & make sure there is atleast one player with a score above zero
-					List<StormPlayerDataEntity> topPlayers = GetTopPlayersWithMostPoints(serverId, discordId);
-
-					// do not let users steal from just themselves (when count is zero)
-					if (topPlayers != null && topPlayers.Any())
+					// make sure user has not stolen in the last ten seconds
+					if (!OngoingStormsUsersWaitingForStealTimeLimit[channelId].Contains(discordId))
 					{
-						// set top players' wallets and criminal's wallet
-						foreach (StormPlayerDataEntity topPlayer in topPlayers)
+						// add user to list of users waiting and trigger removal after set time in seconds
+						OngoingStormsUsersWaitingForStealTimeLimit[channelId].Add(discordId);
+						StartUsersStealTimeLimitCountdown(channelId, discordId);
+
+						AddPlayerToDbTableIfNotExist(serverId, discordId);
+
+						bool hadDisasterMark = GetPlayerWallet(serverId, discordId) >= disasterMark;
+
+						// get the top players to steal from (exclude the criminal/person stealing) & make sure there is atleast one player with a score above zero
+						List<StormPlayerDataEntity> topPlayers = GetTopPlayersWithMostPoints(serverId, discordId);
+
+						// do not let users steal from just themselves (when count is zero)
+						if (topPlayers != null && topPlayers.Any())
 						{
-							double oldWalletTopPlayer = topPlayer.Wallet;
-							double newWalletTopPlayer = SubtractPointsFromPlayersWallet(topPlayer.ServerID, topPlayer.DiscordID, stealAmount / topPlayers.Count);
+							// set top players' wallets and criminal's wallet
+							foreach (StormPlayerDataEntity topPlayer in topPlayers)
+							{
+								double oldWalletTopPlayer = topPlayer.Wallet;
+								double newWalletTopPlayer = SubtractPointsFromPlayersWallet(topPlayer.ServerID, topPlayer.DiscordID, stealAmount / topPlayers.Count);
 
-							double diff;
-							if (newWalletTopPlayer == 0)
-								diff = oldWalletTopPlayer;
-							else
-								diff = stealAmount / topPlayers.Count;
+								double diff;
+								if (newWalletTopPlayer == 0)
+									diff = oldWalletTopPlayer;
+								else
+									diff = stealAmount / topPlayers.Count;
 
-							AddPointsToPlayersWallet(serverId, discordId, diff);
+								AddPointsToPlayersWallet(serverId, discordId, diff);
 
-							IUserMessage message = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you stole {diff} points from <@!{topPlayer.DiscordID}>!");
-							if (PurgeCollection.ContainsKey(channelId))
-								PurgeCollection[channelId].Add(message);
+								IUserMessage message = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, you stole {diff} points from <@!{topPlayer.DiscordID}>!");
+								if (PurgeCollection.ContainsKey(channelId))
+									PurgeCollection[channelId].Add(message);
 
-							await CheckForReset(guild, serverId, discordId, channelId);
-							await CheckForDisaster(serverId, discordId, channelId, hadDisasterMark);
+								await CheckForReset(guild, serverId, discordId, channelId);
+								await CheckForDisaster(serverId, discordId, channelId, hadDisasterMark);
+							}
 						}
 					}
-				}
-				else
-				{
-					IUserMessage message = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, please wait {stealTimeLimitInSeconds} seconds before stealing again.");
-					if (PurgeCollection.ContainsKey(channelId))
-						PurgeCollection[channelId].Add(message);
+					else
+					{
+						IUserMessage message = await ((IMessageChannel)_client.GetChannel(channelId)).SendMessageAsync($"<@!{discordId}>, please wait {stealTimeLimitInSeconds} seconds before stealing again.");
+						if (PurgeCollection.ContainsKey(channelId))
+							PurgeCollection[channelId].Add(message);
 
+					}
 				}
+			}
+			finally
+			{
+				levelTwoLock.Release();
 			}
 		}
 
