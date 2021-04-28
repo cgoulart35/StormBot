@@ -56,37 +56,42 @@ namespace StormBot.Modules
                                 Array.Copy(args, 1, soundNameArgs, 0, args.Length - 1);
                                 string soundName = GetSingleArg(soundNameArgs);
 
-                                // display all category options to user
-                                Tuple<List<int>, bool> loadedSounds = await LoadSounds(true, null, true);
-
-                                if (loadedSounds != null)
+                                if (soundName.Length <= 25)
                                 {
-                                    List<int> categoryIndexes = loadedSounds.Item1;
+                                    // display all category options to user
+                                    Tuple<List<int>, bool> loadedSounds = await LoadSounds(true, null, true);
 
-                                    var user = Context.User as SocketGuildUser;
-
-                                    // ask user what category to add to
-                                    int categoryIndex = await AskUserForCategory(categoryIndexes, user.Id);
-
-                                    // get instance of the YouTube video if not in remote boot mode
-                                    YouTubeVideo video = null;
-                                    if (!Program.configurationSettingsModel.RemoteBootMode)
-                                        video = await GetYouTubeVideo(videoURL);
-
-                                    // unless cancelled, continue adding the sound
-                                    if (categoryIndex != -1)
+                                    if (loadedSounds != null)
                                     {
-                                        // if video exists or in remote boot mode, get admin approval 
-                                        if (video != null || Program.configurationSettingsModel.RemoteBootMode)
+                                        List<int> categoryIndexes = loadedSounds.Item1;
+
+                                        var user = Context.User as SocketGuildUser;
+
+                                        // ask user what category to add to
+                                        int categoryIndex = await AskUserForCategory(categoryIndexes, user.Id);
+
+                                        // get instance of the YouTube video if not in remote boot mode
+                                        YouTubeVideo video = null;
+                                        if (!Program.configurationSettingsModel.RemoteBootMode)
+                                            video = await GetYouTubeVideo(videoURL);
+
+                                        // unless cancelled, continue adding the sound
+                                        if (categoryIndex != -1)
                                         {
-                                            // add sound if admin or if an admin approves
-                                            if (user.GuildPermissions.Administrator || await AskAdministratorForApproval(user))
+                                            // if video exists or in remote boot mode, get admin approval 
+                                            if (video != null || Program.configurationSettingsModel.RemoteBootMode)
                                             {
-                                                await AddNewSound(categoryIndex, video, soundName, videoURL);
+                                                // add sound if admin or if an admin approves
+                                                if (user.GuildPermissions.Administrator || await AskAdministratorForApproval(user))
+                                                {
+                                                    await AddNewSound(categoryIndex, video, soundName, videoURL);
+                                                }
                                             }
                                         }
                                     }
                                 }
+                                else
+                                    await ReplyAsync($"Please provide a sound name with no more than 25 characters.");
                             }
                             else
                             {

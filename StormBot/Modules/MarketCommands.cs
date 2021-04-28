@@ -55,6 +55,8 @@ namespace StormBot.Modules
                                     await ReplyAsync($"<@!{discordId}>, you have insufficient funds. You will be charged 20% of the listed item price for manufacturing.");
                                 else if (!ImageExistsAtURL(imageURL))
                                     await ReplyAsync($"<@!{discordId}>, please provide a valid image URL.");
+                                else if (itemName.Length > 25)
+                                    await ReplyAsync($"<@!{discordId}>, please provide an item name with no more than 25 characters.");
                                 else if (MarketService.GetPlayerMarketItem(discordId, itemName) != null)
                                     await ReplyAsync($"<@!{discordId}>, there is already an item with this name in your inventory.");
                                 else
@@ -74,6 +76,8 @@ namespace StormBot.Modules
                                     }
                                 }
                             }
+                            else
+                                await ReplyAsync($"<@!{discordId}>, please provide a valid number for price.");
                         }
                     }
                 }

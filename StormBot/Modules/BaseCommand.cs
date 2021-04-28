@@ -60,11 +60,11 @@ namespace StormBot.Modules
 
         public static bool ImageExistsAtURL(string url)
         {
-            HttpWebRequest request = (HttpWebRequest) WebRequest.Create(url);
-            request.Method = "HEAD";
-
             try
             {
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+                request.Method = "HEAD";
+
                 request.GetResponse();
                 return true;
             }
