@@ -59,6 +59,8 @@ namespace StormBot.Modules
                                     await ReplyAsync($"<@!{discordId}>, please provide an item name with no more than 25 characters.");
                                 else if (MarketService.GetPlayerMarketItem(discordId, itemName) != null)
                                     await ReplyAsync($"<@!{discordId}>, there is already an item with this name in your inventory.");
+                                else if (MarketService.GetAllPlayerMarketItems(discordId).Items.Count >= 30)
+                                    await ReplyAsync($"<@!{discordId}>, you may only have up to 30 items.");
                                 else
                                 {
                                     MarketItemModel newItem = new MarketItemModel()
@@ -139,7 +141,6 @@ namespace StormBot.Modules
                     {
                         if (args.Length >= 1)
                         {
-                            ulong serverId = Context.Guild.Id;
                             ulong discordId = Context.User.Id;
                             string itemName = GetSingleArg(args);
 
@@ -167,6 +168,14 @@ namespace StormBot.Modules
                                     // if same user starts another command while awaiting a response, end this one but don't display request cancelled
                                     else if (userSelectResponse.Content.StartsWith(BaseService.GetServerOrPrivateMessagePrefix(Context)))
                                     {
+                                    }
+                                    else if (userSelectResponse.Content.Length > 25)
+                                    {
+                                        await ReplyAsync($"<@!{discordId}>, please provide an item name with no more than 25 characters.");
+                                    }
+                                    else if (MarketService.GetPlayerMarketItem(discordId, userSelectResponse.Content) != null)
+                                    {
+                                        await ReplyAsync($"<@!{discordId}>, there is already an item with this name in your inventory.");
                                     }
                                     else if (MarketService.UpdatePlayerMarketItemName(discordId, itemName, userSelectResponse.Content))
                                     {
@@ -227,6 +236,8 @@ namespace StormBot.Modules
                                             await ReplyAsync($"<@!{discordId}>, you have insufficient funds.");
                                         else if (MarketService.GetPlayerMarketItem(discordId, itemName) != null)
                                             await ReplyAsync($"<@!{discordId}>, there is already an item with this name in your inventory.");
+                                        else if (MarketService.GetAllPlayerMarketItems(discordId).Items.Count >= 30)
+                                            await ReplyAsync($"<@!{discordId}>, you may only have up to 30 items.");
                                         else
                                         {
                                             if (MarketService.OpenPendingTransaction(serverId, discordId, ownerDiscordId, itemName))
