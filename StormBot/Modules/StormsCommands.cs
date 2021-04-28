@@ -299,7 +299,7 @@ namespace StormBot.Modules
                         string insuranceStr = "";
                         foreach (StormPlayerDataEntity player in playerData.OrderByDescending(player => player.Wallet))
                         {
-                            if (player.Wallet > 0)
+                            if (player.Wallet > 0 || player.HasInsurance)
                             {
                                 atleastOnePlayer = true;
 
