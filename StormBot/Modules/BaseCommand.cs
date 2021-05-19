@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -60,6 +61,17 @@ namespace StormBot.Modules
 
         public static bool ImageExistsAtURL(string url)
         {
+            if (!Regex.IsMatch(url, ".jpg") &&
+                !Regex.IsMatch(url, ".jpeg") &&
+                !Regex.IsMatch(url, ".jpe") &&
+                !Regex.IsMatch(url, ".jif") &&
+                !Regex.IsMatch(url, ".jfif") &&
+                !Regex.IsMatch(url, ".jfi") &&
+                !Regex.IsMatch(url, ".png") &&
+                !Regex.IsMatch(url, ".gif") &&
+                !Regex.IsMatch(url, ".webp"))
+                return false;
+
             try
             {
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
